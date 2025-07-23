@@ -351,14 +351,6 @@ async function initializePlayerAndStream(
     art.value.on('fullscreen', async (nativeActive: boolean) => {
       isInNativePlayerFullscreen.value = nativeActive;
       isFullScreen.value = isInNativePlayerFullscreen.value || isInWebFullscreen.value;
-
-      if (!isMacOS.value) {
-        try {
-          await WebviewWindow.getCurrent().setFullscreen(nativeActive);
-        } catch (e) {
-          console.error('Tauri setFullscreen error triggered by player native fullscreen:', e);
-        }
-      }
       emit('fullscreen-change', isFullScreen.value);
     });
 
