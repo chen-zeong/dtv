@@ -179,6 +179,10 @@ impl DouYu {
         self.get_pc_js("ws-h5", 0).await
     }
 
+    pub async fn get_real_url_with_quality(&self, rate: i32) -> Result<String, Box<dyn std::error::Error>> {
+        self.get_pc_js("ws-h5", rate).await
+    }
+
     async fn check_room_status(&self) -> Result<bool, Box<dyn std::error::Error>> {
         let room_api_url = format!("http://open.douyucdn.cn/api/RoomApi/room/{}", self.rid);
 
@@ -230,4 +234,17 @@ pub async fn get_stream_url(room_id: &str) -> Result<String, Box<dyn std::error:
     let douyu = DouYu::new(room_id).await?;
     let url = douyu.get_real_url().await?;
     Ok(url) // 直接返回实际的流地址
+}
+
+pub async fn get_stream_url_with_quality(room_id: &str, quality: &str) -> Result<String, Box<dyn std::error::Error>> {
+    let rate = match quality {
+        "原画" | "origin" => 0,
+        "高清" | "high" => 4,
+        "标清" | "standard" => 3,
+        _ => 0, // 默认原画
+    };
+    
+    let douyu = DouYu::new(room_id).await?;
+    let url = douyu.get_real_url_with_quality(rate).await?;
+    Ok(url)
 }

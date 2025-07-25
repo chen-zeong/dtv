@@ -29,6 +29,17 @@ pub async fn get_douyin_live_stream_url(
     proxy_server_handle: State<'_, ProxyServerHandle>,
     payload: crate::platforms::common::GetStreamUrlPayload,
 ) -> Result<crate::platforms::common::LiveStreamInfo, String> {
+    get_douyin_live_stream_url_with_quality(app_handle, stream_url_store, proxy_server_handle, payload, "原画".to_string()).await
+}
+
+#[command]
+pub async fn get_douyin_live_stream_url_with_quality(
+    app_handle: AppHandle,
+    stream_url_store: State<'_, StreamUrlStore>,
+    proxy_server_handle: State<'_, ProxyServerHandle>,
+    payload: crate::platforms::common::GetStreamUrlPayload,
+    quality: String,
+) -> Result<crate::platforms::common::LiveStreamInfo, String> {
     let room_id_str = payload.args.room_id_str;
 
     if room_id_str.is_empty() {
@@ -164,19 +175,37 @@ pub async fn get_douyin_live_stream_url(
                     match serde_json::from_str::<InnerStreamDataWrapper>(stream_data_str) {
                         Ok(inner_wrapper) => {
                             if let Some(qualities_map) = inner_wrapper.data {
-                                let stream_options = [
-                                    qualities_map.origin.as_ref(),
-                                    qualities_map.hd.as_ref(),
-                                    qualities_map.sd.as_ref(),
-                                ];
-                                for opt_quality_detail in stream_options.iter().flatten() {
-                                    if let Some(links) = &opt_quality_detail.main {
-                                        if let Some(flv_url) =
-                                            links.flv.as_ref().filter(|s| !s.is_empty())
-                                        {
+                                // 根据画质选择对应的流
+                                let selected_quality = match quality.as_str() {
+                                    "原画" => qualities_map.origin.as_ref(),
+                                    "高清" => qualities_map.hd.as_ref(),
+                                    "标清" => qualities_map.sd.as_ref(),
+                                    _ => qualities_map.origin.as_ref(), // 默认原画
+                                };
+                                
+                                if let Some(quality_detail) = selected_quality {
+                                    if let Some(links) = &quality_detail.main {
+                                        if let Some(flv_url) = links.flv.as_ref().filter(|s| !s.is_empty()) {
                                             final_stream_url = Some(flv_url.clone());
-                                            println!("[Douyin Live RS INFO] Found FLV URL from sdk_data: {}", flv_url);
-                                            break; // Found an FLV URL, stop searching in sdk_data
+                                            println!("[Douyin Live RS INFO] Found {} FLV URL from sdk_data: {}", quality, flv_url);
+                                        }
+                                    }
+                                }
+                                
+                                // 如果指定画质没有找到，尝试降级
+                                if final_stream_url.is_none() {
+                                    let fallback_options = [
+                                        qualities_map.origin.as_ref(),
+                                        qualities_map.hd.as_ref(),
+                                        qualities_map.sd.as_ref(),
+                                    ];
+                                    for opt_quality_detail in fallback_options.iter().flatten() {
+                                        if let Some(links) = &opt_quality_detail.main {
+                                            if let Some(flv_url) = links.flv.as_ref().filter(|s| !s.is_empty()) {
+                                                final_stream_url = Some(flv_url.clone());
+                                                println!("[Douyin Live RS INFO] Fallback FLV URL from sdk_data: {}", flv_url);
+                                                break;
+                                            }
                                         }
                                     }
                                 }
@@ -279,25 +308,39 @@ pub async fn get_douyin_live_stream_url(
     if final_stream_url.is_none() {
         println!("[Douyin Live RS INFO] No valid FLV stream from sdk_data, or it was discarded. Attempting HLS from hls_pull_url_map.");
         if let Some(hls_map) = &stream_url_container.hls_pull_url_map {
-            // Try to get FULL_HD1
-            if let Some(full_hd_url) = hls_map.get("FULL_HD1") {
-                if !full_hd_url.is_empty() {
-                    final_stream_url = Some(full_hd_url.clone());
+            // 根据画质选择对应的HLS流
+            let hls_quality_key = match quality.as_str() {
+                "原画" => "FULL_HD1",
+                "高清" => "HD1", 
+                "标清" => "SD1",
+                _ => "FULL_HD1", // 默认原画
+            };
+            
+            // 尝试获取指定画质的HLS流
+            if let Some(hls_url) = hls_map.get(hls_quality_key) {
+                if !hls_url.is_empty() {
+                    final_stream_url = Some(hls_url.clone());
+                    println!("[Douyin Live RS INFO] Found {} HLS URL: {}", quality, hls_url);
                 }
             }
-
-            // If FULL_HD1 was not found or its URL was empty, try HD1
+            
+            // 如果指定画质没有找到，尝试降级
             if final_stream_url.is_none() {
-                if let Some(hd_url) = hls_map.get("HD1") {
-                    if !hd_url.is_empty() {
-                        final_stream_url = Some(hd_url.clone());
+                let fallback_keys = ["FULL_HD1", "HD1", "SD1"];
+                for key in fallback_keys.iter() {
+                    if let Some(hls_url) = hls_map.get(*key) {
+                        if !hls_url.is_empty() {
+                            final_stream_url = Some(hls_url.clone());
+                            println!("[Douyin Live RS INFO] Fallback HLS URL ({}): {}", key, hls_url);
+                            break;
+                        }
                     }
                 }
             }
 
             // Optional: log if no suitable URL was found in the map
             if final_stream_url.is_none() {
-                println!("[Douyin Live RS INFO] No suitable HLS stream (FULL_HD1, HD1) found in hls_pull_url_map. Map content: {:?}", hls_map);
+                println!("[Douyin Live RS INFO] No suitable HLS stream found in hls_pull_url_map. Map content: {:?}", hls_map);
             }
         } else {
             println!("[Douyin Live RS INFO] hls_pull_url_map not found or is None in stream_url_container.");

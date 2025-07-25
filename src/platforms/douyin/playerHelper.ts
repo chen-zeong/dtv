@@ -15,7 +15,7 @@ export interface DouyinRustDanmakuPayload {
   fans_club_level: number; // from Rust's i32
 }
 
-export async function fetchAndPrepareDouyinStreamConfig(roomId: string): Promise<{ 
+export async function fetchAndPrepareDouyinStreamConfig(roomId: string, quality: string = '原画'): Promise<{ 
   streamUrl: string | null;
   streamType: string | undefined; 
   title?: string | null; 
@@ -30,7 +30,11 @@ export async function fetchAndPrepareDouyinStreamConfig(roomId: string): Promise
 
   try {
     const payloadData = { args: { room_id_str: roomId } };
-    const result = await invoke<LiveStreamInfo>('get_douyin_live_stream_url', { payload: payloadData });
+    // 使用画质参数调用抖音画质切换API
+    const result = await invoke<LiveStreamInfo>('get_douyin_live_stream_url_with_quality', { 
+      payload: payloadData,
+      quality: quality 
+    });
 
     if (result.error_message) {
       console.error(`[DouyinPlayerHelper] Error from backend for room ${roomId}: ${result.error_message}`);
@@ -147,4 +151,4 @@ export async function stopDouyinDanmaku(currentUnlistenFn: (() => void) | null):
   } catch (error) {
     console.error('[DouyinPlayerHelper] Error stopping Douyin danmaku listener:', error);
   }
-} 
+}

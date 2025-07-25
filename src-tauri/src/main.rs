@@ -17,7 +17,7 @@ use platforms::douyin::danmu::signature::generate_douyin_ms_token;
 use platforms::douyin::fetch_douyin_partition_rooms;
 use platforms::douyin::fetch_douyin_room_info;
 use platforms::douyin::fetch_douyin_streamer_info;
-use platforms::douyin::get_douyin_live_stream_url;
+use platforms::douyin::{get_douyin_live_stream_url, get_douyin_live_stream_url_with_quality};
 use platforms::douyin::start_douyin_danmu_listener;
 use platforms::douyu::fetch_categories;
 use platforms::douyu::fetch_douyu_room_info;
@@ -53,6 +53,21 @@ async fn get_stream_url_cmd(room_id: String) -> Result<String, String> {
                 e.to_string()
             );
             format!("Failed to get stream URL: {}", e.to_string())
+        })
+}
+
+#[tauri::command]
+async fn get_stream_url_with_quality_cmd(room_id: String, quality: String) -> Result<String, String> {
+    platforms::douyu::get_stream_url_with_quality(&room_id, &quality)
+        .await
+        .map_err(|e| {
+            eprintln!(
+                "[Rust Error] Failed to get stream URL with quality {} for room {}: {}",
+                quality,
+                room_id,
+                e.to_string()
+            );
+            format!("Failed to get stream URL with quality: {}", e.to_string())
         })
 }
 
@@ -150,6 +165,7 @@ fn main() {
         .manage(proxy::ProxyServerHandle::default())
         .invoke_handler(tauri::generate_handler![
             get_stream_url_cmd,
+            get_stream_url_with_quality_cmd,
             set_stream_url_cmd,
             search_anchor,
             start_danmaku_listener,      // Douyu danmaku start
@@ -165,6 +181,7 @@ fn main() {
             generate_douyin_ms_token,
             fetch_douyin_partition_rooms,
             get_douyin_live_stream_url,
+            get_douyin_live_stream_url_with_quality,
             fetch_douyin_room_info,
             fetch_douyin_streamer_info
         ])

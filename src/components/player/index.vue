@@ -164,6 +164,10 @@ const isFullScreen = ref(false); // True if EITHER native player OR web fullscre
 const osName = ref<string>('');
 const isMacOS = computed(() => osName.value === 'macos');
 
+// 画质切换相关
+const currentQuality = ref<string>('原画');
+const isQualitySwitching = ref(false);
+
 async function initializePlayerAndStream(
   pRoomId: string, 
   pPlatform: StreamingPlatform,
@@ -222,6 +226,13 @@ async function initializePlayerAndStream(
 
     art.value.destroy(true);
     art.value = null;
+    
+    // 重置全屏状态变量，但不强制发送事件
+    // 让新的播放器实例自然地处理全屏状态
+    isInNativePlayerFullscreen.value = false;
+    isInWebFullscreen.value = false;
+    isFullScreen.value = false;
+    
     await nextTick();
   }
 
@@ -235,10 +246,10 @@ async function initializePlayerAndStream(
         isLoadingStream.value = false;
         return; // Stop further execution for stream fetching and player init
       }
-      streamConfig = await getDouyuStreamConfig(pRoomId);
+      streamConfig = await getDouyuStreamConfig(pRoomId, currentQuality.value);
 
     } else if (pPlatform === StreamingPlatform.DOUYIN) {
-      const douyinConfig = await fetchAndPrepareDouyinStreamConfig(pRoomId);
+      const douyinConfig = await fetchAndPrepareDouyinStreamConfig(pRoomId, currentQuality.value);
       
       // Update internal reactive state with fetched Douyin info
       playerTitle.value = douyinConfig.title;
@@ -296,6 +307,32 @@ async function initializePlayerAndStream(
             click: async () => {
               emit('request-player-reload');
             }
+          },
+          {
+            name: 'qualitySelector',
+            position: 'right',
+            index: 10,
+            html: `<span style="font-size: 14px; color: #fff;">${currentQuality.value}</span>`,
+            selector: [
+              {
+                html: '原画',
+                value: '原画',
+                default: currentQuality.value === '原画'
+              },
+              {
+                html: '高清', 
+                value: '高清',
+                default: currentQuality.value === '高清'
+              },
+              {
+                html: '标清',
+                value: '标清',
+                default: currentQuality.value === '标清'
+              }
+            ],
+            onSelect: async (item: any) => {
+              await switchQuality(item.value);
+            }
           }
         ],
         customType: {
@@ -341,6 +378,10 @@ async function initializePlayerAndStream(
       if (pRoomId && pPlatform && art.value) { 
         await startCurrentDanmakuListener(pPlatform, pRoomId, art.value);
       }
+      
+      // 确保播放器初始化后正确同步全屏状态
+      // 这样可以解决刷新或切换画质后关注列表不显示的问题
+      emit('fullscreen-change', isFullScreen.value);
     });
     art.value.on('error', (error: any, _reconnectTime: number) => { 
         console.error('[Player] Artplayer error:', error);
@@ -459,6 +500,47 @@ const retryInitialization = () => {
   emit('request-player-reload');
 };
 
+// 画质切换函数
+const switchQuality = async (quality: string) => {
+  if (isQualitySwitching.value || !props.roomId || !props.platform) {
+    return;
+  }
+  
+  isQualitySwitching.value = true;
+  
+  try {
+    // 保存用户画质偏好
+    localStorage.setItem(`${props.platform}_preferred_quality`, quality);
+    currentQuality.value = quality;
+    
+    // 像刷新按钮一样，完全重新载入播放器
+    // 这样可以确保画质切换的可靠性
+    emit('request-player-reload');
+    
+    console.log(`[Player] 画质切换请求: ${quality}`);
+    
+  } catch (error) {
+    console.error('[Player] 画质切换失败:', error);
+    // 恢复之前的画质设置
+    const savedQuality = localStorage.getItem(`${props.platform}_preferred_quality`);
+    if (savedQuality && ['原画', '高清', '标清'].includes(savedQuality)) {
+      currentQuality.value = savedQuality;
+    }
+  } finally {
+    isQualitySwitching.value = false;
+  }
+};
+
+// 初始化画质偏好
+const initializeQualityPreference = () => {
+  if (props.platform) {
+    const savedQuality = localStorage.getItem(`${props.platform}_preferred_quality`);
+    if (savedQuality && ['原画', '高清', '标清'].includes(savedQuality)) {
+      currentQuality.value = savedQuality;
+    }
+  }
+};
+
 watch([() => props.roomId, () => props.platform, () => props.streamUrl, () => props.avatar, () => props.title, () => props.anchorName, () => props.isLive], 
   async ([newRoomId, newPlatform, newStreamUrl, _newAvatar, _newTitle, _newAnchorName, _newIsLive], [oldRoomId, oldPlatform, _oldStreamUrl, _oldAvatar, _oldTitle, _oldAnchorName, _oldIsLive]) => {
     // Update internal reactive streamer info when props change
@@ -487,6 +569,8 @@ watch([() => props.roomId, () => props.platform, () => props.streamUrl, () => pr
       const needsReInit = hasSwitchedStream || isInitialCall || douyinStreamUrlChanged;
 
       if (needsReInit) {
+        // 在重新初始化时更新画质偏好
+        initializeQualityPreference();
         // Pass oldRoomId and oldPlatform (which might be undefined on initial call)
         // initializePlayerAndStream will handle undefined cleanup IDs gracefully.
         initializePlayerAndStream(newRoomId, newPlatform, newStreamUrl, false, oldRoomId, oldPlatform);
@@ -526,6 +610,9 @@ watch([() => props.roomId, () => props.platform, () => props.streamUrl, () => pr
 );
 
 onMounted(async () => {
+  // 初始化画质偏好
+  initializeQualityPreference();
+  
   if (!props.roomId || !props.platform) {
     if (props.initialError) {
       if (props.initialError.includes('主播未开播')) {

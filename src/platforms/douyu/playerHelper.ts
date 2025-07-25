@@ -20,24 +20,24 @@ export interface DouyuRustDanmakuPayload {
   uid?: string; // only for uenter
 }
 
-export async function getDouyuStreamConfig(roomId: string): Promise<{ streamUrl: string, streamType: string | undefined }> {
+export async function getDouyuStreamConfig(roomId: string, quality: string = '原画'): Promise<{ streamUrl: string, streamType: string | undefined }> {
   let finalStreamUrl: string | null = null;
   let streamType: string | undefined = undefined;
   const MAX_STREAM_FETCH_ATTEMPTS = 1; // Changed to 1 attempt
 
   for (let attempt = 1; attempt <= MAX_STREAM_FETCH_ATTEMPTS; attempt++) {
     try {
-      const playbackDetails = await fetchStreamPlaybackDetails(roomId, Platform.DOUYU);
-      if (playbackDetails && playbackDetails.primaryUrl) {
-        finalStreamUrl = playbackDetails.primaryUrl;
-        streamType = playbackDetails.format; // 直接使用后端返回的 format
-        if (streamType === 'm3u8') {
-            console.warn('[DouyuPlayerHelper] Received m3u8 format, but expected flv. Overriding to flv.');
-            streamType = 'flv';
-        }
-        break; 
+      // 使用画质参数调用斗鱼画质切换API
+      const streamUrl = await invoke<string>('get_stream_url_with_quality_cmd', {
+        roomId: roomId,
+        quality: quality
+      });
+      
+      if (streamUrl) {
+        finalStreamUrl = streamUrl;
+        streamType = 'flv'; // 斗鱼默认使用flv格式
+        break;
       } else {
-        // This case might be redundant if fetchStreamPlaybackDetails throws an error for empty/null URLs
         throw new Error('斗鱼直播流地址获取为空。');
       }
     } catch (e: any) {
@@ -150,4 +150,4 @@ export async function stopDouyuProxy(): Promise<void> {
   } catch (e) {
     console.error('[DouyuPlayerHelper] Error stopping proxy server:', e);
   }
-} 
+}
