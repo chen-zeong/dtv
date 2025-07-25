@@ -4,10 +4,12 @@ on:
   push:
     tags:
       - 'v*.*.*'
+      - '*.*'
+      - '*.*.*'
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to build (e.g., v1.0.0)'
+        description: 'Version to build (e.g., v1.0.0 or 1.0)'
         required: false
         default: 'manual'
 
@@ -51,16 +53,16 @@ jobs:
           choco install protoc
           refreshenv
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
           version: latest
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
