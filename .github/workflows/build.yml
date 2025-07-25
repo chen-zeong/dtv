@@ -1,5 +1,10 @@
 name: Build and Release
 
+permissions:
+  contents: write
+  packages: write
+  actions: read
+
 on:
   push:
     tags:
@@ -51,7 +56,7 @@ jobs:
         if: matrix.platform == 'windows-latest'
         run: |
           choco install protoc
-          refreshenv
+          echo "C:\ProgramData\chocolatey\lib\protoc\tools" >> $GITHUB_PATH
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
