@@ -98,7 +98,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch, onUnmounted, shallowRef, nextTick, computed } from 'vue';
+import { ref, onMounted, watch, onUnmounted, shallowRef, nextTick } from 'vue';
 import Artplayer from 'artplayer';
 import artplayerPluginDanmuku from 'artplayer-plugin-danmuku';
 
@@ -113,10 +113,7 @@ import { fetchAndPrepareDouyinStreamConfig, startDouyinDanmakuListener, stopDouy
 
 import StreamerInfo from '../StreamerInfo/index.vue';
 import DanmuList from '../DanmuList/index.vue';
-
-// OS detection
 import { platform } from '@tauri-apps/plugin-os';
-import { WebviewWindow } from '@tauri-apps/api/webviewWindow'; // Import WebviewWindow
 
 const props = defineProps<{
   roomId: string | null;
@@ -162,7 +159,6 @@ const isFullScreen = ref(false); // True if EITHER native player OR web fullscre
 
 // OS specific states
 const osName = ref<string>('');
-const isMacOS = computed(() => osName.value === 'macos');
 
 // 画质切换相关
 const currentQuality = ref<string>('原画');

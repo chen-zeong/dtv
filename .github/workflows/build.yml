@@ -1,0 +1,119 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to build (e.g., v1.0.0)'
+        required: false
+        default: 'manual'
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: 'macos-latest'
+            args: '--target aarch64-apple-darwin'
+            arch: 'arm64'
+          - platform: 'macos-latest'
+            args: '--target x86_64-apple-darwin'
+            arch: 'intel'
+          - platform: 'ubuntu-22.04'
+            args: ''
+            arch: 'x64'
+          - platform: 'windows-latest'
+            args: ''
+            arch: 'x64'
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies (Ubuntu only)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf protobuf-compiler
+
+      - name: Install protobuf (macOS)
+        if: matrix.platform == 'macos-latest'
+        run: brew install protobuf
+
+      - name: Install protobuf (Windows)
+        if: matrix.platform == 'windows-latest'
+        run: |
+          choco install protoc
+          refreshenv
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && matrix.arch == 'arm64' && 'aarch64-apple-darwin' || matrix.platform == 'macos-latest' && matrix.arch == 'intel' && 'x86_64-apple-darwin' || '' }}
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - name: Install frontend dependencies
+        run: pnpm install
+
+      - name: Build the app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ github.event.inputs.version || github.ref_name }}
+          releaseName: 'DTV ${{ github.event.inputs.version || github.ref_name }}'
+          releaseBody: |
+            ## 🎉 DTV Release ${{ github.event.inputs.version || github.ref_name }}
+            
+            ### 📦 安装包下载
+            - **macOS (Apple Silicon)**: DTV_${{ github.event.inputs.version || github.ref_name }}_aarch64.dmg
+            - **macOS (Intel)**: DTV_${{ github.event.inputs.version || github.ref_name }}_x64.dmg
+            - **Windows**: DTV_${{ github.event.inputs.version || github.ref_name }}_x64-setup.exe
+            - **Linux (AppImage)**: DTV_${{ github.event.inputs.version || github.ref_name }}_amd64.AppImage
+            - **Linux (Deb)**: DTV_${{ github.event.inputs.version || github.ref_name }}_amd64.deb
+            
+            ### 🔧 安装说明
+            - **macOS**: 下载对应架构的 .dmg 文件，双击安装
+            - **Windows**: 下载 .exe 文件，右键以管理员身份运行
+            - **Linux**: 下载 .AppImage 文件并添加执行权限，或安装 .deb 包
+            
+            ### ⚠️ 注意事项
+            - 首次运行可能需要在系统设置中允许应用运行
+            - macOS 用户可能需要在「系统偏好设置 > 安全性与隐私」中允许应用
+          releaseDraft: false
+          prerelease: false
+          args: ${{ matrix.args }}
+
+  # 创建统一的 Release（仅在所有平台构建完成后运行）
+  create-release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Create Release Summary
+        run: |
+          echo "✅ 所有平台构建完成！"
+          echo "📦 发布版本: ${{ github.event.inputs.version || github.ref_name }}"
+          echo "🎯 支持平台: macOS (Intel + ARM), Windows, Linux"

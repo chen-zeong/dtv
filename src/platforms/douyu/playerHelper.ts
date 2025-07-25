@@ -2,9 +2,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen, type Event as TauriEvent } from '@tauri-apps/api/event';
 import Artplayer from 'artplayer';
 import { Ref } from 'vue';
-import { Platform } from '../common/types';
 import type { DanmakuMessage } from '../../components/player/types'; // Corrected path
-import { fetchStreamPlaybackDetails } from '../common/apiService';
 import { parseDouyuDanmakuMessage } from './parsers'; // <-- Import the parser
 
 // Specific type for Douyu's raw danmaku payload from Rust event
