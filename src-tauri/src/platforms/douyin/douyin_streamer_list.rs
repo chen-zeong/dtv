@@ -37,11 +37,7 @@ pub struct DouyinPartitionRoomData {
     #[serde(rename = "web_rid")] // Capture the top-level web_rid from JSON
     pub actual_web_rid_for_frontend: String, // Field to hold the true web_rid
 
-    pub room: DouyinRoom, // The nested room object
-
-                          // You can also add other fields from this level if needed, e.g.:
-                          // pub uniq_id: Option<String>,
-                          // pub tag_name: Option<String>,
+    pub room: DouyinRoom,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

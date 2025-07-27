@@ -5,13 +5,8 @@ use reqwest;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use tokio::sync::oneshot;
-
-// mod douyu; // Removed old direct module
 mod platforms;
-mod proxy; // Added platforms module
-           // use platforms::douyu; // No longer need this specific use if functions are directly available via platforms::douyu::* from main
-
-// Assuming API commands are correctly re-exported or defined in these modules
+mod proxy;
 use platforms::common::DouyinDanmakuState;
 use platforms::douyin::danmu::signature::generate_douyin_ms_token;
 use platforms::douyin::fetch_douyin_partition_rooms;
@@ -23,7 +18,6 @@ use platforms::douyu::fetch_categories;
 use platforms::douyu::fetch_douyu_room_info;
 use platforms::douyu::fetch_three_cate;
 use platforms::douyu::{fetch_live_list, fetch_live_list_for_cate3};
-// get_stream_url and search_anchor will be directly available via platforms::douyu now
 
 #[derive(Default, Clone)]
 pub struct StreamUrlStore {
@@ -34,13 +28,6 @@ pub struct StreamUrlStore {
 #[derive(Default, Clone)]
 pub struct DouyuDanmakuHandles(Arc<Mutex<HashMap<String, oneshot::Sender<()>>>>);
 
-// DanmakuState remains for the danmaku listener
-// struct DanmakuState(Mutex<Option<mpsc::Sender<()>>>); // Old Douyu state, to be replaced by DouyuDanmakuHandles
-
-// DouyinDanmakuState is already defined in and re-exported by platforms::common::types
-// No need to redefine it here if it's correctly imported.
-
-// This is the command that should be used for getting stream URL if it interacts with StreamUrlStore
 #[tauri::command]
 async fn get_stream_url_cmd(room_id: String) -> Result<String, String> {
     // Call the actual function to fetch the stream URL from the new location
@@ -158,7 +145,6 @@ fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_os::init())
         .manage(client) // Manage the reqwest client
-        // .manage(DanmakuState(Mutex::new(None))) // Old Douyu state, remove this
         .manage(DouyuDanmakuHandles::default()) // Manage new DouyuDanmakuHandles
         .manage(DouyinDanmakuState::default()) // Manage DouyinDanmakuState
         .manage(StreamUrlStore::default())

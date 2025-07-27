@@ -1,8 +1,6 @@
 use tauri::Emitter;
 use tokio::sync::mpsc as tokio_mpsc;
 
-// Assuming DouyinDanmakuState is defined in main.rs (crate root)
-// and common::GetStreamUrlPayload is accessible.
 
 #[tauri::command]
 pub async fn start_douyin_danmu_listener(

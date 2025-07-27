@@ -225,9 +225,3 @@ async fn fetch_categories_douyu_raw() -> Result<Vec<RawFrontendCate1Item>, Strin
         Err(e) => Err(format!("Error fetching categories: {}", e)),
     }
 }
-
-// Ensure this file is part of a module if you have a lib.rs or main.rs that expects it.
-// For example, in main.rs or lib.rs:
-// pub mod category;
-// And ensure this file is named category.rs in the correct directory.
-// And ensure this file is named category.rs in the correct directory.

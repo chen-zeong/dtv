@@ -9,9 +9,6 @@ pub struct DouyuGameCategory {
     pub game_url: Option<String>, // URL path segment for this category
     pub game_icon: Option<String>, // URL for category icon
     pub game_src: Option<String>, // URL for a larger banner/image
-                         // pub count: Option<i32>,      // Sometimes live stream count is included
-                         // pub is_child_cate: Option<i32>, // Indicator for sub-categories
-                         // pub child_cates: Option<Vec<DouyuGameCategory>>, // Nested sub-categories
 }
 
 // Represents a group of categories (e.g., "热门游戏", "网游竞技")
@@ -28,11 +25,6 @@ pub struct DouyuCategoryGroup {
 // This often comes nested under a `data` field.
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct DouyuCategoriesData {
-    // Example: Douyu API might return `game_cate` or `cate_list` or similar for groups
-    // Adjust field name based on actual API response.
-    // For example, if the groups are under a field named `cateInfo` which is an array:
-    // pub cateInfo: Vec<DouyuCategoryGroup>,
-    // Or if it's directly an array of groups:
     #[serde(alias = "gameList", alias = "cate_list")] // Common names Douyu uses
     pub category_groups: Vec<DouyuCategoryGroup>,
 }
@@ -69,9 +61,6 @@ pub struct DouyuRoomsInCateListData {
     pub ct: Option<i32>, // Current item count or total items
 }
 
-// This is the typical structure for Douyu list responses (like rooms in a category)
-// pub type DouyuRoomsInCateResponse = DouyuBaseResponse<DouyuRoomsInCateListData>;
-// Using a concrete struct for clarity if needed for specific command return types
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct DouyuRoomsInCateResponse {
     pub error: i32,

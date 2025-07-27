@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 // use serde_json::Value; // For parts of the response that are complex or not fully typed - REMOVED IF UNUSED
-use std::collections::HashMap; // For flv_pull_url, hls_pull_url_map
+use std::collections::HashMap; // For flv_pull_url
 
 // --- Public struct for the Tauri command result ---
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -8,7 +8,7 @@ pub struct LiveStreamInfo {
     pub title: Option<String>,
     pub anchor_name: Option<String>,
     pub avatar: Option<String>,
-    pub stream_url: Option<String>, // This will hold the final chosen FLV or HLS URL
+    pub stream_url: Option<String>, // This will hold the final chosen FLV URL
     pub error_message: Option<String>,
 }
 
@@ -61,8 +61,6 @@ pub struct AvatarData {
 pub struct StreamUrlContainer {
     #[serde(rename = "flv_pull_url")]
     pub flv_pull_url: Option<HashMap<String, String>>, // e.g., {"FULL_HD1": "url1", "HD1": "url2"}
-    #[serde(rename = "hls_pull_url_map")] // As seen in demo, could also be hls_pull_url
-    pub hls_pull_url_map: Option<HashMap<String, String>>,
     #[serde(rename = "live_core_sdk_data")]
     pub live_core_sdk_data: Option<LiveCoreSdkData>, // For the nested JSON string
                                                      // pub default_resolution: Option<String>,
@@ -107,7 +105,6 @@ pub struct StreamQualityDetail {
 #[allow(dead_code)] // Allow dead code for fields used by serde
 pub struct StreamLinks {
     pub flv: Option<String>,
-    pub hls: Option<String>, // Added HLS field based on typical structure
                              // pub cdn_multi_arc: Option<Value>,
                              // pub sdk_params: Option<String>,
 }

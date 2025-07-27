@@ -14,14 +14,6 @@ use crate::StreamUrlStore;
 
 const DOUYIN_API_REFERER: &str = "https://live.douyin.com/";
 
-// Struct to handle flexible argument deserialization - REMOVED as we use PayloadWrapperForRoomId from common
-// #[derive(Deserialize, Debug)]
-// pub struct GetDouyinLiveStreamUrlArgs {
-//     #[serde(alias = "roomId")]
-//     #[serde(alias = "roomIdStr")]
-//     room_id_str: Option<String>,
-// }
-
 #[command]
 pub async fn get_douyin_live_stream_url(
     app_handle: AppHandle,
@@ -300,50 +292,6 @@ pub async fn get_douyin_live_stream_url_with_quality(
                     final_stream_url = Some(initial_flv_url_candidate.to_string());
                 }
             }
-        }
-    }
-    // 如果 final_stream_url 在此之后为 None (由于上述逻辑或初始就为None), 则会尝试 HLS
-
-    // If no valid FLV stream (with "pull-flv" or successfully redirected) was found from sdk_data, try HLS stream from hls_pull_url_map
-    if final_stream_url.is_none() {
-        println!("[Douyin Live RS INFO] No valid FLV stream from sdk_data, or it was discarded. Attempting HLS from hls_pull_url_map.");
-        if let Some(hls_map) = &stream_url_container.hls_pull_url_map {
-            // 根据画质选择对应的HLS流
-            let hls_quality_key = match quality.as_str() {
-                "原画" => "FULL_HD1",
-                "高清" => "HD1", 
-                "标清" => "SD1",
-                _ => "FULL_HD1", // 默认原画
-            };
-            
-            // 尝试获取指定画质的HLS流
-            if let Some(hls_url) = hls_map.get(hls_quality_key) {
-                if !hls_url.is_empty() {
-                    final_stream_url = Some(hls_url.clone());
-                    println!("[Douyin Live RS INFO] Found {} HLS URL: {}", quality, hls_url);
-                }
-            }
-            
-            // 如果指定画质没有找到，尝试降级
-            if final_stream_url.is_none() {
-                let fallback_keys = ["FULL_HD1", "HD1", "SD1"];
-                for key in fallback_keys.iter() {
-                    if let Some(hls_url) = hls_map.get(*key) {
-                        if !hls_url.is_empty() {
-                            final_stream_url = Some(hls_url.clone());
-                            println!("[Douyin Live RS INFO] Fallback HLS URL ({}): {}", key, hls_url);
-                            break;
-                        }
-                    }
-                }
-            }
-
-            // Optional: log if no suitable URL was found in the map
-            if final_stream_url.is_none() {
-                println!("[Douyin Live RS INFO] No suitable HLS stream found in hls_pull_url_map. Map content: {:?}", hls_map);
-            }
-        } else {
-            println!("[Douyin Live RS INFO] hls_pull_url_map not found or is None in stream_url_container.");
         }
     }
 

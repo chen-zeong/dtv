@@ -1,12 +1,7 @@
-// src-tauri/src/api/three_cate.rs
 use serde::Deserialize;
-// use tauri::command; // Removed as #[tauri::command] macro should suffice
 use crate::platforms::common::types_rust::{CommonPlatformCategoryRust, SupportedPlatformRust};
 use log::{error, info};
 
-// Assumed structure for a single item in the "three_cate" API response array
-// Based on typical Douyu structures, fields like "tag_id", "tag_name", "icon" or "pic" are common.
-// The actual API might use slightly different names or nesting.
 #[derive(Deserialize, Debug, Clone)]
 struct DouyuThreeCateItemRaw {
     #[serde(alias = "tagId", alias = "cateId")] // Common ID fields
@@ -15,19 +10,7 @@ struct DouyuThreeCateItemRaw {
     name: String,
     #[serde(alias = "icon", alias = "pic", alias = "iconUrl")] // Common icon fields
     icon_url: Option<String>,
-    // Add other fields if known from the API response, e.g., parent_id, short_name
-    // parent_id: Option<String>, // Could be useful to link back to the C2 category
 }
-
-// DouyuThreeCateData struct is no longer needed and will be removed.
-/*
-#[derive(Deserialize, Debug)]
-struct DouyuThreeCateData {
-    #[serde(alias = "list", alias = "cateList")] // Common list field names
-    items: Vec<DouyuThreeCateItemRaw>,
-    // Other fields like page count, total items, etc., if present
-}
-*/
 
 #[derive(Deserialize, Debug)]
 struct DouyuThreeCateApiResponse {
