@@ -46,7 +46,7 @@
                 <line x1="1" y1="1" x2="23" y2="23" stroke-width="2"></line> 
               </svg>
             </div>
-            <h3>😴 播放失败了</h3>
+            <h3>😴 获取直播流失败了</h3>
             <p>主播当前未开播，请稍后再来。</p>
             <button @click="retryInitialization" class="retry-btn">再试一次</button>
           </div>

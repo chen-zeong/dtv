@@ -19,7 +19,7 @@
 - 📺 直播观看：同时观看斗鱼和抖音双平台主播，真正的原画画质
 - 💬 弹幕显示：实时显示直播间弹幕，只显示聊天弹幕，不显示礼物等其他类型弹幕
 - ⭐ 主播收藏：支持收藏喜欢的主播，支持收藏列表手动拖拽排序
-- 📋 支持平台：Mac(Intel+Arm)，Windows，Linux(包括Ubuntu和各类发行版)
+- 📋 支持平台：Mac(Intel+Arm)，Windows(Win7需要自行安装Webview2)，Linux(包括Ubuntu和各类发行版)
 - 🌓 主题切换：支持明暗主题切换
 
 ## 软件截图
@@ -43,18 +43,20 @@
 ## 编译
 
 ```bash
+安装protobuf
+
 # 克隆项目
 git clone https://github.com/c-zeong/dtv.git
 cd dtv
 
 # 安装依赖
-npm install
+pnpm install
 
 # 开发调试
-npm run tauri dev
+pnpm tauri dev
 
 # 打包构建
-npm run tauri build      # 构建当前系统的安装包
+pnpm tauri build      # 构建当前系统的安装包
 ```
 
 ##  参考
