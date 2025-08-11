@@ -1,17 +1,14 @@
-use deno_core::{JsRuntime, RuntimeOptions}; // 替换 rquickjs 导入
+use deno_core::{JsRuntime, RuntimeOptions};
 use isahc::config::{Configurable, RedirectPolicy};
 use isahc::{http, prelude::*, HttpClient, Request};
 use md5::Digest;
 use regex::Regex;
 use serde::Deserialize;
-use std::time::{SystemTime, UNIX_EPOCH}; // Added for JSON deserialization
+use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Deserialize, Debug)]
 struct RoomInfoData {
-    // Assuming '1' is live, '2' is offline/not broadcasting, '3' might be replay/video.
-    // This field name might need adjustment based on actual API response.
     room_status: Option<String>,
-    // Add other fields if needed, e.g., room_name, owner_name
 }
 
 #[derive(Deserialize, Debug)]
@@ -28,8 +25,10 @@ struct DouYu {
 
 impl DouYu {
     async fn new(rid: &str) -> Result<Self, Box<dyn std::error::Error>> {
+        // 创建直接连接的HTTP客户端，不使用任何代理
         let client = HttpClient::builder()
             .redirect_policy(RedirectPolicy::Follow)
+            .proxy(None) // 明确禁用代理
             .default_header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
             .build()?;
 
@@ -44,6 +43,58 @@ impl DouYu {
         let mut hasher = md5::Md5::new();
         hasher.update(data.as_bytes());
         format!("{:x}", hasher.finalize())
+    }
+
+    async fn execute_js_functions(&self, func_ub9: &str, rid: &str, did: &str, t10: &str) -> Result<String, Box<dyn std::error::Error>> {
+        let mut runtime = JsRuntime::new(RuntimeOptions::default());
+        
+        // 执行第一个函数
+        let func_ub9_static = String::from(func_ub9);
+        runtime.execute_script("[douyu]", deno_core::FastString::from(func_ub9_static))?;
+        let js_result = runtime.execute_script(
+            "[douyu]",
+            deno_core::FastString::from(String::from("ub98484234()")),
+        )?;
+        
+        // 获取 JavaScript 执行结果
+        let res = {
+            let scope = &mut runtime.handle_scope();
+            let result = js_result.open(scope);
+            result.to_rust_string_lossy(scope)
+        };
+        
+        // 提取v参数
+        let re = Regex::new(r"v=(\d+)")?;
+        let v = re
+            .captures(&res)
+            .ok_or("v parameter not found")?
+            .get(1)
+            .ok_or("No capture group")?
+            .as_str();
+        
+        let rb = Self::md5(&format!("{}{}{}{}", rid, did, t10, v));
+        
+        // 构造签名函数
+        let func_sign = res.replace("return rt;})", "return rt;}");
+        let func_sign = func_sign.replace("(function (", "function sign(");
+        let func_sign = func_sign.replace("CryptoJS.MD5(cb).toString()", &format!("\"{}\"", rb));
+        
+        let func_sign_static = String::from(func_sign);
+        runtime.execute_script("[douyu]", deno_core::FastString::from(func_sign_static))?;
+        
+        let sign_call = format!("sign(\"{}\", \"{}\", \"{}\");", rid, did, t10);
+        
+        let sign_call_static = String::from(sign_call);
+        let js_params = runtime.execute_script("[douyu]", deno_core::FastString::from(sign_call_static))?;
+        
+        // 获取签名结果
+        let params = {
+            let scope = &mut runtime.handle_scope();
+            let result = js_params.open(scope);
+            result.to_rust_string_lossy(scope)
+        };
+        
+        Ok(params)
     }
 
     async fn get_pc_js(&self, cdn: &str, rate: i32) -> Result<String, Box<dyn std::error::Error>> {
@@ -72,6 +123,7 @@ impl DouYu {
                 )));
             }
         }
+        
         // 获取PC网页内容
         let request = Request::builder()
             .method(http::Method::GET)
@@ -82,6 +134,7 @@ impl DouYu {
             .body(())?;
 
         let text = self.client.send(request)?.text()?;
+        
         // 提取JS函数
         let re = Regex::new(r"(vdwdae325w_64we[\s\S]*function ub98484234[\s\S]*?)function")?;
         let result = re
@@ -90,66 +143,18 @@ impl DouYu {
             .get(1)
             .ok_or("No capture group")?
             .as_str();
-
+        
         let re_eval = Regex::new(r"eval.*?;\}")?;
         let func_ub9 = re_eval.replace_all(result, "strc;}");
-
-        let mut runtime = JsRuntime::new(RuntimeOptions::default());
-
-        // 将字符串转换为静态字符串
-        let func_ub9_static = String::from(func_ub9);
-        runtime.execute_script("[douyu]", deno_core::FastString::from(func_ub9_static))?;
-        let js_result = runtime.execute_script(
-            "[douyu]",
-            deno_core::FastString::from(String::from("ub98484234()")),
-        )?;
-
-        // 获取 JavaScript 执行结果
-        let res = {
-            let scope = &mut runtime.handle_scope();
-            let result = js_result.open(scope);
-            result.to_rust_string_lossy(scope)
-        };
-
-        // 提取v参数
-        let re = Regex::new(r"v=(\d+)")?;
-        let v = re
-            .captures(&res)
-            .ok_or("v parameter not found")?
-            .get(1)
-            .ok_or("No capture group")?
-            .as_str();
-
+        
         let t10 = SystemTime::now()
             .duration_since(UNIX_EPOCH)?
             .as_secs()
             .to_string();
-
-        let rb = Self::md5(&format!("{}{}{}{}", self.rid, self.did, &t10, v));
-
-        // 构造签名函数
-        let func_sign = res.replace("return rt;})", "return rt;}");
-        let func_sign = func_sign.replace("(function (", "function sign(");
-        let func_sign = func_sign.replace("CryptoJS.MD5(cb).toString()", &format!("\"{}\"", rb));
-
-        let func_sign_static = String::from(func_sign);
-        runtime.execute_script("[douyu]", deno_core::FastString::from(func_sign_static))?;
-
-        let sign_call = format!("sign(\"{}\", \"{}\", \"{}\");", self.rid, self.did, t10);
-
-        let sign_call_static = String::from(sign_call);
-        let js_params =
-            runtime.execute_script("[douyu]", deno_core::FastString::from(sign_call_static))?;
-
-        // 获取签名结果
-        let mut params = {
-            let scope = &mut runtime.handle_scope();
-            let result = js_params.open(scope);
-            result.to_rust_string_lossy(scope)
-        };
-
+        
+        let mut params = self.execute_js_functions(&func_ub9, &self.rid, &self.did, &t10).await?;
         params.push_str(&format!("&cdn={}&rate={}", cdn, rate));
-
+        
         // 获取真实URL
         let url = format!("https://www.douyu.com/lapi/live/getH5Play/{}", self.rid);
         let request = Request::builder()
@@ -161,17 +166,16 @@ impl DouYu {
             .body(params)?;
 
         let mut response = self.client.send(request)?;
-
         let json: serde_json::Value = response.json()?;
-
+        
         let data = json["data"]
             .as_object()
             .ok_or("No data field in response")?;
         let rtmp_url = data["rtmp_url"].as_str().ok_or("No rtmp_url field")?;
         let rtmp_live = data["rtmp_live"].as_str().ok_or("No rtmp_live field")?;
-
+        
         let final_url = format!("{}/{}", rtmp_url, rtmp_live);
-
+        
         Ok(final_url)
     }
 
@@ -233,7 +237,7 @@ impl DouYu {
 pub async fn get_stream_url(room_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     let douyu = DouYu::new(room_id).await?;
     let url = douyu.get_real_url().await?;
-    Ok(url) // 直接返回实际的流地址
+    Ok(url)
 }
 
 pub async fn get_stream_url_with_quality(room_id: &str, quality: &str) -> Result<String, Box<dyn std::error::Error>> {

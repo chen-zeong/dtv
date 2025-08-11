@@ -45,8 +45,9 @@ pub async fn get_douyin_live_stream_url_with_quality(
         });
     }
 
+    // 使用直连HTTP客户端，绕过所有代理设置
     let mut http_client =
-        HttpClient::new().map_err(|e| format!("Failed to create HttpClient: {}", e))?;
+        HttpClient::new_direct_connection().map_err(|e| format!("Failed to create direct connection HttpClient: {}", e))?;
 
     if let Err(e) = setup_douyin_cookies(&mut http_client, &room_id_str).await {
         return Ok(crate::platforms::common::LiveStreamInfo {

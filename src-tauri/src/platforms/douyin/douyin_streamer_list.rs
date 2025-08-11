@@ -1,3 +1,4 @@
+use crate::platforms::common::http_client::HttpClient;
 use reqwest::header::{HeaderMap, HeaderValue, COOKIE};
 use serde::{Deserialize, Serialize};
 use tauri::State; // Removed SET_COOKIE
@@ -83,10 +84,9 @@ pub async fn fetch_douyin_partition_rooms(
 ) -> Result<DouyinLiveListResponse, String> {
     let count: i32 = 15; // Number of items requested per page, explicitly typed as i32
 
-    // For this test, create a new client, similar to the user's test snippet
-    let local_client = reqwest::Client::builder()
-        .build()
-        .map_err(|e| format!("Failed to build local reqwest client: {}", e))?;
+    // 使用直连HTTP客户端，绕过所有代理设置
+    let local_client = HttpClient::new_direct_connection()
+        .map_err(|e| format!("Failed to create direct connection HttpClient: {}", e))?;
 
     // Use hardcoded ttwid and odin_tt from the user's working test for now
     let hardcoded_odin_tt = "54c68ba8fa8ce792ad017c55272d171c283baedc87b2f6282ca8706df295cbd89c5d55449b587b7ebe0a2e352e394a86975955c9ed7f98f209996bdca2749479619aceecc7b75c2374e146b5a722b2e1";
@@ -106,21 +106,9 @@ pub async fn fetch_douyin_partition_rooms(
         count, offset, partition, partition_type, ms_token
     );
 
-    let request_builder = local_client
-        .request(reqwest::Method::GET, &url)
-        .headers(headers);
-
-    match request_builder.send().await {
-        Ok(response) => {
-            let initial_status = response.status();
-            if initial_status.is_success() {
-                let response_text = response
-                    .text()
-                    .await
-                    .map_err(|e| format!("Failed to read response text: {}", e))?;
-                return match serde_json::from_str::<DouyinPartitionApiResponse>(&response_text) {
-                    Ok(api_response) => {
-                        if api_response.status_code == 0 {
+    match local_client.get_json_with_headers::<DouyinPartitionApiResponse>(&url, Some(headers)).await {
+        Ok(api_response) => {
+            if api_response.status_code == 0 {
                             let mut frontend_rooms = Vec::new();
                             let received_rooms_count = api_response.data.data.len(); // Number of rooms actually received from this API call
 
@@ -168,26 +156,10 @@ pub async fn fetch_douyin_partition_rooms(
                             })
                         } else {
                             Err(format!(
-                                "Douyin API returned non-zero status code: {}. Response: {}",
-                                api_response.status_code, response_text
+                                "Douyin API returned non-zero status code: {}",
+                                api_response.status_code
                             ))
                         }
-                    }
-                    Err(e) => Err(format!(
-                        "Failed to parse Douyin room list JSON: {}. Response: {}",
-                        e, response_text
-                    )),
-                };
-            } else {
-                let error_body = response
-                    .text()
-                    .await
-                    .unwrap_or_else(|_| "Failed to read error body".to_string());
-                Err(format!(
-                    "Failed to fetch Douyin room list: HTTP Status {}. Body: {}",
-                    initial_status, error_body
-                ))
-            }
         }
         Err(e) => Err(format!("Network error fetching Douyin room list: {}", e)),
     }

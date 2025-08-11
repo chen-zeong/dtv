@@ -1,6 +1,5 @@
+use crate::platforms::common::http_client::HttpClient;
 use regex::Regex;
-use reqwest::cookie::Jar;
-use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json;
 use std::sync::Arc;
@@ -25,17 +24,15 @@ pub struct DouyinLiveWebFetcher {
     pub ttwid: Option<String>,
     pub room_id: Option<String>,
     pub user_agent: String,
-    pub http_client: Client,
+    pub http_client: HttpClient,
     pub(crate) _ws_stream: Option<Arc<Mutex<WebSocketStream<MaybeTlsStream<TcpStream>>>>>,
 }
 
 impl DouyinLiveWebFetcher {
     pub fn new(live_id: &str) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
-        let cookie_jar = Arc::new(Jar::default());
-        let http_client = Client::builder()
-            .cookie_provider(cookie_jar)
-            .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-            .build()?;
+        // 使用直连HTTP客户端，绕过所有代理设置
+        let http_client = HttpClient::new_direct_connection()
+            .map_err(|e| format!("Failed to create direct connection HttpClient: {}", e))?;
 
         Ok(DouyinLiveWebFetcher {
             live_id: live_id.to_string(),
@@ -53,7 +50,8 @@ impl DouyinLiveWebFetcher {
         }
 
         let live_url = "https://live.douyin.com/";
-        let response = self.http_client.get(live_url).send().await?;
+        let response = self.http_client.get_with_cookies(live_url).await
+            .map_err(|e| format!("Failed to get response from {}: {}", live_url, e))?;
 
         let ttwid_val = response
             .cookies()
@@ -85,14 +83,16 @@ impl DouyinLiveWebFetcher {
         );
 
         let url = format!("https://live.douyin.com/{}", self.live_id);
-        let response = self
-            .http_client
-            .get(&url)
-            .header("Cookie", cookie_header)
-            .send()
-            .await?;
-
-        let text = response.text().await?;
+        
+        let mut headers = reqwest::header::HeaderMap::new();
+        headers.insert(
+            reqwest::header::COOKIE,
+            reqwest::header::HeaderValue::from_str(&cookie_header)
+                .map_err(|e| format!("Failed to create cookie header: {}", e))?
+        );
+        
+        let text = self.http_client.get_text_with_headers(&url, Some(headers)).await
+            .map_err(|e| format!("Failed to get room page: {}", e))?;
         println!(
             "HTML Response (first 500 chars): {}",
             &text[..std::cmp::min(500, text.len())]
@@ -123,15 +123,20 @@ impl DouyinLiveWebFetcher {
             room_id_val // room_id_str is the actual numerical room ID
         );
 
-        let response = self
-            .http_client
-            .get(&url)
-            .header("User-Agent", &self.user_agent)
-            .header("Cookie", format!("ttwid={};", ttwid_val))
-            .send()
-            .await?;
-
-        let data: serde_json::Value = response.json().await?;
+        let mut headers = reqwest::header::HeaderMap::new();
+        headers.insert(
+            reqwest::header::USER_AGENT,
+            reqwest::header::HeaderValue::from_str(&self.user_agent)
+                .map_err(|e| format!("Failed to create user-agent header: {}", e))?
+        );
+        headers.insert(
+            reqwest::header::COOKIE,
+            reqwest::header::HeaderValue::from_str(&format!("ttwid={};", ttwid_val))
+                .map_err(|e| format!("Failed to create cookie header: {}", e))?
+        );
+        
+        let data: serde_json::Value = self.http_client.get_json_with_headers(&url, Some(headers)).await
+            .map_err(|e| format!("Failed to get room status: {}", e))?;
 
         // This part is mostly for printing/debugging in the original code
         if let Some(room_data_top) = data.get("data") {
@@ -209,26 +214,20 @@ pub async fn fetch_douyin_room_info(live_id: String) -> Result<DouyinFollowListR
         room_id_str // room_id_str (the numerical one we fetched)
     );
 
-    let response = fetcher
-        .http_client
-        .get(&url)
-        .header("User-Agent", &fetcher.user_agent)
-        .header("Cookie", format!("ttwid={};", ttwid))
-        .send()
-        .await
-        .map_err(|e| format!("Failed to send request to web/enter: {}", e))?;
-
-    let response_text = response
-        .text()
-        .await
-        .map_err(|e| format!("Failed to get response text: {}", e))?;
-    // println!("[fetch_douyin_room_info] Response text: {}", response_text);
-    let data: serde_json::Value = serde_json::from_str(&response_text).map_err(|e| {
-        format!(
-            "Failed to parse JSON from web/enter: {}. Response text: {}",
-            e, response_text
-        )
-    })?;
+    let mut headers = reqwest::header::HeaderMap::new();
+    headers.insert(
+        reqwest::header::USER_AGENT,
+        reqwest::header::HeaderValue::from_str(&fetcher.user_agent)
+            .map_err(|e| format!("Failed to create user-agent header: {}", e))?
+    );
+    headers.insert(
+        reqwest::header::COOKIE,
+        reqwest::header::HeaderValue::from_str(&format!("ttwid={};", ttwid))
+            .map_err(|e| format!("Failed to create cookie header: {}", e))?
+    );
+    
+    let data: serde_json::Value = fetcher.http_client.get_json_with_headers(&url, Some(headers)).await
+        .map_err(|e| format!("Failed to get room info from web/enter: {}", e))?;
 
     // Parse data based on typical Douyin API structure
     let room_data_top = data
