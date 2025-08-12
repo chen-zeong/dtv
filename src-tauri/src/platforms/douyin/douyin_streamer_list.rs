@@ -102,7 +102,7 @@ pub async fn fetch_douyin_partition_rooms(
     );
 
     let url = format!(
-        "https://live.douyin.com/webcast/web/partition/detail/room/v2/?aid=6383&app_name=douyin_web&live_id=1&device_platform=web&language=zh-CN&enter_from=web_homepage_hot&cookie_enabled=true&screen_width=1920&screen_height=1080&browser_language=zh-CN&browser_platform=MacIntel&browser_name=Chrome&browser_version=120.0.0.0&count={}&offset={}&partition={}&partition_type={}&req_from=2&msToken={}",
+        "https://live.douyin.com/webcast/web/partition/detail/room/v2/?aid=6383&app_name=douyin_web&live_id=1&device_platform=web&language=zh-CN&enter_from=web_homepage_hot&cookie_enabled=true&screen_width=1920&screen_height=1080&browser_language=zh-CN&browser_platform=MacIntel&browser_name=Chrome&browser_version=120.0.0.0&count={}&offset={}&partition={}&partition_type={}&req_from=2&msToken={}&a_bogus=D7sfgF7iON8bKd%2FGmOiievelRgdlNs8yQrTxbS%2FKSNzrcw0Y%2FSNHicSsjxzJ32CZGuphkCI7iEslbjdcsIXz11npomkDuziW-zAnn0sLMqqsT0JQEHREShzzuwsnUb4q-%2Fc5Elk51sBe2DQW9rAdlpMGH5TaQmRDWHFWdM0cc9WYfSyPm3aROZEAPfqumb243D%3D%3D",
         count, offset, partition, partition_type, ms_token
     );
 
