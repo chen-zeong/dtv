@@ -114,13 +114,15 @@ impl DouyinLiveWebFetcher {
     pub async fn get_room_status(
         &mut self,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let room_id_val = self.get_room_id().await?;
-        let ttwid_val = self.get_ttwid().await?;
+        let room_id_val = self.get_room_id().await?;      
+        let a_bogus: String = "EJ0fkF67Dx%2FfPdKGuObyCHlU2lxMNB8yQZixWCluCNzJOXUTjuP7gcbZboqs4doR3bpsiHIHTx0lYEncTdUs1ZrkumkfSmzyJzACVgsL8qwsGFJQgHfZeukFqwBN0Rsqa%2FcIE1g78sBK2d5W9HAQldBaC5Pa5QmDWHqydM9bj9WbDAyPu3rROMEWiEwPBQ2-rf%3D%3D".to_string();
+        let ms_token: String ="djIQSLNfdq3BLVY9-hIFbpJVQs238wUtsl1_Zvc2-rkmUSUy44JUt-L_jMcpo--kcwpK8Sc4C7fUvX-QL-mrqE1RM0E65tIZ8Rz4UoVXrzbCAhvwNKSX0TG8r1KNdI3K9dbBvI3Lb6W62nr7LStyw-41pkfZkFW2Vfi9zqnnLDSM-NMhCJTrxQ%3D%3D".to_string();
+        let ttwid_val = "ttwid=1%7CMzira2CT1P-CLey42gr0QsEGL_Wmq3Yg5PQF2X412hY%7C1677897397%7C0df7a1da2a44ccac7dda848d236c8d5276d3eae070dfb3fe6df6e86fbd896d93".to_string();
 
         let url = format!(
-            "https://live.douyin.com/webcast/room/web/enter/?aid=6383&app_name=douyin_web&live_id=1&device_platform=web&language=zh-CN&enter_from=web_live&cookie_enabled=true&screen_width=1536&screen_height=864&browser_language=zh-CN&browser_platform=Win32&browser_name=Edge&browser_version=133.0.0.0&web_rid={}&room_id_str={}&enter_source&is_need_double_stream=false&insert_task_id&live_reason&msToken=DhGN36NLvoF_bcmmYnMkuEXAz1Xc-KxBTcyMV1GBOEXIDuILaUL0ofgo2tMzPrlDYKJl3NFfVr2HYCiziloJa897T5ZYVvTO2mj5ljdfffy9tOYCMziJS99Hij2z7AjcMySyz_WoFqA4phIiq5_1AFsPdi6HzNQE2xCGYN1X4vYa&a_bogus=YJ0fD7WixoWcOdMtmCj0yRIUx0V%2FrT8yw-TQWbKuCNOQcZUGYmP-haSMGxug-2KdCRpkhCVH7V0%2FbDdczIXi119pompkukiRbUIc98so2qqpYzw%2FLqSTSzzzowBrU5sq-AnnEIk51sBCId5WnrI%2FlQQG75Pa5ObDSHFRd%2Fsbb9ATDSyP83aRO%2FLWOfwc55947D%3D%3D",
+            "https://live.douyin.com/webcast/room/web/enter/?aid=6383&app_name=douyin_web&live_id=1&device_platform=web&language=zh-CN&enter_from=web_homepage_follow&cookie_enabled=true&screen_width=1536&screen_height=864&browser_language=zh-CN&browser_platform=Win32&browser_name=Edge&browser_version=133.0.0.0&web_rid={}&room_id_str={}&enter_source&is_need_double_stream=false&insert_task_id&live_reason&msToken={}&a_bogus={}",
             self.live_id, // web_rid should be self.live_id (which is the original ID from URL, e.g. username or a numerical ID)
-            room_id_val // room_id_str is the actual numerical room ID
+            room_id_val,ms_token,a_bogus, // room_id_str is the actual numerical room ID
         );
 
         let mut headers = reqwest::header::HeaderMap::new();
@@ -209,7 +211,7 @@ pub async fn fetch_douyin_room_info(live_id: String) -> Result<DouyinFollowListR
 
     // Construct the URL for the web/enter endpoint
     let url = format!(
-        "https://live.douyin.com/webcast/room/web/enter/?aid=6383&app_name=douyin_web&live_id=1&device_platform=web&language=zh-CN&enter_from=web_live&cookie_enabled=true&screen_width=1536&screen_height=864&browser_language=zh-CN&browser_platform=Win32&browser_name=Edge&browser_version=133.0.0.0&web_rid={}&room_id_str={}&enter_source&is_need_double_stream=false&insert_task_id&live_reason&msToken=DhGN36NLvoF_bcmmYnMkuEXAz1Xc-KxBTcyMV1GBOEXIDuILaUL0ofgo2tMzPrlDYKJl3NFfVr2HYCiziloJa897T5ZYVvTO2mj5ljdfffy9tOYCMziJS99Hij2z7AjcMySyz_WoFqA4phIiq5_1AFsPdi6HzNQE2xCGYN1X4vYa&a_bogus=YJ0fD7WixoWcOdMtmCj0yRIUx0V%2FrT8yw-TQWbKuCNOQcZUGYmP-haSMGxug-2KdCRpkhCVH7V0%2FbDdczIXi119pompkukiRbUIc98so2qqpYzw%2FLqSTSzzzowBrU5sq-AnnEIk51sBCId5WnrI%2FlQQG75Pa5ObDSHFRd%2Fsbb9ATDSyP83aRO%2FLWOfwc55947D%3D%3D",
+        "https://live.douyin.com/webcast/room/web/enter/?aid=6383&app_name=douyin_web&live_id=1&device_platform=web&language=zh-CN&enter_from=web_homepage_follow&cookie_enabled=true&screen_width=1536&screen_height=864&browser_language=zh-CN&browser_platform=Win32&browser_name=Edge&browser_version=133.0.0.0&web_rid={}&room_id_str={}&enter_source&is_need_double_stream=false&insert_task_id&live_reason&msToken=DhGN36NLvoF_bcmmYnMkuEXAz1Xc-KxBTcyMV1GBOEXIDuILaUL0ofgo2tMzPrlDYKJl3NFfVr2HYCiziloJa897T5ZYVvTO2mj5ljdfffy9tOYCMziJS99Hij2z7AjcMySyz_WoFqA4phIiq5_1AFsPdi6HzNQE2xCGYN1X4vYa&a_bogus=YJ0fD7WixoWcOdMtmCj0yRIUx0V%2FrT8yw-TQWbKuCNOQcZUGYmP-haSMGxug-2KdCRpkhCVH7V0%2FbDdczIXi119pompkukiRbUIc98so2qqpYzw%2FLqSTSzzzowBrU5sq-AnnEIk51sBCId5WnrI%2FlQQG75Pa5ObDSHFRd%2Fsbb9ATDSyP83aRO%2FLWOfwc55947D%3D%3D",
         live_id, // web_rid (this should be the original live_id from input)
         room_id_str // room_id_str (the numerical one we fetched)
     );

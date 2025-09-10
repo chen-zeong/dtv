@@ -90,7 +90,7 @@ pub async fn fetch_douyin_partition_rooms(
 
     // Use hardcoded ttwid and odin_tt from the user's working test for now
     let hardcoded_odin_tt = "54c68ba8fa8ce792ad017c55272d171c283baedc87b2f6282ca8706df295cbd89c5d55449b587b7ebe0a2e352e394a86975955c9ed7f98f209996bdca2749479619aceecc7b75c2374e146b5a722b2e1";
-    let hardcoded_ttwid = "1%7CujFiEGend0Qdgp4z6JtMVxrMQOb8X-3eVIqJb01WC7M%7C1747990241%7Cc80885daaa44b982ca725011bf5309c94db3aaf4431f89f1792c0455b8d8197c";
+    let hardcoded_ttwid = "1%7CdVwg8DUriPlMDlcGA6XsVP8FZW2vzZEtEnoAxpXQxP8%7C1757517390%7C954f1753f33b21b018d616437b3f053026c22f17cde00bccd655bfb0d71056c5";
 
     let cookie_string = format!("odin_tt={}; ttwid={}", hardcoded_odin_tt, hardcoded_ttwid);
 

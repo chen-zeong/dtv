@@ -22,7 +22,7 @@ pub type WsStream = tokio_tungstenite::WebSocketStream<MaybeTlsStream<TcpStream>
 // This function will establish the connection and spawn send/heartbeat tasks.
 // It returns the read half of the stream and the sender for the outgoing message channel.
 pub async fn connect_and_manage_websocket(
-    fetcher: &DouyinLiveWebFetcher, // Changed to immutable reference as we only read from it now
+    _fetcher: &DouyinLiveWebFetcher, // Changed to immutable reference as we only read from it now
     room_id: &str,
     ttwid: &str,
 ) -> Result<(SplitStream<WsStream>, Sender<WsMessage>), Box<dyn std::error::Error + Send + Sync>> {
@@ -59,7 +59,13 @@ pub async fn connect_and_manage_websocket(
 
     let mut client_request = final_wss_url_str.into_client_request()?;
     let headers = client_request.headers_mut();
-    headers.insert("User-Agent", fetcher.user_agent.parse()?);
+    headers.insert("accept", "application/json, text/plain, */*".parse()?);
+    headers.insert("accept-language", "zh-CN,zh;q=0.9,en;q=0.8".parse()?);
+    headers.insert("cache-control", "no-cache".parse()?);
+    headers.insert("pragma", "no-cache".parse()?);
+    headers.insert("sec-websocket-extensions", "permessage-deflate; client_max_window_bits".parse()?);
+    headers.insert("sec-websocket-version", "13".parse()?);
+    headers.insert("user-agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36".parse()?);
     headers.insert("Cookie", ws_cookie_header.parse()?);
 
     let (ws_stream, _response) = connect_async(client_request).await?;

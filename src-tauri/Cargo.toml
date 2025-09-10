@@ -1,6 +1,6 @@
 [package]
 name = "dtv"
-version = "3.3.0"
+version = "1.3.0"
 description = "A Tauri App"
 authors = ["c-zeong"]
 edition = "2021"

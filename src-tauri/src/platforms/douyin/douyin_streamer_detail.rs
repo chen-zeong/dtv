@@ -2,7 +2,7 @@ use crate::platforms::common::http_client::HttpClient;
 use crate::platforms::douyin::models::*;
 use crate::platforms::douyin::utils::setup_douyin_cookies;
 use reqwest;
-use reqwest::header::REFERER; // For setting referer for the API call
+use reqwest::header::{REFERER, ACCEPT, ACCEPT_LANGUAGE, USER_AGENT, HeaderName}; // For setting referer for the API call
 use tauri::{command, AppHandle, State}; // Added AppHandle and State // 确保 reqwest 被导入
                                                                      // use serde::Deserialize; // Removed unused import
                                                                      // use crate::platforms::common::GetStreamUrlPayload; // Will use full path
@@ -12,7 +12,7 @@ use tauri::{command, AppHandle, State}; // Added AppHandle and State // 确保 r
 use crate::proxy::{start_proxy, ProxyServerHandle};
 use crate::StreamUrlStore;
 
-const DOUYIN_API_REFERER: &str = "https://live.douyin.com/";
+
 
 #[command]
 pub async fn get_douyin_live_stream_url(
@@ -60,10 +60,21 @@ pub async fn get_douyin_live_stream_url_with_quality(
         });
     }
 
-    http_client.insert_header(REFERER, DOUYIN_API_REFERER)?;
+    // 设置与JS文件一致的headers
+    http_client.insert_header(ACCEPT, "application/json, text/plain, */*")?;
+    http_client.insert_header(ACCEPT_LANGUAGE, "zh-CN,zh;q=0.9")?;
+    http_client.insert_header(HeaderName::from_static("priority"), "u=1, i")?;
+    http_client.insert_header(REFERER, "https://live.douyin.com/7254458840")?;
+    http_client.insert_header(HeaderName::from_static("sec-ch-ua"), "\"Chromium\";v=\"140\", \"Not=A?Brand\";v=\"24\", \"Google Chrome\";v=\"140\"")?;
+    http_client.insert_header(HeaderName::from_static("sec-ch-ua-mobile"), "?0")?;
+    http_client.insert_header(HeaderName::from_static("sec-ch-ua-platform"), "\"macOS\"")?;
+    http_client.insert_header(HeaderName::from_static("sec-fetch-dest"), "empty")?;
+    http_client.insert_header(HeaderName::from_static("sec-fetch-mode"), "cors")?;
+    http_client.insert_header(HeaderName::from_static("sec-fetch-site"), "same-origin")?;
+    http_client.insert_header(USER_AGENT, "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36")?;
 
     let api_url = format!(
-        "https://live.douyin.com/webcast/room/web/enter/?aid=6383&app_name=douyin_web&live_id=1&device_platform=web&language=zh-CN&enter_from=web_live&cookie_enabled=true&screen_width=1920&screen_height=1080&browser_language=zh-CN&browser_platform=MacIntel&browser_name=Chrome&browser_version=116.0.0.0&enter_source&is_need_double_stream=false&insert_task_id&live_reason&msToken=DhGN36NLvoF_bcmmYnMkuEXAz1Xc-KxBTcyMV1GBOEXIDuILaUL0ofgo2tMzPrlDYKJl3NFfVr2HYCiziloJa897T5ZYVvTO2mj5ljdfffy9tOYCMziJS99Hij2z7AjcMySyz_WoFqA4phIiq5_1AFsPdi6HzNQE2xCGYN1X4vYa&a_bogus=YJ0fD7WixoWcOdMtmCj0yRIUx0V%2FrT8yw-TQWbKuCNOQcZUGYmP-haSMGxug-2KdCRpkhCVH7V0%2FbDdczIXi119pompkukiRbUIc98so2qqpYzw%2FLqSTSzzzowBrU5sq-AnnEIk51sBCId5WnrI%2FlQQG75Pa5ObDSHFRd%2Fsbb9ATDSyP83aRO%2FLWOfwc55947D%3D%3D&web_rid={}",
+        "https://live.douyin.com/webcast/room/web/enter/?aid=6383&app_name=douyin_web&live_id=1&device_platform=web&language=zh-CN&enter_from=web_homepage_follow&cookie_enabled=true&screen_width=1920&screen_height=1080&browser_language=zh-CN&browser_platform=MacIntel&browser_name=Chrome&browser_version=140.0.0.0&web_rid={}&enter_source=&is_need_double_stream=false&insert_task_id=&live_reason=&msToken=djIQSLNfdq3BLVY9-hIFbpJVQs238wUtsl1_Zvc2-rkmUSUy44JUt-L_jMcpo--kcwpK8Sc4C7fUvX-QL-mrqE1RM0E65tIZ8Rz4UoVXrzbCAhvwNKSX0TG8r1KNdI3K9dbBvI3Lb6W62nr7LStyw-41pkfZkFW2Vfi9zqnnLDSM-NMhCJTrxQ%3D%3D&a_bogus=EJ0fkF67Dx%2FfPdKGuObyCHlU2lxMNB8yQZixWCluCNzJOXUTjuP7gcbZboqs4doR3bpsiHIHTx0lYEncTdUs1ZrkumkfSmzyJzACVgsL8qwsGFJQgHfZeukFqwBN0Rsqa%2FcIE1g78sBK2d5W9HAQldBaC5Pa5QmDWHqydM9bj9WbDAyPu3rROMEWiEwPBQ2-rf%3D%3D",
         room_id_str
     );
 
@@ -71,11 +82,22 @@ pub async fn get_douyin_live_stream_url_with_quality(
         Ok(resp) => resp,
         Err(e) => {
             // Log the raw text response on error as well, if possible
-            let _raw_error_text = http_client
+            let raw_error_text = http_client
                 .get_text(&api_url)
                 .await
                 .unwrap_or_else(|_| "Failed to get raw error text".to_string());
-            // println!("[Douyin Live RS] API request failed. Raw error text (if any): {}", raw_error_text);
+            
+            // 获取调试信息
+            let debug_headers = http_client.get_debug_headers();
+            let debug_cookies = http_client.get_debug_cookies(&api_url);
+            
+            println!("[Douyin Live RS] API request failed.");
+            println!("URL: {}", api_url);
+            println!("Headers:\n{}", debug_headers);
+            println!("Cookies: {}", debug_cookies);
+            println!("Error: {}", e);
+            println!("Raw error text: {}", raw_error_text);
+            
             return Ok(crate::platforms::common::LiveStreamInfo {
                 title: None,
                 anchor_name: None,

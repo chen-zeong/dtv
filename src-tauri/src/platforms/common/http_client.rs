@@ -211,4 +211,24 @@ impl HttpClient {
             .map_err(|e| format!("Failed to read text response from {}: {}", url, e))?;
         Ok(text_response)
     }
+
+    /// 获取当前设置的headers信息用于调试
+    pub fn get_debug_headers(&self) -> String {
+        let mut debug_info = String::new();
+        for (name, value) in &self.headers {
+            if let Ok(value_str) = value.to_str() {
+                debug_info.push_str(&format!("  {}: {}\n", name, value_str));
+            } else {
+                debug_info.push_str(&format!("  {}: [non-UTF8 value]\n", name));
+            }
+        }
+        debug_info
+    }
+
+    /// 获取当前cookies信息用于调试
+    pub fn get_debug_cookies(&self, _url: &str) -> String {
+        // 由于reqwest::Client的cookie_store方法在当前版本中不可用
+        // 我们返回一个提示信息，表明cookies是通过headers设置的
+        "Cookies are set via headers (check Headers section above for Cookie header)".to_string()
+    }
 }
