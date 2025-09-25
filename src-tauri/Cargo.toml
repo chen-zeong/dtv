@@ -1,6 +1,6 @@
 [package]
 name = "dtv"
-version = "1.3.0"
+version = "1"
 description = "A Tauri App"
 authors = ["c-zeong"]
 edition = "2021"
@@ -48,6 +48,10 @@ anyhow = "1.0"
 once_cell = "1.8"
 hex = "0.4"
 
+# Force curl to use platform TLS (SecureTransport on macOS) and avoid OpenSSL linkage
+curl = { version = "0.4", default-features = false, features = ["ssl"] }
+# Disable default features on curl-sys to prevent openssl-sys being pulled in
+curl-sys = { version = "0.4", default-features = false }
 # Dependencies for Douyin Danmaku
 prost = "0.12"
 prost-types = "0.12"
