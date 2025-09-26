@@ -75,7 +75,7 @@ jobs:
 
       - name: Install Python dependencies for V8 build (macOS)
         if: matrix.platform == 'macos-latest'
-        run: python3 -m pip install setuptools
+        run: python3 -m pip install --break-system-packages --user setuptools
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
