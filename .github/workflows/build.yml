@@ -88,6 +88,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          V8_FROM_SOURCE: ${{ matrix.arch != 'intel' && '1' || '' }}
         with:
           tagName: ${{ github.event.inputs.version || github.ref_name }}
           releaseName: 'DTV ${{ github.event.inputs.version || github.ref_name }}'
