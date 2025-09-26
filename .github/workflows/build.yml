@@ -69,6 +69,14 @@ jobs:
           node-version: '20'
           cache: 'pnpm'
 
+      - name: Setup MSVC environment
+        if: matrix.platform == 'windows-latest'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Install Python dependencies for V8 build (macOS)
+        if: matrix.platform == 'macos-latest'
+        run: python3 -m pip install setuptools
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
