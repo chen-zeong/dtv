@@ -24,12 +24,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: 'macos-latest'
-            args: '--target aarch64-apple-darwin'
-            arch: 'arm64'
-          - platform: 'macos-latest'
-            args: '--target x86_64-apple-darwin'
-            arch: 'intel'
           - platform: 'ubuntu-22.04'
             args: ''
             arch: 'x64'
@@ -48,9 +42,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf protobuf-compiler
 
-      - name: Install protobuf (macOS)
-        if: matrix.platform == 'macos-latest'
-        run: brew install protobuf
 
       - name: Install protobuf (Windows)
         if: matrix.platform == 'windows-latest'
@@ -69,18 +60,10 @@ jobs:
           node-version: '20'
           cache: 'pnpm'
 
-      - name: Setup MSVC environment
-        if: matrix.platform == 'windows-latest'
-        uses: ilammy/msvc-dev-cmd@v1
 
-      - name: Install Python dependencies for V8 build (macOS)
-        if: matrix.platform == 'macos-latest'
-        run: python3 -m pip install --break-system-packages --user setuptools
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.platform == 'macos-latest' && matrix.arch == 'arm64' && 'aarch64-apple-darwin' || matrix.platform == 'macos-latest' && matrix.arch == 'intel' && 'x86_64-apple-darwin' || '' }}
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2
@@ -96,7 +79,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          V8_FROM_SOURCE: ${{ matrix.arch != 'intel' && '1' || '' }}
         with:
           tagName: ${{ github.event.inputs.version || github.ref_name }}
           releaseName: 'DTV ${{ github.event.inputs.version || github.ref_name }}'

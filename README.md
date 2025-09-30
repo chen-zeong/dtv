@@ -57,6 +57,9 @@ pnpm tauri dev
 
 # 打包构建
 pnpm tauri build      # 构建当前系统的安装包
+
+# 打包 ARM64 版本（Intel Mac 上交叉编译）
+pnpm tauri build --target aarch64-apple-darwin
 ```
 
 ##  参考
