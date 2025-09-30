@@ -58,33 +58,49 @@ pub async fn fetch_douyin_streamer_info(
     );
     println!("[Douyin Info RS] Constructed API URL: {}", api_url);
 
-    let api_response: DouyinApiResponse = match http_client.get_json(&api_url).await {
-        Ok(resp) => resp,
-        Err(e) => {
-            let raw_error_text = http_client
-                .get_text(&api_url)
-                .await
-                .unwrap_or_else(|_| "Failed to get raw error text".to_string());
-            
-            // 获取调试信息
-            let debug_headers = http_client.get_debug_headers();
-            let debug_cookies = http_client.get_debug_cookies(&api_url);
-            
-            println!("[Douyin Info RS] API request failed.");
-            println!("URL: {}", api_url);
-            println!("Headers:\n{}", debug_headers);
-            println!("Cookies: {}", debug_cookies);
-            println!("Error: {}", e);
-            println!("Raw error text: {}", raw_error_text);
-            
-            return Ok(crate::platforms::common::LiveStreamInfo {
-                title: None,
-                anchor_name: None,
-                avatar: None,
-                stream_url: None,
-                status: None,
-                error_message: Some(format!("API request failed: {}. URL: {}", e, api_url)),
-            });
+    let api_response: DouyinApiResponse = {
+        let mut attempt: u32 = 1;
+        loop {
+            match http_client.get_json(&api_url).await {
+                Ok(resp) => break resp,
+                Err(e) => {
+                    if attempt >= 5 {
+                        let raw_error_text = http_client
+                            .get_text(&api_url)
+                            .await
+                            .unwrap_or_else(|_| "Failed to get raw error text".to_string());
+                        let debug_headers = http_client.get_debug_headers();
+                        let debug_cookies = http_client.get_debug_cookies(&api_url);
+
+                        println!("[Douyin Info RS] API request failed after {} attempts.", attempt);
+                        println!("URL: {}", api_url);
+                        println!("Headers:\n{}", debug_headers);
+                        println!("Cookies: {}", debug_cookies);
+                        println!("Error: {}", e);
+                        println!("Raw error text: {}", raw_error_text);
+
+                        return Ok(crate::platforms::common::LiveStreamInfo {
+                            title: None,
+                            anchor_name: None,
+                            avatar: None,
+                            stream_url: None,
+                            status: None,
+                            error_message: Some(format!(
+                                "API request failed after {} attempts: {}. URL: {}",
+                                attempt, e, api_url
+                            )),
+                        });
+                    } else {
+                        println!(
+                            "[Douyin Streamer Info WARN] API request attempt {} failed: {}. Retrying...",
+                            attempt, e
+                        );
+                        // 直接重试，不等待
+                        attempt += 1;
+                        continue;
+                    }
+                }
+            }
         }
     };
 
