@@ -1,16 +1,5 @@
 <template>
   <div class="player-view">
-    <div class="cookie-panel">
-      <details>
-        <summary>可选 Cookie 设置（某些房间需要登录态）</summary>
-        <textarea v-model="cookieInput" placeholder="在此粘贴你的 B站 Cookie（不会上传，仅本地存储）"></textarea>
-        <div class="cookie-actions">
-          <button @click="saveCookie">保存到本地</button>
-          <button @click="clearCookie">清除</button>
-        </div>
-        <p class="cookie-tip">提示：仅在本机保存于 localStorage，用于后端请求头。</p>
-      </details>
-    </div>
     <MainPlayer
       :key="playerKey"
       :room-id="props.roomId"

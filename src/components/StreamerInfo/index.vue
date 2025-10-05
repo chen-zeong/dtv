@@ -11,6 +11,18 @@
           <div class="streamer-meta-row">
             <span class="streamer-name">{{ computedNickname }}</span>
             <span :class="['status-tag', statusClass]">{{ getStatusText }}</span>
+            <!-- Cookie status button for Bilibili -->
+            <span v-if="props.platform === Platform.BILIBILI" class="cookie-status">
+              <button class="cookie-status-btn" @click="openCookieModal">
+                <span v-if="isCookieConfigured" class="cookie-configured">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                  已设置 Cookie
+                </span>
+                <span v-else class="cookie-unset">
+                  未设置 Cookie
+                </span>
+              </button>
+            </span>
             <span v-if="computedViewerCount > 0" class="viewers-tag">
               <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5M12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5s5 2.24 5-5s-2.24 5-5 5m0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3s3-1.34 3-3s-1.34-3-3-3"/></svg>
               {{ formattedViewerCount }}
@@ -33,6 +45,20 @@
               <span class="follow-text">{{ isFollowing ? '取关' : '关注' }}</span>
             </button>
           </div>
+        </div>
+      </div>
+
+      <!-- Cookie modal -->
+      <div v-if="isCookieModalOpen" class="cookie-modal-backdrop" @click.self="closeCookieModal">
+        <div class="cookie-modal">
+          <h4>B站 Cookie 设置</h4>
+          <textarea v-model="cookieInput" placeholder="在此粘贴你的 B站 Cookie（仅本地存储）"></textarea>
+          <div class="cookie-modal-actions">
+            <button class="primary" @click="saveCookie">保存</button>
+            <button class="danger" @click="clearCookie">清除</button>
+            <button @click="closeCookieModal">取消</button>
+          </div>
+          <p class="cookie-tip">提示：仅保存在本机的 localStorage，用于后端请求头。</p>
         </div>
       </div>
     </div>
@@ -122,6 +148,22 @@
     color: rgba(255, 255, 255, 0.85);
     font-weight: 500;
   }
+
+  /* Cookie status button */
+  .cookie-status-btn {
+    font-size: 0.75rem;
+    padding: 3px 8px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: rgba(255, 255, 255, 0.85);
+    background: rgba(255, 255, 255, 0.08);
+  }
+  .cookie-configured { color: #32b65c; display: inline-flex; align-items: center; gap: 4px; }
+  .cookie-unset { color: #888888; }
   
   .streamer-actions {
     display: flex;
@@ -293,6 +335,54 @@
     height: 12px;
     opacity: 0.9;
   }
+
+  /* Cookie modal styles */
+  .cookie-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+  .cookie-modal {
+    width: 520px;
+    max-width: 90vw;
+    background: #1f232b;
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+    border-radius: 12px;
+    padding: 16px;
+    color: #fff;
+  }
+  .cookie-modal h4 { margin: 0 0 10px 0; font-size: 16px; }
+  .cookie-modal textarea {
+    width: 100%;
+    min-height: 120px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.06);
+    color: #fff;
+    padding: 8px;
+    box-sizing: border-box;
+  }
+  .cookie-modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+  }
+  .cookie-modal-actions button {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    background: rgba(255,255,255,0.12);
+    color: #fff;
+  }
+  .cookie-modal-actions button.primary { background: #439ed9; }
+  .cookie-modal-actions button.danger { background: #d94343; }
+  .cookie-tip { margin-top: 8px; font-size: 12px; color: rgba(255,255,255,0.7); }
   
   @keyframes idPulse {
     0% { text-shadow: 0 0 2px rgba(251, 114, 153, 0); }
@@ -465,6 +555,62 @@
     }
     return count.toString()
   })
+
+  // Proxy support for Bilibili avatar images
+  const proxyBase = ref<string | null>(null)
+  const ensureProxyStarted = async () => {
+    if (!proxyBase.value) {
+      try {
+        const base = await invoke<string>('start_static_proxy_server')
+        proxyBase.value = base
+      } catch (e) {
+        console.error('[StreamerInfo] Failed to start static proxy server', e)
+      }
+    }
+  }
+  const proxify = (url?: string): string => {
+    if (!url) return ''
+    if (proxyBase.value) {
+      return `${proxyBase.value}/image?url=${encodeURIComponent(url)}`
+    }
+    return url
+  }
+
+  // Cookie status UI state
+  const isCookieModalOpen = ref(false)
+  const cookieInput = ref<string>('')
+  const isCookieConfigured = computed(() => !!cookieInput.value && cookieInput.value.trim().length > 0)
+
+  const openCookieModal = () => { isCookieModalOpen.value = true }
+  const closeCookieModal = () => { isCookieModalOpen.value = false }
+  const saveCookie = async () => {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('bilibili_cookie', cookieInput.value.trim())
+      }
+      isCookieModalOpen.value = false
+      // Refresh details to reflect new cookie usage
+      if (props.platform === Platform.BILIBILI) {
+        await fetchRoomDetails()
+      }
+    } catch (e) {
+      console.error('[StreamerInfo] saveCookie error:', e)
+    }
+  }
+  const clearCookie = async () => {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem('bilibili_cookie')
+      }
+      cookieInput.value = ''
+      isCookieModalOpen.value = false
+      if (props.platform === Platform.BILIBILI) {
+        await fetchRoomDetails()
+      }
+    } catch (e) {
+      console.error('[StreamerInfo] clearCookie error:', e)
+    }
+  }
   
   const fetchRoomDetails = async () => {
     if (props.platform === Platform.DOUYIN) {
@@ -499,6 +645,46 @@
         error.value = e?.message || '获取虎牙房间信息失败';
         roomDetails.value = null;
         avatarUrl.value = props.avatar || '';
+        showAvatarText.value = !props.avatar;
+      } finally {
+        isLoading.value = false;
+      }
+      return;
+    }
+
+    // 新增：B 站主播信息
+    if (props.platform === Platform.BILIBILI) {
+      try {
+        isLoading.value = true;
+        error.value = null;
+        roomDetails.value = null;
+        showAvatarText.value = false;
+
+        const payload = { args: { room_id_str: props.roomId } };
+        const savedCookie = (typeof localStorage !== 'undefined') ? (localStorage.getItem('bilibili_cookie') || null) : null;
+        const res: any = await invoke('fetch_bilibili_streamer_info', {
+          payload,
+          cookie: savedCookie,
+        });
+
+        const mapped: StreamerDetails = {
+          roomId: props.roomId,
+          platform: 'bilibili',
+          roomTitle: (res && res.title) ? res.title : (props.title ?? '直播间标题加载中...'),
+          nickname: (res && res.anchor_name) ? res.anchor_name : (props.anchorName ?? props.roomId),
+          avatarUrl: (res && res.avatar) ? res.avatar : (props.avatar ?? null),
+          isLive: !!(res && res.status === 1),
+        };
+        roomDetails.value = mapped;
+        await ensureProxyStarted();
+        avatarUrl.value = proxify(normalizeAvatarUrl(mapped.avatarUrl));
+        showAvatarText.value = !avatarUrl.value;
+      } catch (e: any) {
+        console.error(`[StreamerInfo] BILIBILI fetchRoomDetails error for ${props.roomId}:`, e);
+        error.value = e?.message || '获取 B 站房间信息失败';
+        roomDetails.value = null;
+        await ensureProxyStarted();
+        avatarUrl.value = proxify(normalizeAvatarUrl(props.avatar || ''));
         showAvatarText.value = !props.avatar;
       } finally {
         isLoading.value = false;
@@ -576,6 +762,10 @@
   };
   
   onMounted(() => {
+    // Load saved cookie for status display
+    if (typeof localStorage !== 'undefined') {
+      cookieInput.value = localStorage.getItem('bilibili_cookie') || ''
+    }
     fetchRoomDetails()
     nextTick(() => {
       updateHighlightVars();
