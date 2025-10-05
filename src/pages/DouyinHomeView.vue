@@ -1,6 +1,7 @@
 <template>
   <div class="douyin-home-view-layout">
-    <DouyinCategory 
+    <CommonCategory 
+      :categories-data="douyinCategoriesData as any"
       @category-selected="onCategorySelected" 
       class="douyin-category-section"
     />
@@ -13,13 +14,14 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import DouyinCategory from '../components/DouyinCategory/index.vue'
-import type { DouyinCategorySelectedEvent } from '../components/DouyinCategory/types';
+import CommonCategory from '../components/CommonCategory/index.vue'
+import { douyinCategoriesData } from '../platforms/douyin/douyinCategoriesData'
 import DouyinStreamerList from '../components/DouyinStreamerList/index.vue';
+import type { CategorySelectedEvent } from '../platforms/common/categoryTypes.ts'
 
-const currentSelectedCategory = ref<DouyinCategorySelectedEvent | null>(null);
+const currentSelectedCategory = ref<CategorySelectedEvent | null>(null);
 
-const onCategorySelected = (categoryEvent: DouyinCategorySelectedEvent) => {
+const onCategorySelected = (categoryEvent: CategorySelectedEvent) => {
   currentSelectedCategory.value = categoryEvent;
 }
 </script>
@@ -41,4 +43,4 @@ const onCategorySelected = (categoryEvent: DouyinCategorySelectedEvent) => {
   overflow-y: auto; /* Allow internal scrolling for streamer list if content overflows */
   min-height: 0; /* Important for flex-grow in a flex column */
 }
-</style> 
+</style>

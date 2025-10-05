@@ -1,0 +1,2409 @@
+[
+    {
+        "title": "网游",
+        "href": "/category/2",
+        "id": 2,
+        "subcategories": [
+            {
+                "title": "英雄联盟",
+                "href": "/category/2_86",
+                "id": "86",
+                "parent_id": "2"
+            },
+            {
+                "title": "无畏契约",
+                "href": "/category/2_329",
+                "id": "329",
+                "parent_id": "2"
+            },
+            {
+                "title": "三角洲行动",
+                "href": "/category/2_878",
+                "id": "878",
+                "parent_id": "2"
+            },
+            {
+                "title": "CS:GO",
+                "href": "/category/2_89",
+                "id": "89",
+                "parent_id": "2"
+            },
+            {
+                "title": "吃鸡行动",
+                "href": "/category/2_80",
+                "id": "80",
+                "parent_id": "2"
+            },
+            {
+                "title": "APEX英雄",
+                "href": "/category/2_240",
+                "id": "240",
+                "parent_id": "2"
+            },
+            {
+                "title": "暗区突围：无限",
+                "href": "/category/2_919",
+                "id": "919",
+                "parent_id": "2"
+            },
+            {
+                "title": "守望先锋",
+                "href": "/category/2_87",
+                "id": "87",
+                "parent_id": "2"
+            },
+            {
+                "title": "DOTA2",
+                "href": "/category/2_92",
+                "id": "92",
+                "parent_id": "2"
+            },
+            {
+                "title": "永劫无间",
+                "href": "/category/2_666",
+                "id": "666",
+                "parent_id": "2"
+            },
+            {
+                "title": "漫威争锋",
+                "href": "/category/2_922",
+                "id": "922",
+                "parent_id": "2"
+            },
+            {
+                "title": "命运方舟",
+                "href": "/category/2_590",
+                "id": "590",
+                "parent_id": "2"
+            },
+            {
+                "title": "魔兽世界",
+                "href": "/category/2_83",
+                "id": "83",
+                "parent_id": "2"
+            },
+            {
+                "title": "炉石传说",
+                "href": "/category/2_91",
+                "id": "91",
+                "parent_id": "2"
+            },
+            {
+                "title": "解限机",
+                "href": "/category/2_915",
+                "id": "915",
+                "parent_id": "2"
+            },
+            {
+                "title": "终极角逐（The Finals）",
+                "href": "/category/2_846",
+                "id": "846",
+                "parent_id": "2"
+            },
+            {
+                "title": "彩虹六号",
+                "href": "/category/2_601",
+                "id": "601",
+                "parent_id": "2"
+            },
+            {
+                "title": "逃离塔科夫",
+                "href": "/category/2_252",
+                "id": "252",
+                "parent_id": "2"
+            },
+            {
+                "title": "传奇",
+                "href": "/category/2_695",
+                "id": "695",
+                "parent_id": "2"
+            },
+            {
+                "title": "DNF",
+                "href": "/category/2_78",
+                "id": "78",
+                "parent_id": "2"
+            },
+            {
+                "title": "七日世界",
+                "href": "/category/2_857",
+                "id": "857",
+                "parent_id": "2"
+            },
+            {
+                "title": "卡拉彼丘",
+                "href": "/category/2_782",
+                "id": "782",
+                "parent_id": "2"
+            },
+            {
+                "title": "塔瑞斯世界",
+                "href": "/category/2_881",
+                "id": "881",
+                "parent_id": "2"
+            },
+            {
+                "title": "生死狙击2",
+                "href": "/category/2_575",
+                "id": "575",
+                "parent_id": "2"
+            },
+            {
+                "title": "穿越火线",
+                "href": "/category/2_88",
+                "id": "88",
+                "parent_id": "2"
+            },
+            {
+                "title": "洛奇英雄传",
+                "href": "/category/2_599",
+                "id": "599",
+                "parent_id": "2"
+            },
+            {
+                "title": "燕云十六声",
+                "href": "/category/2_903",
+                "id": "903",
+                "parent_id": "2"
+            },
+            {
+                "title": "遗忘之海",
+                "href": "/category/2_975",
+                "id": "975",
+                "parent_id": "2"
+            },
+            {
+                "title": "远光84",
+                "href": "/category/2_965",
+                "id": "965",
+                "parent_id": "2"
+            },
+            {
+                "title": "逆水寒端游",
+                "href": "/category/2_166",
+                "id": "166",
+                "parent_id": "2"
+            },
+            {
+                "title": "流放之路",
+                "href": "/category/2_551",
+                "id": "551",
+                "parent_id": "2"
+            },
+            {
+                "title": "最终幻想14",
+                "href": "/category/2_102",
+                "id": "102",
+                "parent_id": "2"
+            },
+            {
+                "title": "无烬战争",
+                "href": "/category/2_1015",
+                "id": "1015",
+                "parent_id": "2"
+            },
+            {
+                "title": "命运扳机",
+                "href": "/category/2_998",
+                "id": "998",
+                "parent_id": "2"
+            },
+            {
+                "title": "星际战甲",
+                "href": "/category/2_249",
+                "id": "249",
+                "parent_id": "2"
+            },
+            {
+                "title": "梦三国",
+                "href": "/category/2_710",
+                "id": "710",
+                "parent_id": "2"
+            },
+            {
+                "title": "英魂之刃",
+                "href": "/category/2_690",
+                "id": "690",
+                "parent_id": "2"
+            },
+            {
+                "title": "剑网3",
+                "href": "/category/2_82",
+                "id": "82",
+                "parent_id": "2"
+            },
+            {
+                "title": "从军",
+                "href": "/category/2_829",
+                "id": "829",
+                "parent_id": "2"
+            },
+            {
+                "title": "无主星渊",
+                "href": "/category/2_980",
+                "id": "980",
+                "parent_id": "2"
+            },
+            {
+                "title": "头号追击",
+                "href": "/category/2_991",
+                "id": "991",
+                "parent_id": "2"
+            },
+            {
+                "title": "全民街篮",
+                "href": "/category/2_845",
+                "id": "845",
+                "parent_id": "2"
+            },
+            {
+                "title": "铁甲雄兵",
+                "href": "/category/2_691",
+                "id": "691",
+                "parent_id": "2"
+            },
+            {
+                "title": "新天龙八部",
+                "href": "/category/2_653",
+                "id": "653",
+                "parent_id": "2"
+            },
+            {
+                "title": "赛尔号",
+                "href": "/category/2_667",
+                "id": "667",
+                "parent_id": "2"
+            },
+            {
+                "title": "造梦西游",
+                "href": "/category/2_668",
+                "id": "668",
+                "parent_id": "2"
+            },
+            {
+                "title": "洛克王国",
+                "href": "/category/2_669",
+                "id": "669",
+                "parent_id": "2"
+            },
+            {
+                "title": "问道",
+                "href": "/category/2_670",
+                "id": "670",
+                "parent_id": "2"
+            },
+            {
+                "title": "诛仙世界",
+                "href": "/category/2_654",
+                "id": "654",
+                "parent_id": "2"
+            },
+            {
+                "title": "大话西游",
+                "href": "/category/2_652",
+                "id": "652",
+                "parent_id": "2"
+            },
+            {
+                "title": "SUPER PEOPLE",
+                "href": "/category/2_680",
+                "id": "680",
+                "parent_id": "2"
+            },
+            {
+                "title": "奇迹MU",
+                "href": "/category/2_683",
+                "id": "683",
+                "parent_id": "2"
+            },
+            {
+                "title": "永恒之塔",
+                "href": "/category/2_684",
+                "id": "684",
+                "parent_id": "2"
+            },
+            {
+                "title": "QQ三国",
+                "href": "/category/2_685",
+                "id": "685",
+                "parent_id": "2"
+            },
+            {
+                "title": "人间地狱",
+                "href": "/category/2_677",
+                "id": "677",
+                "parent_id": "2"
+            },
+            {
+                "title": "彩虹岛",
+                "href": "/category/2_686",
+                "id": "686",
+                "parent_id": "2"
+            },
+            {
+                "title": "洛奇",
+                "href": "/category/2_663",
+                "id": "663",
+                "parent_id": "2"
+            },
+            {
+                "title": "跑跑卡丁车",
+                "href": "/category/2_664",
+                "id": "664",
+                "parent_id": "2"
+            },
+            {
+                "title": "星际公民",
+                "href": "/category/2_658",
+                "id": "658",
+                "parent_id": "2"
+            },
+            {
+                "title": "Squad战术小队",
+                "href": "/category/2_659",
+                "id": "659",
+                "parent_id": "2"
+            },
+            {
+                "title": "反恐精英Online",
+                "href": "/category/2_629",
+                "id": "629",
+                "parent_id": "2"
+            },
+            {
+                "title": "阿尔比恩",
+                "href": "/category/2_639",
+                "id": "639",
+                "parent_id": "2"
+            },
+            {
+                "title": "创世战车",
+                "href": "/category/2_705",
+                "id": "705",
+                "parent_id": "2"
+            },
+            {
+                "title": "猎杀对决（Hunt: Showdown）",
+                "href": "/category/2_600",
+                "id": "600",
+                "parent_id": "2"
+            },
+            {
+                "title": "CFHD",
+                "href": "/category/2_472",
+                "id": "472",
+                "parent_id": "2"
+            },
+            {
+                "title": "300英雄",
+                "href": "/category/2_84",
+                "id": "84",
+                "parent_id": "2"
+            },
+            {
+                "title": "剑网3缘起",
+                "href": "/category/2_499",
+                "id": "499",
+                "parent_id": "2"
+            },
+            {
+                "title": "街头篮球",
+                "href": "/category/2_649",
+                "id": "649",
+                "parent_id": "2"
+            },
+            {
+                "title": "剑灵",
+                "href": "/category/2_505",
+                "id": "505",
+                "parent_id": "2"
+            },
+            {
+                "title": "黑色沙漠",
+                "href": "/category/2_632",
+                "id": "632",
+                "parent_id": "2"
+            },
+            {
+                "title": "天涯明月刀",
+                "href": "/category/2_596",
+                "id": "596",
+                "parent_id": "2"
+            },
+            {
+                "title": "冒险岛",
+                "href": "/category/2_574",
+                "id": "574",
+                "parent_id": "2"
+            },
+            {
+                "title": "逆战",
+                "href": "/category/2_487",
+                "id": "487",
+                "parent_id": "2"
+            },
+            {
+                "title": "FIFA ONLINE 4",
+                "href": "/category/2_388",
+                "id": "388",
+                "parent_id": "2"
+            },
+            {
+                "title": "魔兽争霸3",
+                "href": "/category/2_181",
+                "id": "181",
+                "parent_id": "2"
+            },
+            {
+                "title": "QQ飞车",
+                "href": "/category/2_610",
+                "id": "610",
+                "parent_id": "2"
+            },
+            {
+                "title": "NBA2KOL2",
+                "href": "/category/2_581",
+                "id": "581",
+                "parent_id": "2"
+            },
+            {
+                "title": "使命召唤:战区",
+                "href": "/category/2_318",
+                "id": "318",
+                "parent_id": "2"
+            },
+            {
+                "title": "战舰世界",
+                "href": "/category/2_248",
+                "id": "248",
+                "parent_id": "2"
+            },
+            {
+                "title": "坦克世界",
+                "href": "/category/2_115",
+                "id": "115",
+                "parent_id": "2"
+            },
+            {
+                "title": "战意",
+                "href": "/category/2_383",
+                "id": "383",
+                "parent_id": "2"
+            },
+            {
+                "title": "风暴英雄",
+                "href": "/category/2_114",
+                "id": "114",
+                "parent_id": "2"
+            },
+            {
+                "title": "战争雷霆",
+                "href": "/category/2_316",
+                "id": "316",
+                "parent_id": "2"
+            },
+            {
+                "title": "星际争霸2",
+                "href": "/category/2_93",
+                "id": "93",
+                "parent_id": "2"
+            },
+            {
+                "title": "堡垒之夜",
+                "href": "/category/2_164",
+                "id": "164",
+                "parent_id": "2"
+            },
+            {
+                "title": "失控进化",
+                "href": "/category/2_1008",
+                "id": "1008",
+                "parent_id": "2"
+            },
+            {
+                "title": "枪神纪",
+                "href": "/category/2_251",
+                "id": "251",
+                "parent_id": "2"
+            },
+            {
+                "title": "三国杀",
+                "href": "/category/2_81",
+                "id": "81",
+                "parent_id": "2"
+            },
+            {
+                "title": "龙之谷",
+                "href": "/category/2_112",
+                "id": "112",
+                "parent_id": "2"
+            },
+            {
+                "title": "幻想全明星",
+                "href": "/category/2_176",
+                "id": "176",
+                "parent_id": "2"
+            },
+            {
+                "title": "怀旧网游",
+                "href": "/category/2_288",
+                "id": "288",
+                "parent_id": "2"
+            },
+            {
+                "title": "新游前瞻",
+                "href": "/category/2_298",
+                "id": "298",
+                "parent_id": "2"
+            },
+            {
+                "title": "星战前夜：晨曦",
+                "href": "/category/2_331",
+                "id": "331",
+                "parent_id": "2"
+            },
+            {
+                "title": "FPS沙盒",
+                "href": "/category/2_633",
+                "id": "633",
+                "parent_id": "2"
+            },
+            {
+                "title": "永恒轮回",
+                "href": "/category/2_459",
+                "id": "459",
+                "parent_id": "2"
+            },
+            {
+                "title": "激战2",
+                "href": "/category/2_607",
+                "id": "607",
+                "parent_id": "2"
+            },
+            {
+                "title": "其他网游",
+                "href": "/category/2_107",
+                "id": "107",
+                "parent_id": "2"
+            },
+            {
+                "title": "蓝色协议",
+                "href": "/category/2_760",
+                "id": "760",
+                "parent_id": "2"
+            },
+            {
+                "title": "第一后裔",
+                "href": "/category/2_909",
+                "id": "909",
+                "parent_id": "2"
+            },
+            {
+                "title": "界外狂潮",
+                "href": "/category/2_941",
+                "id": "941",
+                "parent_id": "2"
+            },
+            {
+                "title": "DeadLock",
+                "href": "/category/2_927",
+                "id": "927",
+                "parent_id": "2"
+            },
+            {
+                "title": "其他射击",
+                "href": "/category/2_953",
+                "id": "953",
+                "parent_id": "2"
+            }
+        ]
+    },
+    {
+        "title": "手游",
+        "href": "/category/3",
+        "id": 3,
+        "subcategories": [
+            {
+                "title": "王者荣耀",
+                "href": "/category/3_35",
+                "id": "35",
+                "parent_id": "3"
+            },
+            {
+                "title": "和平精英",
+                "href": "/category/3_256",
+                "id": "256",
+                "parent_id": "3"
+            },
+            {
+                "title": "绝区零",
+                "href": "/category/3_662",
+                "id": "662",
+                "parent_id": "3"
+            },
+            {
+                "title": "第五人格",
+                "href": "/category/3_163",
+                "id": "163",
+                "parent_id": "3"
+            },
+            {
+                "title": "原神",
+                "href": "/category/3_321",
+                "id": "321",
+                "parent_id": "3"
+            },
+            {
+                "title": "无畏契约：源能行动",
+                "href": "/category/3_984",
+                "id": "984",
+                "parent_id": "3"
+            },
+            {
+                "title": "崩坏：星穹铁道",
+                "href": "/category/3_549",
+                "id": "549",
+                "parent_id": "3"
+            },
+            {
+                "title": "火影忍者手游",
+                "href": "/category/3_292",
+                "id": "292",
+                "parent_id": "3"
+            },
+            {
+                "title": "鸣潮",
+                "href": "/category/3_874",
+                "id": "874",
+                "parent_id": "3"
+            },
+            {
+                "title": "明日方舟",
+                "href": "/category/3_255",
+                "id": "255",
+                "parent_id": "3"
+            },
+            {
+                "title": "异环",
+                "href": "/category/3_940",
+                "id": "940",
+                "parent_id": "3"
+            },
+            {
+                "title": "超自然行动组",
+                "href": "/category/3_1017",
+                "id": "1017",
+                "parent_id": "3"
+            },
+            {
+                "title": "无限暖暖",
+                "href": "/category/3_892",
+                "id": "892",
+                "parent_id": "3"
+            },
+            {
+                "title": "航海王壮志雄心",
+                "href": "/category/3_902",
+                "id": "902",
+                "parent_id": "3"
+            },
+            {
+                "title": "宝可梦大集结",
+                "href": "/category/3_493",
+                "id": "493",
+                "parent_id": "3"
+            },
+            {
+                "title": "蛋仔派对",
+                "href": "/category/3_571",
+                "id": "571",
+                "parent_id": "3"
+            },
+            {
+                "title": "元梦之星",
+                "href": "/category/3_822",
+                "id": "822",
+                "parent_id": "3"
+            },
+            {
+                "title": "金铲铲之战",
+                "href": "/category/3_514",
+                "id": "514",
+                "parent_id": "3"
+            },
+            {
+                "title": "LOL手游",
+                "href": "/category/3_395",
+                "id": "395",
+                "parent_id": "3"
+            },
+            {
+                "title": "DNF手游",
+                "href": "/category/3_343",
+                "id": "343",
+                "parent_id": "3"
+            },
+            {
+                "title": "斗罗大陆：猎魂世界",
+                "href": "/category/3_989",
+                "id": "989",
+                "parent_id": "3"
+            },
+            {
+                "title": "晴空之下",
+                "href": "/category/3_997",
+                "id": "997",
+                "parent_id": "3"
+            },
+            {
+                "title": "三国：谋定天下",
+                "href": "/category/3_871",
+                "id": "871",
+                "parent_id": "3"
+            },
+            {
+                "title": "伊莫",
+                "href": "/category/3_994",
+                "id": "994",
+                "parent_id": "3"
+            },
+            {
+                "title": "归环",
+                "href": "/category/3_983",
+                "id": "983",
+                "parent_id": "3"
+            },
+            {
+                "title": "鹅鸭杀手游",
+                "href": "/category/3_993",
+                "id": "993",
+                "parent_id": "3"
+            },
+            {
+                "title": "NBA2K手游",
+                "href": "/category/3_959",
+                "id": "959",
+                "parent_id": "3"
+            },
+            {
+                "title": "奥特曼：超时空英雄",
+                "href": "/category/3_999",
+                "id": "999",
+                "parent_id": "3"
+            },
+            {
+                "title": "二重螺旋",
+                "href": "/category/3_981",
+                "id": "981",
+                "parent_id": "3"
+            },
+            {
+                "title": "影之诗",
+                "href": "/category/3_156",
+                "id": "156",
+                "parent_id": "3"
+            },
+            {
+                "title": "永远的蔚蓝星球",
+                "href": "/category/3_990",
+                "id": "990",
+                "parent_id": "3"
+            },
+            {
+                "title": "逆战：未来",
+                "href": "/category/3_1007",
+                "id": "1007",
+                "parent_id": "3"
+            },
+            {
+                "title": "仙剑世界",
+                "href": "/category/3_950",
+                "id": "950",
+                "parent_id": "3"
+            },
+            {
+                "title": "虚环",
+                "href": "/category/3_1003",
+                "id": "1003",
+                "parent_id": "3"
+            },
+            {
+                "title": "最终幻想14水晶世界",
+                "href": "/category/3_982",
+                "id": "982",
+                "parent_id": "3"
+            },
+            {
+                "title": "源序空间",
+                "href": "/category/3_1016",
+                "id": "1016",
+                "parent_id": "3"
+            },
+            {
+                "title": "异人之下",
+                "href": "/category/3_956",
+                "id": "956",
+                "parent_id": "3"
+            },
+            {
+                "title": "洛克王国：世界",
+                "href": "/category/3_958",
+                "id": "958",
+                "parent_id": "3"
+            },
+            {
+                "title": "银与绯",
+                "href": "/category/3_968",
+                "id": "968",
+                "parent_id": "3"
+            },
+            {
+                "title": "归龙潮",
+                "href": "/category/3_924",
+                "id": "924",
+                "parent_id": "3"
+            },
+            {
+                "title": "胜利女神：新的希望",
+                "href": "/category/3_954",
+                "id": "954",
+                "parent_id": "3"
+            },
+            {
+                "title": "暗区突围",
+                "href": "/category/3_502",
+                "id": "502",
+                "parent_id": "3"
+            },
+            {
+                "title": "永劫无间手游",
+                "href": "/category/3_882",
+                "id": "882",
+                "parent_id": "3"
+            },
+            {
+                "title": "漫威终极逆转",
+                "href": "/category/3_930",
+                "id": "930",
+                "parent_id": "3"
+            },
+            {
+                "title": "英勇之地手游",
+                "href": "/category/3_967",
+                "id": "967",
+                "parent_id": "3"
+            },
+            {
+                "title": "无尽梦回",
+                "href": "/category/3_938",
+                "id": "938",
+                "parent_id": "3"
+            },
+            {
+                "title": "高达钢铁之诗",
+                "href": "/category/3_952",
+                "id": "952",
+                "parent_id": "3"
+            },
+            {
+                "title": "炽焰天穹",
+                "href": "/category/3_912",
+                "id": "912",
+                "parent_id": "3"
+            },
+            {
+                "title": "爆裂小队",
+                "href": "/category/3_971",
+                "id": "971",
+                "parent_id": "3"
+            },
+            {
+                "title": "排球少年",
+                "href": "/category/3_933",
+                "id": "933",
+                "parent_id": "3"
+            },
+            {
+                "title": "白荆回廊",
+                "href": "/category/3_849",
+                "id": "849",
+                "parent_id": "3"
+            },
+            {
+                "title": "剑与远征：启程",
+                "href": "/category/3_918",
+                "id": "918",
+                "parent_id": "3"
+            },
+            {
+                "title": "新月同行",
+                "href": "/category/3_931",
+                "id": "931",
+                "parent_id": "3"
+            },
+            {
+                "title": "潮汐守望者",
+                "href": "/category/3_972",
+                "id": "972",
+                "parent_id": "3"
+            },
+            {
+                "title": "雷索纳斯",
+                "href": "/category/3_879",
+                "id": "879",
+                "parent_id": "3"
+            },
+            {
+                "title": "元气骑士前传",
+                "href": "/category/3_850",
+                "id": "850",
+                "parent_id": "3"
+            },
+            {
+                "title": "重构阿塔提斯",
+                "href": "/category/3_939",
+                "id": "939",
+                "parent_id": "3"
+            },
+            {
+                "title": "时光杂货店",
+                "href": "/category/3_916",
+                "id": "916",
+                "parent_id": "3"
+            },
+            {
+                "title": "龙族：卡塞尔之门",
+                "href": "/category/3_923",
+                "id": "923",
+                "parent_id": "3"
+            },
+            {
+                "title": "剑与骑士团",
+                "href": "/category/3_921",
+                "id": "921",
+                "parent_id": "3"
+            },
+            {
+                "title": "三国群英传：策定天下",
+                "href": "/category/3_1018",
+                "id": "1018",
+                "parent_id": "3"
+            },
+            {
+                "title": "决胜巅峰",
+                "href": "/category/3_947",
+                "id": "947",
+                "parent_id": "3"
+            },
+            {
+                "title": "望月",
+                "href": "/category/3_944",
+                "id": "944",
+                "parent_id": "3"
+            },
+            {
+                "title": "钢岚",
+                "href": "/category/3_856",
+                "id": "856",
+                "parent_id": "3"
+            },
+            {
+                "title": "射雕",
+                "href": "/category/3_886",
+                "id": "886",
+                "parent_id": "3"
+            },
+            {
+                "title": "物华弥新",
+                "href": "/category/3_890",
+                "id": "890",
+                "parent_id": "3"
+            },
+            {
+                "title": "野兽领主：新世界",
+                "href": "/category/3_904",
+                "id": "904",
+                "parent_id": "3"
+            },
+            {
+                "title": "西游：笔绘西行",
+                "href": "/category/3_900",
+                "id": "900",
+                "parent_id": "3"
+            },
+            {
+                "title": "咏月风雅",
+                "href": "/category/3_899",
+                "id": "899",
+                "parent_id": "3"
+            },
+            {
+                "title": "星之翼",
+                "href": "/category/3_891",
+                "id": "891",
+                "parent_id": "3"
+            },
+            {
+                "title": "歧路旅人：大陆的霸者",
+                "href": "/category/3_901",
+                "id": "901",
+                "parent_id": "3"
+            },
+            {
+                "title": "仙境传说：爱如初见",
+                "href": "/category/3_885",
+                "id": "885",
+                "parent_id": "3"
+            },
+            {
+                "title": "极品飞车：集结",
+                "href": "/category/3_852",
+                "id": "852",
+                "parent_id": "3"
+            },
+            {
+                "title": "逆水寒手游",
+                "href": "/category/3_771",
+                "id": "771",
+                "parent_id": "3"
+            },
+            {
+                "title": "一梦江湖",
+                "href": "/category/3_913",
+                "id": "913",
+                "parent_id": "3"
+            },
+            {
+                "title": "率土之滨",
+                "href": "/category/3_807",
+                "id": "807",
+                "parent_id": "3"
+            },
+            {
+                "title": "萤火突击",
+                "href": "/category/3_870",
+                "id": "870",
+                "parent_id": "3"
+            },
+            {
+                "title": "月圆之夜",
+                "href": "/category/3_215",
+                "id": "215",
+                "parent_id": "3"
+            },
+            {
+                "title": "哈利波特：魔法觉醒",
+                "href": "/category/3_474",
+                "id": "474",
+                "parent_id": "3"
+            },
+            {
+                "title": "幻塔",
+                "href": "/category/3_550",
+                "id": "550",
+                "parent_id": "3"
+            },
+            {
+                "title": "星之破晓",
+                "href": "/category/3_799",
+                "id": "799",
+                "parent_id": "3"
+            },
+            {
+                "title": "女神异闻录：夜幕魅影",
+                "href": "/category/3_802",
+                "id": "802",
+                "parent_id": "3"
+            },
+            {
+                "title": "星痕共鸣",
+                "href": "/category/3_970",
+                "id": "970",
+                "parent_id": "3"
+            },
+            {
+                "title": "少女前线2：追放",
+                "href": "/category/3_832",
+                "id": "832",
+                "parent_id": "3"
+            },
+            {
+                "title": "深空之眼",
+                "href": "/category/3_598",
+                "id": "598",
+                "parent_id": "3"
+            },
+            {
+                "title": "交错战线",
+                "href": "/category/3_864",
+                "id": "864",
+                "parent_id": "3"
+            },
+            {
+                "title": "黎明觉醒：生机",
+                "href": "/category/3_479",
+                "id": "479",
+                "parent_id": "3"
+            },
+            {
+                "title": "无期迷途",
+                "href": "/category/3_675",
+                "id": "675",
+                "parent_id": "3"
+            },
+            {
+                "title": "晶核",
+                "href": "/category/3_777",
+                "id": "777",
+                "parent_id": "3"
+            },
+            {
+                "title": "星球重启",
+                "href": "/category/3_828",
+                "id": "828",
+                "parent_id": "3"
+            },
+            {
+                "title": "光遇",
+                "href": "/category/3_687",
+                "id": "687",
+                "parent_id": "3"
+            },
+            {
+                "title": "以闪亮之名",
+                "href": "/category/3_755",
+                "id": "755",
+                "parent_id": "3"
+            },
+            {
+                "title": "尘白禁区",
+                "href": "/category/3_778",
+                "id": "778",
+                "parent_id": "3"
+            },
+            {
+                "title": "狼人杀：谎言与推理的对抗",
+                "href": "/category/3_1002",
+                "id": "1002",
+                "parent_id": "3"
+            },
+            {
+                "title": "香肠派对",
+                "href": "/category/3_689",
+                "id": "689",
+                "parent_id": "3"
+            },
+            {
+                "title": "高能英雄",
+                "href": "/category/3_783",
+                "id": "783",
+                "parent_id": "3"
+            },
+            {
+                "title": "使命召唤手游",
+                "href": "/category/3_386",
+                "id": "386",
+                "parent_id": "3"
+            },
+            {
+                "title": "崩坏3",
+                "href": "/category/3_40",
+                "id": "40",
+                "parent_id": "3"
+            },
+            {
+                "title": "蔚蓝档案",
+                "href": "/category/3_787",
+                "id": "787",
+                "parent_id": "3"
+            },
+            {
+                "title": "第七史诗",
+                "href": "/category/3_784",
+                "id": "784",
+                "parent_id": "3"
+            },
+            {
+                "title": "游戏王：决斗链接",
+                "href": "/category/3_407",
+                "id": "407",
+                "parent_id": "3"
+            },
+            {
+                "title": "游戏王",
+                "href": "/category/3_303",
+                "id": "303",
+                "parent_id": "3"
+            },
+            {
+                "title": "JJ斗地主",
+                "href": "/category/3_724",
+                "id": "724",
+                "parent_id": "3"
+            },
+            {
+                "title": "阴阳师",
+                "href": "/category/3_36",
+                "id": "36",
+                "parent_id": "3"
+            },
+            {
+                "title": "欢乐斗地主",
+                "href": "/category/3_719",
+                "id": "719",
+                "parent_id": "3"
+            },
+            {
+                "title": "Fate/GO",
+                "href": "/category/3_37",
+                "id": "37",
+                "parent_id": "3"
+            },
+            {
+                "title": "综合棋牌",
+                "href": "/category/3_354",
+                "id": "354",
+                "parent_id": "3"
+            },
+            {
+                "title": "QQ飞车手游",
+                "href": "/category/3_154",
+                "id": "154",
+                "parent_id": "3"
+            },
+            {
+                "title": "决战！平安京",
+                "href": "/category/3_140",
+                "id": "140",
+                "parent_id": "3"
+            },
+            {
+                "title": "狼人杀",
+                "href": "/category/3_41",
+                "id": "41",
+                "parent_id": "3"
+            },
+            {
+                "title": "三国杀移动版",
+                "href": "/category/3_352",
+                "id": "352",
+                "parent_id": "3"
+            },
+            {
+                "title": "碧蓝航线",
+                "href": "/category/3_113",
+                "id": "113",
+                "parent_id": "3"
+            },
+            {
+                "title": "明日之后",
+                "href": "/category/3_189",
+                "id": "189",
+                "parent_id": "3"
+            },
+            {
+                "title": "重返未来：1999",
+                "href": "/category/3_761",
+                "id": "761",
+                "parent_id": "3"
+            },
+            {
+                "title": "部落冲突:皇室战争",
+                "href": "/category/3_50",
+                "id": "50",
+                "parent_id": "3"
+            },
+            {
+                "title": "弹弹堂",
+                "href": "/category/3_734",
+                "id": "734",
+                "parent_id": "3"
+            },
+            {
+                "title": "雀姬",
+                "href": "/category/3_214",
+                "id": "214",
+                "parent_id": "3"
+            },
+            {
+                "title": "公主连结Re:Dive",
+                "href": "/category/3_330",
+                "id": "330",
+                "parent_id": "3"
+            },
+            {
+                "title": "闪耀！优俊少女",
+                "href": "/category/3_805",
+                "id": "805",
+                "parent_id": "3"
+            },
+            {
+                "title": "FIFA足球世界",
+                "href": "/category/3_641",
+                "id": "641",
+                "parent_id": "3"
+            },
+            {
+                "title": "BanG Dream",
+                "href": "/category/3_258",
+                "id": "258",
+                "parent_id": "3"
+            },
+            {
+                "title": "荒野乱斗",
+                "href": "/category/3_469",
+                "id": "469",
+                "parent_id": "3"
+            },
+            {
+                "title": "CF手游",
+                "href": "/category/3_333",
+                "id": "333",
+                "parent_id": "3"
+            },
+            {
+                "title": "战双帕弥什",
+                "href": "/category/3_293",
+                "id": "293",
+                "parent_id": "3"
+            },
+            {
+                "title": "天涯明月刀手游",
+                "href": "/category/3_389",
+                "id": "389",
+                "parent_id": "3"
+            },
+            {
+                "title": "解密游戏",
+                "href": "/category/3_42",
+                "id": "42",
+                "parent_id": "3"
+            },
+            {
+                "title": "恋爱养成游戏",
+                "href": "/category/3_576",
+                "id": "576",
+                "parent_id": "3"
+            },
+            {
+                "title": "跑跑卡丁车手游",
+                "href": "/category/3_265",
+                "id": "265",
+                "parent_id": "3"
+            },
+            {
+                "title": "非人学园",
+                "href": "/category/3_212",
+                "id": "212",
+                "parent_id": "3"
+            },
+            {
+                "title": "百闻牌",
+                "href": "/category/3_286",
+                "id": "286",
+                "parent_id": "3"
+            },
+            {
+                "title": "猫和老鼠手游",
+                "href": "/category/3_269",
+                "id": "269",
+                "parent_id": "3"
+            },
+            {
+                "title": "坎公骑冠剑",
+                "href": "/category/3_442",
+                "id": "442",
+                "parent_id": "3"
+            },
+            {
+                "title": "忍者必须死3",
+                "href": "/category/3_203",
+                "id": "203",
+                "parent_id": "3"
+            },
+            {
+                "title": "梦幻西游手游",
+                "href": "/category/3_342",
+                "id": "342",
+                "parent_id": "3"
+            },
+            {
+                "title": "航海王热血航线",
+                "href": "/category/3_504",
+                "id": "504",
+                "parent_id": "3"
+            },
+            {
+                "title": "少女前线",
+                "href": "/category/3_39",
+                "id": "39",
+                "parent_id": "3"
+            },
+            {
+                "title": "300大作战",
+                "href": "/category/3_688",
+                "id": "688",
+                "parent_id": "3"
+            },
+            {
+                "title": "少女前线：云图计划",
+                "href": "/category/3_525",
+                "id": "525",
+                "parent_id": "3"
+            },
+            {
+                "title": "小动物之星",
+                "href": "/category/3_473",
+                "id": "473",
+                "parent_id": "3"
+            },
+            {
+                "title": "天地劫：幽城再临",
+                "href": "/category/3_448",
+                "id": "448",
+                "parent_id": "3"
+            },
+            {
+                "title": "东方归言录",
+                "href": "/category/3_538",
+                "id": "538",
+                "parent_id": "3"
+            },
+            {
+                "title": "命运圣契",
+                "href": "/category/3_925",
+                "id": "925",
+                "parent_id": "3"
+            },
+            {
+                "title": "梦幻模拟战",
+                "href": "/category/3_178",
+                "id": "178",
+                "parent_id": "3"
+            },
+            {
+                "title": "时空猎人3",
+                "href": "/category/3_643",
+                "id": "643",
+                "parent_id": "3"
+            },
+            {
+                "title": "休闲小游戏",
+                "href": "/category/3_679",
+                "id": "679",
+                "parent_id": "3"
+            },
+            {
+                "title": "其他手游",
+                "href": "/category/3_98",
+                "id": "98",
+                "parent_id": "3"
+            },
+            {
+                "title": "小冰冰传奇",
+                "href": "/category/3_824",
+                "id": "824",
+                "parent_id": "3"
+            },
+            {
+                "title": "冒险岛手游",
+                "href": "/category/3_796",
+                "id": "796",
+                "parent_id": "3"
+            },
+            {
+                "title": "对峙2",
+                "href": "/category/3_863",
+                "id": "863",
+                "parent_id": "3"
+            },
+            {
+                "title": "新游评测",
+                "href": "/category/3_274",
+                "id": "274",
+                "parent_id": "3"
+            },
+            {
+                "title": "火炬之光:无限",
+                "href": "/category/3_910",
+                "id": "910",
+                "parent_id": "3"
+            },
+            {
+                "title": "综合二游",
+                "href": "/category/3_957",
+                "id": "957",
+                "parent_id": "3"
+            },
+            {
+                "title": "黑色信标",
+                "href": "/category/3_966",
+                "id": "966",
+                "parent_id": "3"
+            },
+            {
+                "title": "踏风行",
+                "href": "/category/3_973",
+                "id": "973",
+                "parent_id": "3"
+            }
+        ]
+    },
+    {
+        "title": "单机游戏",
+        "href": "/category/6",
+        "id": 6,
+        "subcategories": [
+            {
+                "title": "主机游戏",
+                "href": "/category/6_236",
+                "id": "236",
+                "parent_id": "6"
+            },
+            {
+                "title": "其他单机",
+                "href": "/category/6_235",
+                "id": "235",
+                "parent_id": "6"
+            },
+            {
+                "title": "我的世界",
+                "href": "/category/6_216",
+                "id": "216",
+                "parent_id": "6"
+            },
+            {
+                "title": "新游推荐",
+                "href": "/category/6_889",
+                "id": "889",
+                "parent_id": "6"
+            },
+            {
+                "title": "独立游戏",
+                "href": "/category/6_283",
+                "id": "283",
+                "parent_id": "6"
+            },
+            {
+                "title": "怀旧游戏",
+                "href": "/category/6_237",
+                "id": "237",
+                "parent_id": "6"
+            },
+            {
+                "title": "恐怖游戏",
+                "href": "/category/6_276",
+                "id": "276",
+                "parent_id": "6"
+            },
+            {
+                "title": "战地风云",
+                "href": "/category/6_597",
+                "id": "597",
+                "parent_id": "6"
+            },
+            {
+                "title": "无主之地4",
+                "href": "/category/6_1012",
+                "id": "1012",
+                "parent_id": "6"
+            },
+            {
+                "title": "空洞骑士：丝之歌",
+                "href": "/category/6_1009",
+                "id": "1009",
+                "parent_id": "6"
+            },
+            {
+                "title": "明末：渊虚之羽",
+                "href": "/category/6_1001",
+                "id": "1001",
+                "parent_id": "6"
+            },
+            {
+                "title": "剑星",
+                "href": "/category/6_988",
+                "id": "988",
+                "parent_id": "6"
+            },
+            {
+                "title": "艾尔登法环：黑夜君临",
+                "href": "/category/6_976",
+                "id": "976",
+                "parent_id": "6"
+            },
+            {
+                "title": "刺客信条：影",
+                "href": "/category/6_227",
+                "id": "227",
+                "parent_id": "6"
+            },
+            {
+                "title": "双影奇境",
+                "href": "/category/6_951",
+                "id": "951",
+                "parent_id": "6"
+            },
+            {
+                "title": "怪物猎人：荒野",
+                "href": "/category/6_578",
+                "id": "578",
+                "parent_id": "6"
+            },
+            {
+                "title": "黑神话：悟空",
+                "href": "/category/6_804",
+                "id": "804",
+                "parent_id": "6"
+            },
+            {
+                "title": "艾尔登法环",
+                "href": "/category/6_555",
+                "id": "555",
+                "parent_id": "6"
+            },
+            {
+                "title": "命运2",
+                "href": "/category/6_277",
+                "id": "277",
+                "parent_id": "6"
+            },
+            {
+                "title": "矩阵：零日危机",
+                "href": "/category/6_996",
+                "id": "996",
+                "parent_id": "6"
+            },
+            {
+                "title": "使命召唤22",
+                "href": "/category/6_282",
+                "id": "282",
+                "parent_id": "6"
+            },
+            {
+                "title": "禁闭求生2",
+                "href": "/category/6_1010",
+                "id": "1010",
+                "parent_id": "6"
+            },
+            {
+                "title": "最后纪元",
+                "href": "/category/6_877",
+                "id": "877",
+                "parent_id": "6"
+            },
+            {
+                "title": "消逝的光芒：困兽",
+                "href": "/category/6_586",
+                "id": "586",
+                "parent_id": "6"
+            },
+            {
+                "title": "饿狼传说：群狼之城",
+                "href": "/category/6_969",
+                "id": "969",
+                "parent_id": "6"
+            },
+            {
+                "title": "暗黑破坏神3",
+                "href": "/category/6_962",
+                "id": "962",
+                "parent_id": "6"
+            },
+            {
+                "title": "光与影：33号远征队",
+                "href": "/category/6_964",
+                "id": "964",
+                "parent_id": "6"
+            },
+            {
+                "title": "第一狂战士：卡赞",
+                "href": "/category/6_960",
+                "id": "960",
+                "parent_id": "6"
+            },
+            {
+                "title": "绝地潜兵2",
+                "href": "/category/6_875",
+                "id": "875",
+                "parent_id": "6"
+            },
+            {
+                "title": "盛世天下",
+                "href": "/category/6_1005",
+                "id": "1005",
+                "parent_id": "6"
+            },
+            {
+                "title": "幻兽帕鲁",
+                "href": "/category/6_866",
+                "id": "866",
+                "parent_id": "6"
+            },
+            {
+                "title": "英勇之地",
+                "href": "/category/6_906",
+                "id": "906",
+                "parent_id": "6"
+            },
+            {
+                "title": "猛兽派对",
+                "href": "/category/6_384",
+                "id": "384",
+                "parent_id": "6"
+            },
+            {
+                "title": "FORZA 极限竞速",
+                "href": "/category/6_302",
+                "id": "302",
+                "parent_id": "6"
+            },
+            {
+                "title": "卡牌潮玩",
+                "href": "/category/6_854",
+                "id": "854",
+                "parent_id": "6"
+            },
+            {
+                "title": "全境封锁2",
+                "href": "/category/6_243",
+                "id": "243",
+                "parent_id": "6"
+            },
+            {
+                "title": "FC26",
+                "href": "/category/6_830",
+                "id": "830",
+                "parent_id": "6"
+            },
+            {
+                "title": "植物大战僵尸",
+                "href": "/category/6_309",
+                "id": "309",
+                "parent_id": "6"
+            },
+            {
+                "title": "雀魂麻将",
+                "href": "/category/6_803",
+                "id": "803",
+                "parent_id": "6"
+            },
+            {
+                "title": "生化危机",
+                "href": "/category/6_721",
+                "id": "721",
+                "parent_id": "6"
+            },
+            {
+                "title": "格斗游戏",
+                "href": "/category/6_433",
+                "id": "433",
+                "parent_id": "6"
+            },
+            {
+                "title": "精灵宝可梦",
+                "href": "/category/6_228",
+                "id": "228",
+                "parent_id": "6"
+            },
+            {
+                "title": "碧蓝幻想GBR",
+                "href": "/category/6_859",
+                "id": "859",
+                "parent_id": "6"
+            },
+            {
+                "title": "红色警戒2",
+                "href": "/category/6_693",
+                "id": "693",
+                "parent_id": "6"
+            },
+            {
+                "title": "策略游戏",
+                "href": "/category/6_570",
+                "id": "570",
+                "parent_id": "6"
+            },
+            {
+                "title": "暗黑破坏神Ⅳ",
+                "href": "/category/6_780",
+                "id": "780",
+                "parent_id": "6"
+            },
+            {
+                "title": "宝可梦集换式卡牌游戏",
+                "href": "/category/6_720",
+                "id": "720",
+                "parent_id": "6"
+            },
+            {
+                "title": "饥荒",
+                "href": "/category/6_218",
+                "id": "218",
+                "parent_id": "6"
+            },
+            {
+                "title": "荒野大镖客2",
+                "href": "/category/6_226",
+                "id": "226",
+                "parent_id": "6"
+            },
+            {
+                "title": "塞尔达传说",
+                "href": "/category/6_308",
+                "id": "308",
+                "parent_id": "6"
+            },
+            {
+                "title": "方舟",
+                "href": "/category/6_295",
+                "id": "295",
+                "parent_id": "6"
+            },
+            {
+                "title": "帝国时代4",
+                "href": "/category/6_548",
+                "id": "548",
+                "parent_id": "6"
+            },
+            {
+                "title": "体育游戏",
+                "href": "/category/6_500",
+                "id": "500",
+                "parent_id": "6"
+            },
+            {
+                "title": "Dark and Darker",
+                "href": "/category/6_795",
+                "id": "795",
+                "parent_id": "6"
+            },
+            {
+                "title": "仁王2",
+                "href": "/category/6_313",
+                "id": "313",
+                "parent_id": "6"
+            },
+            {
+                "title": "只狼",
+                "href": "/category/6_245",
+                "id": "245",
+                "parent_id": "6"
+            },
+            {
+                "title": "暗黑破坏神",
+                "href": "/category/6_535",
+                "id": "535",
+                "parent_id": "6"
+            },
+            {
+                "title": "以撒",
+                "href": "/category/6_219",
+                "id": "219",
+                "parent_id": "6"
+            },
+            {
+                "title": "泰拉瑞亚",
+                "href": "/category/6_593",
+                "id": "593",
+                "parent_id": "6"
+            },
+            {
+                "title": "骑马与砍杀",
+                "href": "/category/6_326",
+                "id": "326",
+                "parent_id": "6"
+            },
+            {
+                "title": "斯普拉遁3",
+                "href": "/category/6_694",
+                "id": "694",
+                "parent_id": "6"
+            },
+            {
+                "title": "Dread Hunger",
+                "href": "/category/6_591",
+                "id": "591",
+                "parent_id": "6"
+            },
+            {
+                "title": "恋爱模拟游戏",
+                "href": "/category/6_592",
+                "id": "592",
+                "parent_id": "6"
+            },
+            {
+                "title": "NBA2K",
+                "href": "/category/6_362",
+                "id": "362",
+                "parent_id": "6"
+            },
+            {
+                "title": "博德之门3",
+                "href": "/category/6_385",
+                "id": "385",
+                "parent_id": "6"
+            },
+            {
+                "title": "双人成行",
+                "href": "/category/6_446",
+                "id": "446",
+                "parent_id": "6"
+            },
+            {
+                "title": "赛博朋克2077",
+                "href": "/category/6_402",
+                "id": "402",
+                "parent_id": "6"
+            },
+            {
+                "title": "糖豆人",
+                "href": "/category/6_357",
+                "id": "357",
+                "parent_id": "6"
+            },
+            {
+                "title": "聚会游戏",
+                "href": "/category/6_636",
+                "id": "636",
+                "parent_id": "6"
+            },
+            {
+                "title": "全面战争",
+                "href": "/category/6_257",
+                "id": "257",
+                "parent_id": "6"
+            },
+            {
+                "title": "重生细胞",
+                "href": "/category/6_426",
+                "id": "426",
+                "parent_id": "6"
+            },
+            {
+                "title": "辐射76",
+                "href": "/category/6_220",
+                "id": "220",
+                "parent_id": "6"
+            },
+            {
+                "title": "战神",
+                "href": "/category/6_579",
+                "id": "579",
+                "parent_id": "6"
+            },
+            {
+                "title": "匹诺曹的谎言",
+                "href": "/category/6_812",
+                "id": "812",
+                "parent_id": "6"
+            },
+            {
+                "title": "鬼泣5",
+                "href": "/category/6_244",
+                "id": "244",
+                "parent_id": "6"
+            },
+            {
+                "title": "恐鬼症",
+                "href": "/category/6_387",
+                "id": "387",
+                "parent_id": "6"
+            },
+            {
+                "title": "Roblox",
+                "href": "/category/6_753",
+                "id": "753",
+                "parent_id": "6"
+            },
+            {
+                "title": "胡闹厨房",
+                "href": "/category/6_507",
+                "id": "507",
+                "parent_id": "6"
+            },
+            {
+                "title": "盗贼之海",
+                "href": "/category/6_341",
+                "id": "341",
+                "parent_id": "6"
+            },
+            {
+                "title": "KARDS",
+                "href": "/category/6_835",
+                "id": "835",
+                "parent_id": "6"
+            },
+            {
+                "title": "致命公司",
+                "href": "/category/6_858",
+                "id": "858",
+                "parent_id": "6"
+            }
+        ]
+    },
+    {
+        "title": "虚拟主播",
+        "href": "/category/9",
+        "id": 9,
+        "subcategories": [
+            {
+                "title": "虚拟Singer",
+                "href": "/category/9_744",
+                "id": "744",
+                "parent_id": "9"
+            },
+            {
+                "title": "虚拟Gamer",
+                "href": "/category/9_745",
+                "id": "745",
+                "parent_id": "9"
+            },
+            {
+                "title": "虚拟声优",
+                "href": "/category/9_746",
+                "id": "746",
+                "parent_id": "9"
+            },
+            {
+                "title": "虚拟男V",
+                "href": "/category/9_851",
+                "id": "851",
+                "parent_id": "9"
+            },
+            {
+                "title": "虚拟日常",
+                "href": "/category/9_371",
+                "id": "371",
+                "parent_id": "9"
+            },
+            {
+                "title": "虚拟APEX",
+                "href": "/category/9_789",
+                "id": "789",
+                "parent_id": "9"
+            },
+            {
+                "title": "虚拟PK",
+                "href": "/category/9_775",
+                "id": "775",
+                "parent_id": "9"
+            }
+        ]
+    },
+    {
+        "title": "娱乐",
+        "href": "/category/1",
+        "id": 1,
+        "subcategories": [
+            {
+                "title": "萌宅领域",
+                "href": "/category/1_530",
+                "id": "530",
+                "parent_id": "1"
+            },
+            {
+                "title": "视频唱见",
+                "href": "/category/1_21",
+                "id": "21",
+                "parent_id": "1"
+            },
+            {
+                "title": "舞见",
+                "href": "/category/1_207",
+                "id": "207",
+                "parent_id": "1"
+            },
+            {
+                "title": "颜值",
+                "href": "/category/1_145",
+                "id": "145",
+                "parent_id": "1"
+            },
+            {
+                "title": "脱口秀",
+                "href": "/category/1_868",
+                "id": "868",
+                "parent_id": "1"
+            },
+            {
+                "title": "团播",
+                "href": "/category/1_1013",
+                "id": "1013",
+                "parent_id": "1"
+            }
+        ]
+    },
+    {
+        "title": "电台",
+        "href": "/category/5",
+        "id": 5,
+        "subcategories": [
+            {
+                "title": "唱见电台",
+                "href": "/category/5_190",
+                "id": "190",
+                "parent_id": "5"
+            },
+            {
+                "title": "聊天电台",
+                "href": "/category/5_192",
+                "id": "192",
+                "parent_id": "5"
+            },
+            {
+                "title": "男声电台",
+                "href": "/category/5_817",
+                "id": "817",
+                "parent_id": "5"
+            }
+        ]
+    },
+    {
+        "title": "赛事",
+        "href": "/category/13",
+        "id": 13,
+        "subcategories": [
+            {
+                "title": "游戏赛事",
+                "href": "/category/13_561",
+                "id": "561",
+                "parent_id": "13"
+            },
+            {
+                "title": "赛事综合",
+                "href": "/category/13_563",
+                "id": "563",
+                "parent_id": "13"
+            }
+        ]
+    },
+    {
+        "title": "聊天室",
+        "href": "/category/14",
+        "id": 14,
+        "subcategories": [
+            {
+                "title": "交友",
+                "href": "/category/14_818",
+                "id": "818",
+                "parent_id": "14"
+            },
+            {
+                "title": "点唱",
+                "href": "/category/14_819",
+                "id": "819",
+                "parent_id": "14"
+            },
+            {
+                "title": "兴趣",
+                "href": "/category/14_820",
+                "id": "820",
+                "parent_id": "14"
+            },
+            {
+                "title": "找人玩",
+                "href": "/category/14_943",
+                "id": "943",
+                "parent_id": "14"
+            }
+        ]
+    },
+    {
+        "title": "生活",
+        "href": "/category/10",
+        "id": 10,
+        "subcategories": [
+            {
+                "title": "生活杂谈",
+                "href": "/category/10_646",
+                "id": "646",
+                "parent_id": "10"
+            },
+            {
+                "title": "情感杂谈",
+                "href": "/category/10_623",
+                "id": "623",
+                "parent_id": "10"
+            },
+            {
+                "title": "运动体育",
+                "href": "/category/10_628",
+                "id": "628",
+                "parent_id": "10"
+            },
+            {
+                "title": "手工绘画",
+                "href": "/category/10_627",
+                "id": "627",
+                "parent_id": "10"
+            },
+            {
+                "title": "户外",
+                "href": "/category/10_368",
+                "id": "368",
+                "parent_id": "10"
+            },
+            {
+                "title": "萌宠",
+                "href": "/category/10_369",
+                "id": "369",
+                "parent_id": "10"
+            },
+            {
+                "title": "美食",
+                "href": "/category/10_367",
+                "id": "367",
+                "parent_id": "10"
+            },
+            {
+                "title": "时尚",
+                "href": "/category/10_378",
+                "id": "378",
+                "parent_id": "10"
+            },
+            {
+                "title": "电子榨菜",
+                "href": "/category/10_624",
+                "id": "624",
+                "parent_id": "10"
+            },
+            {
+                "title": "沉浸体验",
+                "href": "/category/10_827",
+                "id": "827",
+                "parent_id": "10"
+            }
+        ]
+    },
+    {
+        "title": "知识",
+        "href": "/category/11",
+        "id": 11,
+        "subcategories": [
+            {
+                "title": "社会观察·财经",
+                "href": "/category/11_945",
+                "id": "945",
+                "parent_id": "11"
+            },
+            {
+                "title": "教育学习",
+                "href": "/category/11_377",
+                "id": "377",
+                "parent_id": "11"
+            },
+            {
+                "title": "法律·心理",
+                "href": "/category/11_376",
+                "id": "376",
+                "parent_id": "11"
+            },
+            {
+                "title": "历史·人文·综合",
+                "href": "/category/11_702",
+                "id": "702",
+                "parent_id": "11"
+            },
+            {
+                "title": "科技·科学",
+                "href": "/category/11_701",
+                "id": "701",
+                "parent_id": "11"
+            },
+            {
+                "title": "自习室",
+                "href": "/category/11_372",
+                "id": "372",
+                "parent_id": "11"
+            },
+            {
+                "title": "时政",
+                "href": "/category/11_715",
+                "id": "715",
+                "parent_id": "11"
+            }
+        ]
+    },
+    {
+        "title": "帮我玩",
+        "href": "/category/301",
+        "id": 301,
+        "subcategories": [
+            {
+                "title": "热门帮玩",
+                "href": "/category/301_301000",
+                "id": "301000",
+                "parent_id": "301"
+            },
+            {
+                "title": "手游帮玩",
+                "href": "/category/301_301002",
+                "id": "301002",
+                "parent_id": "301"
+            },
+            {
+                "title": "网游帮玩",
+                "href": "/category/301_301003",
+                "id": "301003",
+                "parent_id": "301"
+            },
+            {
+                "title": "单机帮玩",
+                "href": "/category/301_301004",
+                "id": "301004",
+                "parent_id": "301"
+            }
+        ]
+    },
+    {
+        "title": "互动玩法",
+        "href": "/category/15",
+        "id": 15,
+        "subcategories": [
+            {
+                "title": "竞技玩法",
+                "href": "/category/15_815",
+                "id": "815",
+                "parent_id": "15"
+            },
+            {
+                "title": "养成玩法",
+                "href": "/category/15_840",
+                "id": "840",
+                "parent_id": "15"
+            },
+            {
+                "title": "棋牌玩法",
+                "href": "/category/15_841",
+                "id": "841",
+                "parent_id": "15"
+            },
+            {
+                "title": "休闲玩法",
+                "href": "/category/15_816",
+                "id": "816",
+                "parent_id": "15"
+            },
+            {
+                "title": "搞笑整蛊",
+                "href": "/category/15_842",
+                "id": "842",
+                "parent_id": "15"
+            }
+        ]
+    },
+    {
+        "title": "购物",
+        "href": "/category/300",
+        "id": 300,
+        "subcategories": [
+            {
+                "title": "购物",
+                "href": "/category/300_300000",
+                "id": "300000",
+                "parent_id": "300"
+            }
+        ]
+    }
+]

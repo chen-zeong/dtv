@@ -35,6 +35,8 @@ const router = useRouter();
 const navItems = ref([
   { name: '斗鱼直播', path: '/' },
   { name: '抖音直播', path: '/douyin' },
+  { name: '虎牙直播', path: '/huya' },
+  { name: 'B站直播', path: '/bilibili' },
 ]);
 
 const props = withDefaults(defineProps<{
@@ -249,4 +251,4 @@ defineExpose({ router });
   background: var(--text-secondary-light, #9ca3af); /* Example light scrollbar hover */
 }
 
-</style> 
+</style>

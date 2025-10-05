@@ -49,10 +49,10 @@
 import { ref, watch, onMounted, onBeforeUnmount, nextTick, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useDouyinLiveRooms } from './composables/useDouyinLiveRooms';
-import type { DouyinCategorySelectedEvent } from '../DouyinCategory/types'; // Corrected path
+import type { CategorySelectedEvent } from '../../platforms/common/categoryTypes'
 
 const props = defineProps<{
-  selectedCategory: DouyinCategorySelectedEvent | null;
+  selectedCategory: CategorySelectedEvent | null;
 }>();
 
 const router = useRouter();
@@ -333,4 +333,4 @@ const goToPlayer = (roomId: string) => {
   height: 10px; /* Douyu style */
   width: 100%; /* Douyu style */
 }
-</style> 
+</style>
