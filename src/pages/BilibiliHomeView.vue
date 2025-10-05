@@ -2,17 +2,29 @@
   <div class="bili-home-view-layout">
     <CommonCategory 
       :categories-data="biliCategoriesData as any"
+      @category-selected="onCategorySelected"
       class="bili-category-section"
     />
-    <div class="bili-streamer-list-section">
-      <!-- 预留：B站主播列表（后续实现） -->
-    </div>
+    <CommonStreamerList 
+      :selected-category="currentSelectedCategory"
+      :categories-data="biliCategoriesData as any"
+      platformName="bilibili"
+      class="bili-streamer-list-section"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
 import CommonCategory from '../components/CommonCategory/index.vue'
+import CommonStreamerList from '../components/CommonStreamerList/index.vue'
 import { biliCategoriesData } from '../platforms/bilibili/biliCategoriesData'
+import type { CategorySelectedEvent } from '../platforms/common/categoryTypes.ts'
+
+const currentSelectedCategory = ref<CategorySelectedEvent | null>(null)
+const onCategorySelected = (categoryEvent: CategorySelectedEvent) => {
+  currentSelectedCategory.value = categoryEvent
+}
 </script>
 
 <style scoped>

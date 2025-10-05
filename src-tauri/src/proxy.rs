@@ -4,6 +4,7 @@ use reqwest::Client;
 use std::sync::Mutex as StdMutex;
 use tauri::{AppHandle, State};
 use crate::StreamUrlStore;
+use serde::Deserialize;
 
 // Define a struct to hold the server handle in a Tauri managed state
 #[derive(Default)]
@@ -12,6 +13,101 @@ pub struct ProxyServerHandle(pub StdMutex<Option<ServerHandle>>);
 async fn find_free_port() -> u16 {
     // Using a fixed port as requested by the user for easier debugging
     34719
+}
+
+#[derive(Deserialize)]
+struct ImageQuery {
+    url: String,
+}
+
+async fn image_proxy_handler(
+    query: web::Query<ImageQuery>,
+    client: web::Data<Client>,
+) -> impl Responder {
+    let url = query.url.clone();
+    if url.is_empty() {
+        return HttpResponse::BadRequest().body("Missing url query parameter");
+    }
+
+    let mut req = client
+        .get(&url)
+        .header(
+            "User-Agent",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        )
+        .header(
+            "Accept",
+            "image/avif,image/webp,image/apng,image/*;q=0.8,*/*;q=0.5",
+        );
+
+    // Set a Referer to bypass hotlink protections
+    if url.contains("hdslb.com") || url.contains("bilibili.com") {
+        req = req.header("Referer", "https://live.bilibili.com/");
+    } else if url.contains("huya.com") {
+        req = req.header("Referer", "https://www.huya.com/");
+    } else if url.contains("douyin") || url.contains("douyinpic.com") {
+        req = req.header("Referer", "https://www.douyin.com/");
+    }
+
+    match req.send().await {
+        Ok(upstream_response) => {
+            let content_type = upstream_response
+                .headers()
+                .get(reqwest::header::CONTENT_TYPE)
+                .and_then(|v| v.to_str().ok())
+                .unwrap_or("application/octet-stream")
+                .to_string();
+
+            // Stream image bytes regardless of upstream status if content-type indicates image
+            let is_image = content_type.starts_with("image/");
+
+            if upstream_response.status().is_success() || is_image {
+                let mut response_builder = HttpResponse::Ok();
+                response_builder.content_type(content_type);
+
+                let byte_stream = upstream_response.bytes_stream().map_err(|e| {
+                    eprintln!(
+                        "[Rust/proxy.rs image] Error reading bytes from upstream: {}",
+                        e
+                    );
+                    actix_web::error::ErrorInternalServerError(format!(
+                        "Upstream stream error: {}",
+                        e
+                    ))
+                });
+
+                response_builder.streaming(byte_stream)
+            } else {
+                let status_from_reqwest = upstream_response.status();
+                let error_text = upstream_response.text().await.unwrap_or_else(|e| {
+                    format!("Failed to read error body from upstream: {}", e)
+                });
+                eprintln!(
+                    "[Rust/proxy.rs image] Upstream request to {} failed with status: {}. Body: {}",
+                    url, status_from_reqwest, error_text
+                );
+                let actix_status_code = actix_web::http::StatusCode::from_u16(
+                    status_from_reqwest.as_u16(),
+                )
+                .unwrap_or(actix_web::http::StatusCode::INTERNAL_SERVER_ERROR);
+
+                HttpResponse::build(actix_status_code).body(format!(
+                    "Error fetching IMAGE from upstream (reqwest): {}. Status: {}. Details: {}",
+                    url, status_from_reqwest, error_text
+                ))
+            }
+        }
+        Err(e) => {
+            eprintln!(
+                "[Rust/proxy.rs image] Failed to send request to upstream {}: {}",
+                url, e
+            );
+            HttpResponse::InternalServerError().body(format!(
+                "Error connecting to upstream IMAGE {}: {}",
+                url, e
+            ))
+        }
+    }
 }
 
 // Your actual proxy logic - this is a simplified placeholder
@@ -25,8 +121,12 @@ async fn flv_proxy_handler(
         return HttpResponse::NotFound().body("Stream URL is not set or empty.");
     }
 
-    match client.get(&url)
-        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+    match client
+        .get(&url)
+        .header(
+            "User-Agent",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        )
         .send()
         .await
     {
@@ -35,14 +135,18 @@ async fn flv_proxy_handler(
                 let mut response_builder = HttpResponse::Ok();
                 response_builder.content_type("video/x-flv");
 
-                
                 let byte_stream = upstream_response.bytes_stream().map_err(|e| {
-                    eprintln!("[Rust/proxy.rs handler] Error reading bytes from upstream: {}", e);
-                    actix_web::error::ErrorInternalServerError(format!("Upstream stream error: {}", e))
+                    eprintln!(
+                        "[Rust/proxy.rs handler] Error reading bytes from upstream: {}",
+                        e
+                    );
+                    actix_web::error::ErrorInternalServerError(format!(
+                        "Upstream stream error: {}",
+                        e
+                    ))
                 });
-                
-                response_builder.streaming(byte_stream)
 
+                response_builder.streaming(byte_stream)
             } else {
                 let status_from_reqwest = upstream_response.status(); // Renamed for clarity
                 let error_text = upstream_response.text().await.unwrap_or_else(|e| {
@@ -50,32 +154,28 @@ async fn flv_proxy_handler(
                 });
                 eprintln!(
                     "[Rust/proxy.rs handler] Upstream request to {} failed with status: {}. Body: {}",
-                    url,
-                    status_from_reqwest, // Use the renamed variable for logging
-                    error_text
+                    url, status_from_reqwest, error_text
                 );
                 // Convert reqwest::StatusCode to actix_web::http::StatusCode
-                let actix_status_code = actix_web::http::StatusCode::from_u16(status_from_reqwest.as_u16())
-                    .unwrap_or(actix_web::http::StatusCode::INTERNAL_SERVER_ERROR);
+                let actix_status_code = actix_web::http::StatusCode::from_u16(
+                    status_from_reqwest.as_u16(),
+                )
+                .unwrap_or(actix_web::http::StatusCode::INTERNAL_SERVER_ERROR);
 
                 HttpResponse::build(actix_status_code).body(format!(
                     "Error fetching FLV stream from upstream (reqwest): {}. Status: {}. Details: {}",
-                    url,
-                    status_from_reqwest, // Log original reqwest status code
-                    error_text
+                    url, status_from_reqwest, error_text
                 ))
             }
         }
         Err(e) => {
             eprintln!(
                 "[Rust/proxy.rs handler] Failed to send request to upstream {} with reqwest: {}",
-                url,
-                e
+                url, e
             );
             HttpResponse::InternalServerError().body(format!(
                 "Error connecting to upstream FLV stream {} with reqwest: {}",
-                url,
-                e
+                url, e
             ))
         }
     }
@@ -113,6 +213,7 @@ pub async fn start_proxy(
             .app_data(app_data_reqwest_client) // Provide reqwest client
             .wrap(actix_cors::Cors::permissive())
             .route("/live.flv", web::get().to(flv_proxy_handler))
+            .route("/image", web::get().to(image_proxy_handler))
     })
     .bind(("127.0.0.1", port))
     {
@@ -142,6 +243,60 @@ pub async fn start_proxy(
 
     let proxy_url = format!("http://127.0.0.1:{}/live.flv", port);
     Ok(proxy_url)
+}
+
+#[tauri::command]
+pub async fn start_static_proxy_server(
+    _app_handle: AppHandle,
+    server_handle_state: State<'_, ProxyServerHandle>,
+    stream_url_store: State<'_, StreamUrlStore>,
+) -> Result<String, String> {
+    let port = find_free_port().await;
+
+    // Ensure MutexGuard is dropped before .await
+    let existing_handle_to_stop = { server_handle_state.0.lock().unwrap().take() };
+    if let Some(existing_handle) = existing_handle_to_stop {
+        existing_handle.stop(false).await;
+    }
+
+    let stream_url_data_for_actix = web::Data::new(stream_url_store.inner().clone());
+
+    let server = match HttpServer::new(move || {
+        let app_data_stream_url = stream_url_data_for_actix.clone();
+        let app_data_reqwest_client = web::Data::new(Client::new());
+        App::new()
+            .app_data(app_data_stream_url)
+            .app_data(app_data_reqwest_client)
+            .wrap(actix_cors::Cors::permissive())
+            .route("/live.flv", web::get().to(flv_proxy_handler))
+            .route("/image", web::get().to(image_proxy_handler))
+    })
+    .bind(("127.0.0.1", port))
+    {
+        Ok(srv) => srv,
+        Err(e) => {
+            let err_msg = format!(
+                "[Rust/proxy.rs] Failed to bind server to port {}: {}",
+                port, e
+            );
+            eprintln!("{}", err_msg);
+            return Err(err_msg);
+        }
+    }
+    .run();
+
+    let server_handle_for_state = server.handle();
+    *server_handle_state.0.lock().unwrap() = Some(server_handle_for_state);
+
+    tauri::async_runtime::spawn(async move {
+        if let Err(e) = server.await {
+            eprintln!("[Rust/proxy.rs] Proxy server run error: {}", e);
+        } else {
+            println!("[Rust/proxy.rs] Proxy server on port {} shut down.", port);
+        }
+    });
+
+    Ok(format!("http://127.0.0.1:{}", port))
 }
 
 #[tauri::command]

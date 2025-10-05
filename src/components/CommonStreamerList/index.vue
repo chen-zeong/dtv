@@ -51,6 +51,7 @@ import { useRouter } from 'vue-router';
 import type { CategorySelectedEvent } from '../../platforms/common/categoryTypes'
 import { useHuyaLiveRooms } from './composables/useHuyaLiveRooms'
 import { useDouyinLiveRooms } from './composables/useDouyinLiveRooms'
+import { useBilibiliLiveRooms } from './composables/useBilibiliLiveRooms'
 
 const props = defineProps<{
   selectedCategory: CategorySelectedEvent | null;
@@ -100,9 +101,26 @@ const douyinPartitionType = computed(() => {
   return null;
 });
 
+const resolvedParentCategoryId = computed(() => {
+  const href = props.selectedCategory?.cate2Href;
+  const data = props.categoriesData;
+  if (!href || !Array.isArray(data)) return null;
+  for (const c1 of data) {
+    if (!Array.isArray(c1.subcategories)) continue;
+    const c2 = c1.subcategories.find((s: any) => s.href === href);
+    if (c2 && (c2.parent_id || c2.parentId || c1.id)) return String(c2.parent_id ?? c2.parentId ?? c1.id);
+  }
+  return null;
+});
+
 const huyaComposable = useHuyaLiveRooms(resolvedSubcategoryId, { defaultPageSize: props.defaultPageSize ?? 120 });
 const douyinComposable = useDouyinLiveRooms(douyinPartition, douyinPartitionType);
-const selectedComposable = computed(() => platformName.value === 'douyin' ? douyinComposable : huyaComposable);
+const bilibiliComposable = useBilibiliLiveRooms(resolvedSubcategoryId, resolvedParentCategoryId);
+const selectedComposable = computed(() => {
+  if (platformName.value === 'douyin') return douyinComposable;
+  if (platformName.value === 'bilibili') return bilibiliComposable;
+  return huyaComposable;
+});
 
 const rooms = computed(() => selectedComposable.value.rooms.value);
 const isLoading = computed(() => selectedComposable.value.isLoading.value);
@@ -147,6 +165,10 @@ watch(() => props.selectedCategory, (newCategory, _oldCategory) => {
       douyinComposable.rooms.value = [];
       douyinComposable.hasMore.value = false;
       douyinComposable.error.value = null;
+    } else if (platformName.value === 'bilibili') {
+      bilibiliComposable.rooms.value = [];
+      bilibiliComposable.hasMore.value = false;
+      bilibiliComposable.error.value = null;
     } else {
       huyaComposable.rooms.value = [];
       huyaComposable.hasMore.value = false;

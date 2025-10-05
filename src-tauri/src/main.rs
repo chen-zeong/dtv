@@ -29,6 +29,7 @@ pub struct StreamUrlStore {
 #[derive(Default, Clone)]
 pub struct DouyuDanmakuHandles(Arc<Mutex<HashMap<String, oneshot::Sender<()>>>>);
 
+
 #[tauri::command]
 async fn get_stream_url_cmd(room_id: String) -> Result<String, String> {
     // Call the actual function to fetch the stream URL from the new location
@@ -150,6 +151,7 @@ fn main() {
         .manage(DouyinDanmakuState::default()) // Manage DouyinDanmakuState
         .manage(StreamUrlStore::default())
         .manage(proxy::ProxyServerHandle::default())
+        .manage(platforms::bilibili::state::BilibiliState::default())
         .invoke_handler(tauri::generate_handler![
             get_stream_url_cmd,
             get_stream_url_with_quality_cmd,
@@ -160,6 +162,7 @@ fn main() {
             start_douyin_danmu_listener, // Added Douyin danmaku listener command
             proxy::start_proxy,
             proxy::stop_proxy,
+            proxy::start_static_proxy_server,
             fetch_categories,
             fetch_live_list,
             fetch_live_list_for_cate3,
@@ -171,7 +174,9 @@ fn main() {
             get_douyin_live_stream_url_with_quality,
             fetch_douyin_room_info,
             fetch_douyin_streamer_info,
-            fetch_huya_live_list
+            fetch_huya_live_list,
+            platforms::bilibili::state::generate_bilibili_w_webid,
+            platforms::bilibili::live_list::fetch_bilibili_live_list
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
