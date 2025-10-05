@@ -9,6 +9,7 @@
       :selected-category="currentSelectedCategory"
       :categories-data="biliCategoriesData as any"
       platformName="bilibili"
+      playerRouteName="bilibiliPlayer"
       class="bili-streamer-list-section"
     />
   </div>

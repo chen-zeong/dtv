@@ -6,6 +6,7 @@ import DouyinPlayerView from '../pages/DouyinPlayerView.vue';
 import HuyaHomeView from '../pages/HuyaHomeView.vue'
 import HuyaPlayerView from '../pages/HuyaPlayerView.vue'
 import BilibiliHomeView from '../pages/BilibiliHomeView.vue'
+import BilibiliPlayerView from '../pages/BilibiliPlayerView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -46,6 +47,12 @@ const router = createRouter({
       path: '/player/huya/:roomId',
       name: 'huyaPlayer',
       component: HuyaPlayerView,
+      props: true
+    },
+    {
+      path: '/player/bilibili/:roomId',
+      name: 'bilibiliPlayer',
+      component: BilibiliPlayerView,
       props: true
     }
   ]

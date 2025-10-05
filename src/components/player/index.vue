@@ -111,6 +111,7 @@ import type { DanmakuMessage } from './types';
 import { getDouyuStreamConfig, startDouyuDanmakuListener, stopDouyuDanmaku, stopDouyuProxy } from '../../platforms/douyu/playerHelper';
 import { fetchAndPrepareDouyinStreamConfig, startDouyinDanmakuListener, stopDouyinDanmaku } from '../../platforms/douyin/playerHelper';
 import { getHuyaStreamConfig, stopHuyaProxy } from '../../platforms/huya/playerHelper';
+import { getBilibiliStreamConfig } from '../../platforms/bilibili/playerHelper';
 
 import StreamerInfo from '../StreamerInfo/index.vue';
 import DanmuList from '../DanmuList/index.vue';
@@ -126,6 +127,7 @@ const props = defineProps<{
   avatar?: string | null;
   isLive?: boolean | null;
   initialError?: string | null; // Added to accept pre-determined errors like "主播未开播"
+  cookie?: string | null; // Optional cookie for platforms like Bilibili
 }>();
 
 const emit = defineEmits<{
@@ -273,6 +275,8 @@ async function initializePlayerAndStream(
       console.log(`[Player/HUYA] Invoking getHuyaStreamConfig(roomId=${pRoomId}, quality=${currentQuality.value})`);
       streamConfig = await getHuyaStreamConfig(pRoomId, currentQuality.value);
       console.log('[Player/HUYA] Received streamConfig:', streamConfig);
+    } else if (pPlatform === StreamingPlatform.BILIBILI) {
+      streamConfig = await getBilibiliStreamConfig(pRoomId, currentQuality.value, props.cookie || undefined);
     } else {
       throw new Error(`不支持的平台: ${pPlatform}`);
     }

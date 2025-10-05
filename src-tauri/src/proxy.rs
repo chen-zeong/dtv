@@ -133,6 +133,10 @@ async fn flv_proxy_handler(
             .header("Referer", "https://www.huya.com/")
             .header("Origin", "https://www.huya.com");
     }
+    // 如果是B站域名，添加必要的 Referer 头
+    if url.contains("bilivideo") || url.contains("bilibili.com") || url.contains("hdslb.com") {
+        req = req.header("Referer", "https://live.bilibili.com/");
+    }
 
     match req.send().await {
         Ok(upstream_response) => {

@@ -180,7 +180,8 @@ fn main() {
             fetch_huya_live_list,
             platforms::huya::stream_url::get_huya_unified_cmd,
             platforms::bilibili::state::generate_bilibili_w_webid,
-            platforms::bilibili::live_list::fetch_bilibili_live_list
+            platforms::bilibili::live_list::fetch_bilibili_live_list,
+            platforms::bilibili::stream_url::get_bilibili_live_stream_url_with_quality
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
