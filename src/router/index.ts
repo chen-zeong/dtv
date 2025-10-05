@@ -4,6 +4,7 @@ import DouyinHomeView from '../pages/DouyinHomeView.vue'
 import DouyuPlayerView from '../pages/DouyuPlayerView.vue';
 import DouyinPlayerView from '../pages/DouyinPlayerView.vue';
 import HuyaHomeView from '../pages/HuyaHomeView.vue'
+import HuyaPlayerView from '../pages/HuyaPlayerView.vue'
 import BilibiliHomeView from '../pages/BilibiliHomeView.vue'
 
 const router = createRouter({
@@ -39,6 +40,12 @@ const router = createRouter({
       path: '/player/douyin/:roomId',
       name: 'douyinPlayer',
       component: DouyinPlayerView,
+      props: true
+    },
+    {
+      path: '/player/huya/:roomId',
+      name: 'huyaPlayer',
+      component: HuyaPlayerView,
       props: true
     }
   ]

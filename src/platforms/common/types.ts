@@ -1,9 +1,9 @@
-export type SupportedPlatform = 'douyu' | 'bilibili' | 'douyin'; // Add other platforms as needed
+export type SupportedPlatform = 'douyu' | 'bilibili' | 'douyin' | 'huya'; // Add other platforms as needed 
  
-
 export enum Platform {
   DOUYU = 'DOUYU',
-  DOUYIN = 'DOUYIN'
+  DOUYIN = 'DOUYIN',
+  HUYA = 'HUYA'
 }
 
 export type LiveStatus = 'LIVE' | 'REPLAY' | 'OFFLINE' | 'UNKNOWN';
@@ -115,4 +115,4 @@ export interface LiveStreamInfo {
   status?: number | null; // Add status field, consistent with Rust struct
   error_message?: string | null;
   // Potentially other platform-specific fields if not covered by StreamRoomDetails
-} 
+}

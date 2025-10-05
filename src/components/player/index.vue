@@ -110,6 +110,7 @@ import type { DanmakuMessage } from './types';
 // Platform-specific player helpers
 import { getDouyuStreamConfig, startDouyuDanmakuListener, stopDouyuDanmaku, stopDouyuProxy } from '../../platforms/douyu/playerHelper';
 import { fetchAndPrepareDouyinStreamConfig, startDouyinDanmakuListener, stopDouyinDanmaku } from '../../platforms/douyin/playerHelper';
+import { getHuyaStreamConfig, stopHuyaProxy } from '../../platforms/huya/playerHelper';
 
 import StreamerInfo from '../StreamerInfo/index.vue';
 import DanmuList from '../DanmuList/index.vue';
@@ -263,6 +264,15 @@ async function initializePlayerAndStream(
         return; // Stop if not playable
       }
       streamConfig = { streamUrl: douyinConfig.streamUrl, streamType: douyinConfig.streamType };
+    } else if (pPlatform === StreamingPlatform.HUYA) {
+      console.log(`[Player/HUYA] Enter HUYA branch: roomId=${pRoomId}, quality=${currentQuality.value}, playerIsLive=${playerIsLive.value}`);
+      // 对虎牙，props 里的 isLive 不一定可靠，即使为 false 也尝试获取直播流
+      if (playerIsLive.value === false) {
+        console.warn(`[Player/HUYA] playerIsLive=false from props, but will still attempt to fetch stream for room ${pRoomId}`);
+      }
+      console.log(`[Player/HUYA] Invoking getHuyaStreamConfig(roomId=${pRoomId}, quality=${currentQuality.value})`);
+      streamConfig = await getHuyaStreamConfig(pRoomId, currentQuality.value);
+      console.log('[Player/HUYA] Received streamConfig:', streamConfig);
     } else {
       throw new Error(`不支持的平台: ${pPlatform}`);
     }
@@ -630,6 +640,9 @@ onUnmounted(async () => {
 
   if (props.platform === StreamingPlatform.DOUYU) {
       await stopDouyuProxy();
+  }
+  if (props.platform === StreamingPlatform.HUYA) {
+      await stopHuyaProxy();
   }
 
   if (art.value) {

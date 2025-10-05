@@ -9,6 +9,7 @@
       :selected-category="currentSelectedCategory"
       :categories-data="huyaCategoriesData as any"
       :default-page-size="120"
+      playerRouteName="huyaPlayer"
       class="huya-streamer-list-section"
     />
   </div>

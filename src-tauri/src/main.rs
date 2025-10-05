@@ -19,6 +19,7 @@ use platforms::douyu::fetch_douyu_room_info;
 use platforms::douyu::fetch_three_cate;
 use platforms::douyu::{fetch_live_list, fetch_live_list_for_cate3};
 use platforms::huya::fetch_huya_live_list;
+// use platforms::huya::get_huya_stream_url_with_quality; // removed in favor of unified cmd
 
 #[derive(Default, Clone)]
 pub struct StreamUrlStore {
@@ -59,6 +60,8 @@ async fn get_stream_url_with_quality_cmd(room_id: String, quality: String) -> Re
             format!("Failed to get stream URL with quality: {}", e.to_string())
         })
 }
+
+// Legacy Huya stream URL command removed in favor of unified command
 
 // This is the command that should be used for setting stream URL if it interacts with StreamUrlStore
 #[tauri::command]
@@ -175,6 +178,7 @@ fn main() {
             fetch_douyin_room_info,
             fetch_douyin_streamer_info,
             fetch_huya_live_list,
+            platforms::huya::stream_url::get_huya_unified_cmd,
             platforms::bilibili::state::generate_bilibili_w_webid,
             platforms::bilibili::live_list::fetch_bilibili_live_list
         ])

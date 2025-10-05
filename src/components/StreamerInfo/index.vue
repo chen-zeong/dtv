@@ -2,7 +2,7 @@
     <div class="streamer-info">
       <div class="streamer-layout">
         <div class="avatar-wrapper">
-          <img v-if="props.avatar && !showAvatarText" :src="props.avatar" :alt="computedNickname" @error="handleAvatarError" class="avatar-img">
+          <img v-if="avatarUrl && !showAvatarText" :src="avatarUrl" :alt="computedNickname" @error="handleAvatarError" class="avatar-img">
           <div v-else class="avatar-fallback">{{ computedNickname.charAt(0).toUpperCase() }}</div>
         </div>
   
@@ -12,7 +12,7 @@
             <span class="streamer-name">{{ computedNickname }}</span>
             <span :class="['status-tag', statusClass]">{{ getStatusText }}</span>
             <span v-if="computedViewerCount > 0" class="viewers-tag">
-              <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5M12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5s5 2.24 5 5s-2.24 5-5 5m0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3s3-1.34 3-3s-1.34-3-3-3"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5M12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5s5 2.24 5-5s-2.24 5-5 5m0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3s3-1.34 3-3s-1.34-3-3-3"/></svg>
               {{ formattedViewerCount }}
             </span>
           </div>
@@ -382,7 +382,30 @@
   import type { StreamerDetails } from '../../platforms/common/types'
   import { fetchDouyuStreamerDetails } from '../../platforms/douyu/streamerInfoParser'
   import { getDouyinStreamerDetails } from '../../platforms/douyin/streamerInfoParser'
-  
+  import { invoke } from '@tauri-apps/api/core'
+
+  // Helper: normalize avatar URL (strip wrappers/backticks, fix protocol)
+  const normalizeAvatarUrl = (input: string | null | undefined): string => {
+    if (!input) return ''
+    let url = String(input).trim()
+    // strip wrapping backticks or quotes
+    const startsWithWrapper = url.startsWith('`') || url.startsWith('"') || url.startsWith("'")
+    const endsWithWrapper = url.endsWith('`') || url.endsWith('"') || url.endsWith("'")
+    if (startsWithWrapper && endsWithWrapper) {
+      url = url.slice(1, -1).trim()
+    }
+    // handle protocol-relative URLs
+    if (url.startsWith('//')) {
+      url = 'https:' + url
+    }
+    // upgrade http to https
+    if (url.startsWith('http://')) {
+      url = 'https://' + url.slice('http://'.length)
+    }
+    // remove any whitespace inside the URL
+    url = url.replace(/\s+/g, '')
+    return url
+  }
   const emit = defineEmits<{
     (e: 'follow', data: { id: string; platform: Platform; nickname: string; avatarUrl: string | null; roomTitle?: string }): void
     (e: 'unfollow', roomId: string): void
@@ -418,10 +441,7 @@
         return 'live';
       }
     } else if (props.isLive) { 
-      // This part might need adjustment if props can also indicate looping
-      // For now, if props.isLive is true, and we don't have loop info from props, assume 'live'
-      // Consider if props should also have an isLooping field if direct prop data is primary
-      return 'live'; // Fallback for initial props or Douyin where roomDetails might not be fetched by this component
+      return 'live';
     }
     return 'offline';
   });
@@ -451,23 +471,55 @@
       showAvatarText.value = !props.avatar;
       isLoading.value = false;
       roomDetails.value = null;
+      avatarUrl.value = props.avatar || '';
+      return;
+    }
+
+    if (props.platform === Platform.HUYA) {
+      try {
+        isLoading.value = true;
+        error.value = null;
+        roomDetails.value = null;
+        showAvatarText.value = false;
+
+        const res: any = await invoke('get_huya_unified_cmd', { roomId: props.roomId, quality: '原画' });
+        const mapped: StreamerDetails = {
+          roomId: props.roomId,
+          platform: 'huya',
+          roomTitle: (res && res.title) ? res.title : (props.title ?? '直播间标题加载中...'),
+          nickname: (res && res.nick) ? res.nick : (props.anchorName ?? props.roomId),
+          avatarUrl: (res && res.avatar) ? res.avatar : (props.avatar ?? null),
+          isLive: !!(res && res.is_live),
+        };
+        roomDetails.value = mapped;
+        avatarUrl.value = normalizeAvatarUrl(mapped.avatarUrl);
+        showAvatarText.value = !avatarUrl.value;
+      } catch (e: any) {
+        console.error(`[StreamerInfo] HUYA fetchRoomDetails error for ${props.roomId}:`, e);
+        error.value = e?.message || '获取虎牙房间信息失败';
+        roomDetails.value = null;
+        avatarUrl.value = props.avatar || '';
+        showAvatarText.value = !props.avatar;
+      } finally {
+        isLoading.value = false;
+      }
       return;
     }
 
     isLoading.value = true;
     error.value = null;
-    roomDetails.value = null; // Clear previous details
+    roomDetails.value = null;
     showAvatarText.value = false;
 
     try {
       if (props.platform === Platform.DOUYU) {
         roomDetails.value = await fetchDouyuStreamerDetails(props.roomId);
+        avatarUrl.value = normalizeAvatarUrl(roomDetails.value?.avatarUrl || avatarUrl.value);
       } else {
         console.warn(`[StreamerInfo] Unsupported platform: ${props.platform}`);
         throw new Error(`Unsupported platform: ${props.platform}`);
       }
 
-      // Fallback for avatar after attempting to load details
       if (!avatarUrl.value) {
         showAvatarText.value = true
       }
@@ -475,7 +527,7 @@
     } catch (e: any) {
       console.error(`[StreamerInfo] Error in fetchRoomDetails for ${props.platform}/${props.roomId}:`, e)
       error.value = e.message || 'Failed to load streamer details'
-      showAvatarText.value = true // Show fallback if any error occurs
+      showAvatarText.value = true
     } finally {
       isLoading.value = false
     }
@@ -497,7 +549,7 @@
   }
   
   const handleAvatarError = () => {
-    console.warn(`[StreamerInfo] Avatar image failed to load for ${props.anchorName} (URL: ${props.avatar}). Displaying fallback.`);
+    console.warn(`[StreamerInfo] Avatar image failed to load for ${computedNickname.value} (URL: ${avatarUrl.value}). Displaying fallback.`);
     showAvatarText.value = true;
   };
   
@@ -546,6 +598,13 @@
           initialAnchorName: props.anchorName,
           initialAvatar: props.avatar,
         })
+        avatarUrl.value = normalizeAvatarUrl(roomDetails.value?.avatarUrl || avatarUrl.value)
+        showAvatarText.value = !avatarUrl.value
+      }
+    } else {
+      // For non-Douyin platforms, if parent updates avatar prop, reflect it
+      if (newValues[2] !== oldValues[2]) {
+        avatarUrl.value = normalizeAvatarUrl(props.avatar || '')
         showAvatarText.value = !avatarUrl.value
       }
     }
@@ -571,5 +630,4 @@
       updateHighlightVars();
     });
   })
-
   </script>

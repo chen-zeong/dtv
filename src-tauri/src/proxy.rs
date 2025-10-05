@@ -121,15 +121,20 @@ async fn flv_proxy_handler(
         return HttpResponse::NotFound().body("Stream URL is not set or empty.");
     }
 
-    match client
-        .get(&url)
+    let mut req = client.get(&url)
         .header(
             "User-Agent",
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        )
-        .send()
-        .await
-    {
+        );
+
+    // 如果是虎牙域名，添加必要的 Referer/Origin 头
+    if url.contains("huya.com") || url.contains("hy-cdn.com") || url.contains("huyaimg.com") {
+        req = req
+            .header("Referer", "https://www.huya.com/")
+            .header("Origin", "https://www.huya.com");
+    }
+
+    match req.send().await {
         Ok(upstream_response) => {
             if upstream_response.status().is_success() {
                 let mut response_builder = HttpResponse::Ok();
