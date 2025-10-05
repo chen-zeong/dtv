@@ -50,11 +50,13 @@ import { ref, watch, onMounted, onBeforeUnmount, nextTick, computed } from 'vue'
 import { useRouter } from 'vue-router';
 import type { CategorySelectedEvent } from '../../platforms/common/categoryTypes'
 import { useHuyaLiveRooms } from './composables/useHuyaLiveRooms'
+import { useDouyinLiveRooms } from './composables/useDouyinLiveRooms'
 
 const props = defineProps<{
   selectedCategory: CategorySelectedEvent | null;
   categoriesData?: any[]; // Pass platform categories to resolve id mapping generically
-  playerRouteName?: string; // e.g., 'huyaPlayer' in future; default fallback disabled if route not exist
+  playerRouteName?: string; // e.g., 'huyaPlayer' or 'douyinPlayer'
+  platformName?: 'huya' | 'douyin' | 'douyu' | 'bilibili' | string; // choose composable
   defaultPageSize?: number; // platform-specific default page size, Huya=120
 }>();
 
@@ -63,8 +65,9 @@ const scrollComponentRef = ref<HTMLElement | null>(null);
 const sentinelRef = ref<HTMLElement | null>(null);
 const categoryHref = computed(() => props.selectedCategory?.cate2Href || null);
 const categoryName = computed(() => props.selectedCategory?.cate2Name || null);
+const platformName = computed(() => props.platformName ?? 'huya');
 
-// Resolve platform-specific gid/id from categoriesData based on cate2Href
+// Resolve platform-specific gid/id from categoriesData based on cate2Href (Huya)
 const resolvedSubcategoryId = computed(() => {
   const href = props.selectedCategory?.cate2Href;
   const data = props.categoriesData;
@@ -77,15 +80,37 @@ const resolvedSubcategoryId = computed(() => {
   return null;
 });
 
-const { 
-  rooms,
-  isLoading,
-  isLoadingMore,
-  error,
-  hasMore,
-  loadInitialRooms,
-  loadMoreRooms,
-} = useHuyaLiveRooms(resolvedSubcategoryId, { defaultPageSize: props.defaultPageSize ?? 120 });
+// Douyin: parse cate2Href to partition and partitionType
+const douyinPartition = computed(() => { 
+  const href = props.selectedCategory?.cate2Href;
+  if (!href) return null;
+  const parts = href.split('_');
+  if (parts.length >= 1) {
+    return parts[parts.length - 1];
+  }
+  return null;
+});
+const douyinPartitionType = computed(() => { 
+  const href = props.selectedCategory?.cate2Href;
+  if (!href) return null;
+  const parts = href.split('_');
+  if (parts.length >= 2) {
+    return parts[parts.length - 2];
+  }
+  return null;
+});
+
+const huyaComposable = useHuyaLiveRooms(resolvedSubcategoryId, { defaultPageSize: props.defaultPageSize ?? 120 });
+const douyinComposable = useDouyinLiveRooms(douyinPartition, douyinPartitionType);
+const selectedComposable = computed(() => platformName.value === 'douyin' ? douyinComposable : huyaComposable);
+
+const rooms = computed(() => selectedComposable.value.rooms.value);
+const isLoading = computed(() => selectedComposable.value.isLoading.value);
+const isLoadingMore = computed(() => selectedComposable.value.isLoadingMore.value);
+const error = computed(() => selectedComposable.value.error.value);
+const hasMore = computed(() => selectedComposable.value.hasMore.value);
+const loadInitialRooms = () => selectedComposable.value.loadInitialRooms();
+const loadMoreRooms = () => selectedComposable.value.loadMoreRooms();
 
 let observer: IntersectionObserver | null = null;
 
@@ -117,9 +142,16 @@ watch(() => props.selectedCategory, (newCategory, _oldCategory) => {
         loadInitialRooms();
     }
   } else {
-    rooms.value = [];
-    hasMore.value = false;
-    error.value = null;
+    // Reset states when no category
+    if (platformName.value === 'douyin') {
+      douyinComposable.rooms.value = [];
+      douyinComposable.hasMore.value = false;
+      douyinComposable.error.value = null;
+    } else {
+      huyaComposable.rooms.value = [];
+      huyaComposable.hasMore.value = false;
+      huyaComposable.error.value = null;
+    }
   }
   nextTick(() => {
     if (scrollComponentRef.value && sentinelRef.value) setupIntersectionObserver();

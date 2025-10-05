@@ -1,46 +1,60 @@
 <template>
-  <div class="douyin-home-view-layout">
-    <CommonCategory 
-      :categories-data="douyinCategoriesData as any"
-      @category-selected="onCategorySelected" 
-      class="douyin-category-section"
-    />
-    <DouyinStreamerList 
-      :selected-category="currentSelectedCategory" 
-      class="douyin-streamer-list-section"
-    />
+  <div class="douyin-home">
+    <div class="douyin-content">
+      <div class="left-panel">
+        <CommonCategory 
+          :categoriesData="categoriesData"
+          @category-selected="onCategorySelected" 
+        />
+      </div>
+      <div class="right-panel">
+        <CommonStreamerList
+          :selectedCategory="selectedCategory"
+          :categoriesData="categoriesData"
+          platformName="douyin"
+          playerRouteName="douyinPlayer"
+        />
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref } from 'vue'
 import CommonCategory from '../components/CommonCategory/index.vue'
+import CommonStreamerList from '../components/CommonStreamerList/index.vue'
 import { douyinCategoriesData } from '../platforms/douyin/douyinCategoriesData'
-import DouyinStreamerList from '../components/DouyinStreamerList/index.vue';
-import type { CategorySelectedEvent } from '../platforms/common/categoryTypes.ts'
+import type { CategorySelectedEvent } from '../platforms/common/categoryTypes'
 
-const currentSelectedCategory = ref<CategorySelectedEvent | null>(null);
+const categoriesData = douyinCategoriesData
+const selectedCategory = ref<CategorySelectedEvent | null>(null)
 
-const onCategorySelected = (categoryEvent: CategorySelectedEvent) => {
-  currentSelectedCategory.value = categoryEvent;
+function onCategorySelected(evt: CategorySelectedEvent) {
+  selectedCategory.value = evt
 }
 </script>
 
 <style scoped>
-.douyin-home-view-layout {
+.douyin-home {
   display: flex;
   flex-direction: column;
-  height: 100%; /* Make sure the layout takes full height */
-  overflow: hidden; /* Prevent unintended scrollbars on the layout itself */
+  height: 100%;
 }
 
-.douyin-category-section {
-  flex-shrink: 0;
+.douyin-content {
+  display: flex;
+  flex-direction: column; /* 改为纵向排列，上下布局 */
+  height: 100%;
 }
 
-.douyin-streamer-list-section {
-  flex-grow: 1; /* Allow streamer list to take remaining space */
-  overflow-y: auto; /* Allow internal scrolling for streamer list if content overflows */
-  min-height: 0; /* Important for flex-grow in a flex column */
+.left-panel {
+  width: 100%; /* 顶部区域占满宽度 */
+  border-bottom: 1px solid var(--border-color-light); /* 改为底部分隔线 */
+  overflow: hidden;
+}
+
+.right-panel {
+  flex: 1; /* 下方列表区域填满剩余空间 */
+  overflow: hidden;
 }
 </style>
