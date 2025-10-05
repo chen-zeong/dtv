@@ -18,6 +18,7 @@ use platforms::douyu::fetch_categories;
 use platforms::douyu::fetch_douyu_room_info;
 use platforms::douyu::fetch_three_cate;
 use platforms::douyu::{fetch_live_list, fetch_live_list_for_cate3};
+use platforms::huya::fetch_huya_live_list;
 
 #[derive(Default, Clone)]
 pub struct StreamUrlStore {
@@ -169,7 +170,8 @@ fn main() {
             get_douyin_live_stream_url,
             get_douyin_live_stream_url_with_quality,
             fetch_douyin_room_info,
-            fetch_douyin_streamer_info
+            fetch_douyin_streamer_info,
+            fetch_huya_live_list
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

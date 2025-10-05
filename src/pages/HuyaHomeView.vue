@@ -2,17 +2,29 @@
   <div class="huya-home-view-layout">
     <CommonCategory 
       :categories-data="huyaCategoriesData as any"
+      @category-selected="onCategorySelected"
       class="huya-category-section"
     />
-    <div class="huya-streamer-list-section">
-      <!-- 预留：虎牙主播列表（后续实现） -->
-    </div>
+    <CommonStreamerList 
+      :selected-category="currentSelectedCategory"
+      :categories-data="huyaCategoriesData as any"
+      :default-page-size="120"
+      class="huya-streamer-list-section"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
 import CommonCategory from '../components/CommonCategory/index.vue'
 import { huyaCategoriesData } from '../platforms/huya/huyaCategoriesData'
+import CommonStreamerList from '../components/CommonStreamerList/index.vue'
+import type { CategorySelectedEvent } from '../platforms/common/categoryTypes.ts'
+
+const currentSelectedCategory = ref<CategorySelectedEvent | null>(null)
+const onCategorySelected = (categoryEvent: CategorySelectedEvent) => {
+  currentSelectedCategory.value = categoryEvent
+}
 </script>
 
 <style scoped>
