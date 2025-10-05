@@ -77,6 +77,22 @@ pub struct LiveCoreSdkData {
 pub struct PullDataContainer {
     #[serde(rename = "stream_data")]
     pub stream_data: Option<String>, // This is the JSON string e.g., "{\"data\":{\"origin\":...}}"
+    #[serde(rename = "options")]
+    pub options: Option<PullOptions>, // Qualities array with name/level/sdk_key
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct PullOptions {
+    #[serde(rename = "qualities")]
+    pub qualities: Option<Vec<PullQualityOption>>, // e.g., [{ name: "原画", level: 3, sdk_key: "FULL_HD1" }, ...]
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct PullQualityOption {
+    pub name: Option<String>,
+    pub level: Option<i32>,
+    #[serde(rename = "sdk_key")]
+    pub sdk_key: Option<String>,
 }
 
 // --- Structs for parsing the nested JSON string within stream_data ---
