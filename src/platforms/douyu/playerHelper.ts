@@ -2,20 +2,15 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen, type Event as TauriEvent } from '@tauri-apps/api/event';
 import Artplayer from 'artplayer';
 import { Ref } from 'vue';
-import type { DanmakuMessage } from '../../components/player/types'; // Corrected path
-import { parseDouyuDanmakuMessage } from './parsers'; // <-- Import the parser
+import type { DanmakuMessage } from '../../components/player/types';
 
-// Specific type for Douyu's raw danmaku payload from Rust event
-export interface DouyuRustDanmakuPayload {
-  type: "chatmsg" | "uenter";
-  room_id: string;
-  nickname: string;
-  content: string; // only for chatmsg
-  level: string;
-  badgeName?: string;
-  badgeLevel?: string;
-  color?: string;
-  uid?: string; // only for uenter
+// 统一的 Rust 弹幕事件负载（与 Douyin/Huya 保持一致）
+export interface UnifiedRustDanmakuPayload {
+  room_id?: string;
+  user: string;
+  content: string;
+  user_level: number;
+  fans_club_level: number;
 }
 
 export async function getDouyuStreamConfig(roomId: string, quality: string = '原画'): Promise<{ streamUrl: string, streamType: string | undefined }> {
@@ -25,7 +20,6 @@ export async function getDouyuStreamConfig(roomId: string, quality: string = '�
 
   for (let attempt = 1; attempt <= MAX_STREAM_FETCH_ATTEMPTS; attempt++) {
     try {
-      // 使用画质参数调用斗鱼画质切换API
       const streamUrl = await invoke<string>('get_stream_url_with_quality_cmd', {
         roomId: roomId,
         quality: quality
@@ -33,23 +27,20 @@ export async function getDouyuStreamConfig(roomId: string, quality: string = '�
       
       if (streamUrl) {
         finalStreamUrl = streamUrl;
-        streamType = 'flv'; // 斗鱼默认使用flv格式
+        streamType = 'flv';
         break;
       } else {
         throw new Error('斗鱼直播流地址获取为空。');
       }
     } catch (e: any) {
       console.error(`[DouyuPlayerHelper] 获取斗鱼直播流失败 (尝试 ${attempt}/${MAX_STREAM_FETCH_ATTEMPTS}):`, e.message);
-      // Check for specific error messages indicating streamer is offline or room doesn't exist
-      // These are examples; actual messages from your Rust backend might differ.
       const offlineOrInvalidRoomMessages = [
-        "主播未开播", // Generic offline message
-        "房间不存在", // Generic room not found
-        "error: 1",   // Example: Douyu API error code 1 (often offline or invalid)
-        "error: 102", // Example: Douyu API error code 102 (often room not found or offline)
-        "error code 1", // More flexible matching for error codes
-        "error code 102"
-        // Add other known patterns here from your Rust error messages
+        '主播未开播',
+        '房间不存在',
+        'error: 1',
+        'error: 102',
+        'error code 1',
+        'error code 102',
       ];
 
       const errorMessageLowerCase = e.message?.toLowerCase() || '';
@@ -57,13 +48,12 @@ export async function getDouyuStreamConfig(roomId: string, quality: string = '�
 
       if (isDefinitivelyOffline) {
         console.warn(`[DouyuPlayerHelper] Streamer for room ${roomId} is definitively offline or room is invalid. Aborting retries.`);
-        throw e; // Re-throw the specific error to stop retries
+        throw e;
       }
 
       if (attempt === MAX_STREAM_FETCH_ATTEMPTS) {
         throw new Error(`获取斗鱼直播流失败 (尝试 ${MAX_STREAM_FETCH_ATTEMPTS} 次后): ${e.message}`);
       }
-      // Exponential backoff might be better, but simple delay for now
       await new Promise(resolve => setTimeout(resolve, 1000 * attempt)); 
     }
   }
@@ -73,9 +63,8 @@ export async function getDouyuStreamConfig(roomId: string, quality: string = '�
   }
 
   try {
-    // Assuming stopProxy is handled separately or before calling this if needed
     await invoke('set_stream_url_cmd', { url: finalStreamUrl });
-    const proxyUrl = await invoke<string>('start_proxy')
+    const proxyUrl = await invoke<string>('start_proxy');
     return { streamUrl: proxyUrl, streamType };
   } catch (e: any) {
     throw new Error(`设置斗鱼代理失败: ${e.message}`);
@@ -84,44 +73,36 @@ export async function getDouyuStreamConfig(roomId: string, quality: string = '�
 
 export async function startDouyuDanmakuListener(
   roomId: string,
-  artInstance: Artplayer, // For emitting danmaku to player
-  danmakuMessagesRef: Ref<DanmakuMessage[]> // For updating DanmuList
+  artInstance: Artplayer,
+  danmakuMessagesRef: Ref<DanmakuMessage[]>
 ): Promise<() => void> {
 
   await invoke('start_danmaku_listener', { roomId });
   
-  const eventName = `danmaku-${roomId}`;
+  const eventName = 'danmaku-message';
 
-  const unlisten = await listen<DouyuRustDanmakuPayload>(eventName, (event: TauriEvent<DouyuRustDanmakuPayload>) => {
-
+  const unlisten = await listen<UnifiedRustDanmakuPayload>(eventName, (event: TauriEvent<UnifiedRustDanmakuPayload>) => {
     if (artInstance && artInstance.plugins && artInstance.plugins.artplayerPluginDanmuku && event.payload) {
+      const rustP = event.payload;
 
-      const commonDanmaku = parseDouyuDanmakuMessage(event.payload);
-      
-      if (commonDanmaku) {
+      // 仅处理当前 roomId 的消息，避免跨房间干扰
+      if (rustP.room_id && rustP.room_id !== roomId) return;
 
-        artInstance.plugins.artplayerPluginDanmuku.emit({
-          text: commonDanmaku.content, // Use content from parsed message
-          color: commonDanmaku.color || '#FFFFFF', // Use color from parsed message
-        });
+      const frontendDanmaku: DanmakuMessage = {
+        nickname: rustP.user || '未知用户',
+        content: rustP.content || '',
+        level: String(rustP.user_level || 0),
+        badgeLevel: rustP.fans_club_level > 0 ? String(rustP.fans_club_level) : undefined,
+        room_id: rustP.room_id || roomId,
+      };
 
-       
-        const displayDanmaku: DanmakuMessage = { // Adapting to DanmuList's expected DanmakuMessage type
-            nickname: commonDanmaku.sender.nickname,
-            content: commonDanmaku.content,
-            level: commonDanmaku.sender.level ? String(commonDanmaku.sender.level) : '0',
-            badgeName: commonDanmaku.sender.badgeName,
-            badgeLevel: commonDanmaku.sender.badgeLevel ? String(commonDanmaku.sender.badgeLevel) : undefined,
-            color: commonDanmaku.color,
-            uid: commonDanmaku.sender.uid,
-            room_id: roomId, // roomId is available in this scope
-            // id and timestamp are part of CommonDanmakuMessage but might not be directly used by DanmuList's item display
-        };
-        danmakuMessagesRef.value.push(displayDanmaku);
-        
-        if (danmakuMessagesRef.value.length > 200) { // Manage danmaku array size
-            danmakuMessagesRef.value.splice(0, danmakuMessagesRef.value.length - 200);
-        }
+      artInstance.plugins.artplayerPluginDanmuku.emit({
+        text: frontendDanmaku.content,
+        color: frontendDanmaku.color || '#FFFFFF',
+      });
+      danmakuMessagesRef.value.push(frontendDanmaku);
+      if (danmakuMessagesRef.value.length > 200) {
+        danmakuMessagesRef.value.splice(0, danmakuMessagesRef.value.length - 200);
       }
     }
   });

@@ -2,17 +2,7 @@ use super::gen::{ChatMessage, LikeMessage, MemberMessage, RoomStatsMessage}; // 
 use prost::Message as ProstMessage; // For .decode()
 use serde::Serialize; // For an AppHandle.emit_all payload
 use specta; // Keep the main crate import if needed, or just specta::Type
-
-// Define the structure for frontend danmaku messages
-#[derive(Serialize, Clone, Debug, specta::Type)] // Explicitly use specta::Type for derive
-pub struct DanmakuFrontendPayload {
-    pub room_id: String, // Added roomId, ensure it's populated when creating this struct
-    pub user: String,
-    pub content: String,
-    pub user_level: i64,
-    pub fans_club_level: i32,
-    // pub r#type: String, // Example: "chat", "gift", "enter"
-}
+use crate::platforms::common::DanmakuFrontendPayload; // Use shared payload type
 
 // Parser for ChatMessage
 pub fn parse_chat_message(

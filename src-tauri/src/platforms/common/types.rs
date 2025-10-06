@@ -56,3 +56,17 @@ pub struct DouyinDanmakuState(pub std::sync::Mutex<Option<tokio::sync::mpsc::Sen
 #[derive(Default)]
 #[allow(dead_code)]
 pub struct DouyuDanmakuState(pub std::sync::Mutex<Option<tokio::sync::mpsc::Sender<()>>>);
+
+// State for the Huya Danmaku listener
+#[derive(Default)]
+#[allow(dead_code)]
+pub struct HuyaDanmakuState(pub std::sync::Mutex<Option<tokio::sync::mpsc::Sender<()>>>);
+
+#[derive(Serialize, Clone, Debug, specta::Type)]
+pub struct DanmakuFrontendPayload {
+    pub room_id: String,
+    pub user: String,
+    pub content: String,
+    pub user_level: i64,
+    pub fans_club_level: i32,
+}

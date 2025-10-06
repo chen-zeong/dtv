@@ -7,7 +7,7 @@ use std::sync::{Arc, Mutex};
 use tokio::sync::oneshot;
 mod platforms;
 mod proxy;
-use platforms::common::DouyinDanmakuState;
+use platforms::common::{DouyinDanmakuState, HuyaDanmakuState};
 use platforms::douyin::danmu::signature::generate_douyin_ms_token;
 use platforms::douyin::fetch_douyin_partition_rooms;
 use platforms::douyin::fetch_douyin_room_info;
@@ -18,7 +18,8 @@ use platforms::douyu::fetch_categories;
 use platforms::douyu::fetch_douyu_room_info;
 use platforms::douyu::fetch_three_cate;
 use platforms::douyu::{fetch_live_list, fetch_live_list_for_cate3};
-use platforms::huya::fetch_huya_live_list;
+use platforms::huya::{fetch_huya_live_list, start_huya_danmaku_listener};
+use platforms::huya::stop_huya_danmaku_listener;
 // use platforms::huya::get_huya_stream_url_with_quality; // removed in favor of unified cmd
 
 #[derive(Default, Clone)]
@@ -152,6 +153,7 @@ fn main() {
         .manage(client) // Manage the reqwest client
         .manage(DouyuDanmakuHandles::default()) // Manage new DouyuDanmakuHandles
         .manage(DouyinDanmakuState::default()) // Manage DouyinDanmakuState
+        .manage(HuyaDanmakuState::default()) // Manage HuyaDanmakuState
         .manage(StreamUrlStore::default())
         .manage(proxy::ProxyServerHandle::default())
         .manage(platforms::bilibili::state::BilibiliState::default())
@@ -163,6 +165,8 @@ fn main() {
             start_danmaku_listener,      // Douyu danmaku start
             stop_danmaku_listener,       // Douyu danmaku stop
             start_douyin_danmu_listener, // Added Douyin danmaku listener command
+            start_huya_danmaku_listener, // Added Huya danmaku listener command
+            stop_huya_danmaku_listener,  // Added Huya danmaku stop command
             proxy::start_proxy,
             proxy::stop_proxy,
             proxy::start_static_proxy_server,
@@ -178,6 +182,7 @@ fn main() {
             fetch_douyin_room_info,
             fetch_douyin_streamer_info,
             fetch_huya_live_list,
+            platforms::huya::danmaku::fetch_huya_join_params,
             platforms::huya::stream_url::get_huya_unified_cmd,
             platforms::bilibili::state::generate_bilibili_w_webid,
             platforms::bilibili::live_list::fetch_bilibili_live_list,

@@ -109,7 +109,7 @@ pub async fn start_douyin_danmu_listener(
                 room_id_str_clone, e
             );
             let error_payload =
-                crate::platforms::douyin::danmu::message_parsers::DanmakuFrontendPayload {
+                crate::platforms::common::DanmakuFrontendPayload {
                     room_id: room_id_str_clone.clone(),
                     user: "系统消息".to_string(),
                     content: format!("弹幕连接发生错误: {}", e),

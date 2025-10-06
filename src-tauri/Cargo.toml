@@ -48,7 +48,10 @@ base64 = "0.21"
 anyhow = "1.0"
 once_cell = "1.8"
 hex = "0.4"
-
+http = "0.2" 
+# Huya TARS codec
+tars-stream = "0.1.1"
+ 
 # Force curl to use platform TLS (SecureTransport on macOS) and avoid OpenSSL linkage
 # Dependencies for Douyin Danmaku
 prost = "0.12"

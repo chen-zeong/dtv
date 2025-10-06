@@ -110,7 +110,7 @@ import type { DanmakuMessage } from './types';
 // Platform-specific player helpers
 import { getDouyuStreamConfig, startDouyuDanmakuListener, stopDouyuDanmaku, stopDouyuProxy } from '../../platforms/douyu/playerHelper';
 import { fetchAndPrepareDouyinStreamConfig, startDouyinDanmakuListener, stopDouyinDanmaku } from '../../platforms/douyin/playerHelper';
-import { getHuyaStreamConfig, stopHuyaProxy } from '../../platforms/huya/playerHelper';
+import { getHuyaStreamConfig, startHuyaDanmakuListener, stopHuyaDanmaku, stopHuyaProxy } from '../../platforms/huya/playerHelper';
 import { getBilibiliStreamConfig } from '../../platforms/bilibili/playerHelper';
 
 import StreamerInfo from '../StreamerInfo/index.vue';
@@ -446,6 +446,8 @@ async function startCurrentDanmakuListener(platform: StreamingPlatform, roomId: 
       stopFn = await startDouyuDanmakuListener(roomId, artInstance, danmakuMessages); 
     } else if (platform === StreamingPlatform.DOUYIN) {
       stopFn = await startDouyinDanmakuListener(roomId, artInstance, danmakuMessages);
+    } else if (platform === StreamingPlatform.HUYA) {
+      stopFn = await startHuyaDanmakuListener(roomId, artInstance, danmakuMessages);
     }
 
     if (stopFn) {
@@ -486,6 +488,8 @@ async function stopCurrentDanmakuListener(platform?: StreamingPlatform, roomId?:
       await stopDouyuDanmaku(roomId!, unlistenDanmakuFn); 
     } else if (platform === StreamingPlatform.DOUYIN) {
       await stopDouyinDanmaku(unlistenDanmakuFn);
+    } else if (platform === StreamingPlatform.HUYA) {
+      await stopHuyaDanmaku(unlistenDanmakuFn);
     }
     if (unlistenDanmakuFn) { 
         unlistenDanmakuFn = null;

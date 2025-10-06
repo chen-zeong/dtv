@@ -22,7 +22,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self' http://localhost:2896 http://127.0.0.1:34719; connect-src 'self' http://localhost:2896 http://127.0.0.1:34719 https://*.douyu.com https://*.douyucdn.cn https://*.edgesrv.com wss://*.douyu.com; media-src 'self' http://localhost:2896 http://127.0.0.1:34719 https://*.douyucdn.cn https://*.douyinpic.com https://*.edgesrv.com blob:; img-src 'self' data: https://*.douyucdn.cn https://*.douyinpic.com https://*.douyu.com; script-src 'self' 'unsafe-eval' blob: 'wasm-unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; worker-src blob:; child-src blob:; object-src blob:; base-uri 'self'; media-src-elem 'self' http://localhost:2896 http://127.0.0.1:34719 blob:"
+      "csp": "default-src 'self' http://localhost:2896 http://127.0.0.1:34719; connect-src 'self' http://localhost:2896 http://127.0.0.1:34719 https://*.douyu.com https://*.douyucdn.cn https://*.edgesrv.com https://*.huya.com wss://*.douyu.com wss://*.huya.com; media-src 'self' http://localhost:2896 http://127.0.0.1:34719 https://*.douyucdn.cn https://*.douyinpic.com https://*.edgesrv.com blob:; img-src 'self' data: https://*.douyucdn.cn https://*.douyinpic.com https://*.douyu.com; script-src 'self' 'unsafe-eval' blob: 'wasm-unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; worker-src blob:; child-src blob:; object-src blob:; base-uri 'self'; media-src-elem 'self' http://localhost:2896 http://127.0.0.1:34719 blob:"
     }
   },
   "bundle": {

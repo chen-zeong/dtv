@@ -140,6 +140,26 @@ impl DanmakuClient {
                                 });
 
                                 let _ = window.emit(&event_name, danmaku);
+
+                                // 统一向前端发送通用弹幕事件，便于跨平台 DanmuList 使用
+                                let _ = window.emit(
+                                    "danmaku-message",
+                                    crate::platforms::common::DanmakuFrontendPayload {
+                                        room_id: room_id_clone.clone(),
+                                        user: result.get("nn").unwrap_or(&unknown).to_string(),
+                                        content: result.get("txt").unwrap_or(&empty).to_string(),
+                                        user_level: result
+                                            .get("level")
+                                            .unwrap_or(&zero)
+                                            .parse::<i64>()
+                                            .unwrap_or(0),
+                                        fans_club_level: result
+                                            .get("bl")
+                                            .unwrap_or(&zero)
+                                            .parse::<i32>()
+                                            .unwrap_or(0),
+                                    },
+                                );
                             } else if result.get("type").map_or(false, |t| t == "uenter") {
                                 let unknown = "unknown".to_string();
                                 let empty = "".to_string();
