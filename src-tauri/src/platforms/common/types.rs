@@ -43,7 +43,7 @@ pub struct LiveStreamInfo {
 #[derive(Default, Clone)]
 #[allow(dead_code)]
 pub struct StreamUrlStore {
-    pub url: std::sync::Arc<std::sync::Mutex<String>>,
+    pub url: std::sync::Arc<std::sync::Mutex<String>>, 
 }
 
 // Moved from main.rs
@@ -51,6 +51,11 @@ pub struct StreamUrlStore {
 #[derive(Default)]
 #[allow(dead_code)]
 pub struct DouyinDanmakuState(pub std::sync::Mutex<Option<tokio::sync::mpsc::Sender<()>>>);
+
+// State for the Bilibili Danmaku listener
+#[derive(Default)]
+#[allow(dead_code)]
+pub struct BilibiliDanmakuState(pub std::sync::Mutex<Option<tokio::sync::mpsc::Sender<()>>>);
 
 // State for the Douyu Danmaku listener
 #[derive(Default)]

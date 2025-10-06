@@ -154,6 +154,7 @@ fn main() {
         .manage(DouyuDanmakuHandles::default()) // Manage new DouyuDanmakuHandles
         .manage(DouyinDanmakuState::default()) // Manage DouyinDanmakuState
         .manage(HuyaDanmakuState::default()) // Manage HuyaDanmakuState
+        .manage(platforms::common::BilibiliDanmakuState::default()) // Manage BilibiliDanmakuState
         .manage(StreamUrlStore::default())
         .manage(proxy::ProxyServerHandle::default())
         .manage(platforms::bilibili::state::BilibiliState::default())
@@ -167,6 +168,8 @@ fn main() {
             start_douyin_danmu_listener, // Added Douyin danmaku listener command
             start_huya_danmaku_listener, // Added Huya danmaku listener command
             stop_huya_danmaku_listener,  // Added Huya danmaku stop command
+            platforms::bilibili::danmaku::start_bilibili_danmaku_listener,
+            platforms::bilibili::danmaku::stop_bilibili_danmaku_listener,
             proxy::start_proxy,
             proxy::stop_proxy,
             proxy::start_static_proxy_server,

@@ -3,6 +3,7 @@ pub mod types;
 pub mod types_rust;
 
 // Re-export necessary types to make them available directly under platforms::common::TypeName
+pub use types::BilibiliDanmakuState;
 pub use types::DouyinDanmakuState;
 pub use types::DouyuDanmakuState;
 pub use types::HuyaDanmakuState;
