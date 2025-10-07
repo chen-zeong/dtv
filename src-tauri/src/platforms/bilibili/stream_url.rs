@@ -163,9 +163,12 @@ pub async fn get_bilibili_live_stream_url_with_quality(
                                         if final_url_ts.is_none() && format_name == "ts" {
                                             final_url_ts = Some(composed.clone());
                                         }
-                                        // 其次选择第一个 FLV 地址作为备用
-                                        if final_url_flv.is_none() && format_name == "flv" {
-                                            final_url_flv = Some(composed.clone());
+                                        // 仅选择包含 d1--cn 的 FLV 地址
+                                        if format_name == "flv" {
+                                            let is_d1_cn = host.contains("d1--cn") || composed.contains("d1--cn");
+                                            if is_d1_cn && final_url_flv.is_none() {
+                                                final_url_flv = Some(composed.clone());
+                                            }
                                         }
                                     }
                                 }
@@ -190,18 +193,29 @@ pub async fn get_bilibili_live_stream_url_with_quality(
         });
     }
 
-    let real_url = if let Some(u) = final_url_ts.clone() { u } else { final_url_flv.clone().unwrap() };
+    // 改为优先选择 FLV 地址（不使用 HLS）
+    if final_url_flv.is_none() {
+        return Ok(crate::platforms::common::LiveStreamInfo {
+            title: init_json["data"]["title"].as_str().map(|s| s.to_string()),
+            anchor_name: init_json["data"]["uname"].as_str().map(|s| s.to_string()),
+            avatar: None,
+            stream_url: None,
+            status: Some(2),
+            error_message: Some("未找到可用的 FLV 地址（拒绝使用 HLS）".to_string()),
+            upstream_url: None,
+            available_streams: Some(variants),
+        });
+    }
 
-    // 根据是否为 HLS 选择是否启动本地代理（目前直接返回 M3U8 上游地址，FLV 仍通过代理）
-    let proxied_url = if final_url_ts.is_some() {
-        // HLS：直接使用上游 M3U8 地址
-        Some(real_url.clone())
-    } else {
-        // FLV：写入到 Store 并启动代理
+    let real_url = final_url_flv.clone().unwrap();
+
+    // FLV：写入到 Store 并启动代理（不再返回 HLS）
+    let proxied_url = {
+        // 先更新 Store，再释放锁，最后启动代理，避免借用冲突
         {
             let mut current_url_in_store = stream_url_store.url.lock().unwrap();
             *current_url_in_store = real_url.clone();
-        }
+        } // 作用域结束，释放 MutexGuard
         match start_proxy(app_handle, proxy_server_handle, stream_url_store).await {
             Ok(proxy) => Some(proxy),
             Err(e) => {

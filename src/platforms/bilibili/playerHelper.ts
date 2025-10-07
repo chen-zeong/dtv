@@ -39,14 +39,8 @@ export async function getBilibiliStreamConfig(
     });
   }
 
-  // 根据 available_streams 决定播放类型：优先 m3u8，其次 flv
-  let streamType: string | undefined = undefined;
-  if (Array.isArray(result.available_streams)) {
-    const hasM3U8 = (result.available_streams as StreamVariant[]).some(v => (v.format || '').toLowerCase() === 'ts' || v.url.includes('.m3u8'));
-    const hasFlv = (result.available_streams as StreamVariant[]).some(v => (v.format || '').toLowerCase() === 'flv' || v.url.endsWith('.flv'));
-    if (hasM3U8) streamType = 'm3u8';
-    else if (hasFlv) streamType = 'flv';
-  }
+  // 强制使用 FLV 播放类型（不使用 HLS）
+  let streamType: string | undefined = 'flv';
 
   return { streamUrl: result.stream_url, streamType };
 }
