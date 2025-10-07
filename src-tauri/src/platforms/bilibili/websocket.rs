@@ -4,13 +4,12 @@ use serde_json::Value;
 use std::net::TcpStream;
 use tungstenite::{client, Message, WebSocket};
 use url::Url;
-use http::Response;
 use std::time::{Duration, Instant};
 use std::sync::OnceLock;
 use std::collections::VecDeque;
 
-use crate::auth::{init_server_no_cookie, init_server_with_cookie};
-use crate::models::{BiliMessage, DanmuServer, MsgHead};
+use super::auth::{init_server_no_cookie, init_server_with_cookie};
+use super::models::{BiliMessage, DanmuServer, MsgHead};
 
 static DEBUG_FLAG: OnceLock<bool> = OnceLock::new();
 
@@ -24,7 +23,7 @@ pub fn is_debug_enabled() -> bool {
 
 macro_rules! ws_debug {
     ($($arg:tt)*) => {
-        if crate::websocket::is_debug_enabled() {
+        if crate::platforms::bilibili::websocket::is_debug_enabled() {
             println!($($arg)*);
         }
     }
@@ -46,7 +45,7 @@ impl BiliLiveClient {
     pub fn new_with_cookie(cookies: &str, room_id: &str) -> Self {
         let (v, auth) = init_server_with_cookie(cookies, room_id);
         ws_debug!("[websocket] server_info host_list: {:?}", v["host_list"]);
-        let (ws, _res) = connect(v["host_list"].clone());
+        let ws = connect(v["host_list"].clone());
         ws_debug!("[websocket] connected via cookie for room {}", room_id);
         BiliLiveClient {
             ws,
@@ -61,7 +60,7 @@ impl BiliLiveClient {
     pub fn new_without_cookie(room_id: &str) -> Self {
         let (v, auth) = init_server_no_cookie(room_id);
         ws_debug!("[websocket] server_info host_list: {:?}", v["host_list"]);
-        let (ws, _res) = connect(v["host_list"].clone());
+        let ws = connect(v["host_list"].clone());
         ws_debug!("[websocket] connected without cookie for room {}", room_id);
         BiliLiveClient {
             ws,
@@ -102,7 +101,7 @@ impl BiliLiveClient {
             let host_list = self.host_list.clone();
             move || connect(host_list)
         }) {
-            Ok((new_ws, _resp)) => {
+            Ok(new_ws) => {
                 self.ws = new_ws;
                 ws_debug!("[websocket] reconnect successful, resending auth");
                 self.send_auth();
@@ -295,7 +294,7 @@ fn find_server(vd: Vec<DanmuServer>) -> (String, String, String) {
     )
 }
 
-pub fn connect(v: Value) -> (WebSocket<TlsStream<TcpStream>>, Response<Option<Vec<u8>>>) {
+pub fn connect(v: Value) -> WebSocket<TlsStream<TcpStream>> {
     let danmu_server = gen_damu_list(&v);
     let (host, url, ws_url) = find_server(danmu_server);
     ws_debug!("[websocket] connecting tcp {} and ws {}", url, ws_url);
@@ -303,10 +302,10 @@ pub fn connect(v: Value) -> (WebSocket<TlsStream<TcpStream>>, Response<Option<Ve
     let stream: TcpStream = TcpStream::connect(url).unwrap();
     let stream: native_tls::TlsStream<TcpStream> =
         connector.connect(host.as_str(), stream).unwrap();
-    let (socket, resp) =
+    let (socket, _resp) =
         client(Url::parse(ws_url.as_str()).unwrap(), stream).expect("Can't connect");
-    ws_debug!("[websocket] websocket handshake complete: {}", resp.status());
-    (socket, resp)
+    ws_debug!("[websocket] websocket handshake complete");
+    socket
 }
 
 pub enum Operation {

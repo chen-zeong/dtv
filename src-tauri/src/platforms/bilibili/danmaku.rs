@@ -3,8 +3,8 @@ use tokio::sync::mpsc as tokio_mpsc;
 use std::sync::{Arc};
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use danmu_fetch::websocket::BiliLiveClient;
-use danmu_fetch::models::BiliMessage;
+use crate::platforms::bilibili::websocket::BiliLiveClient;
+use crate::platforms::bilibili::models::BiliMessage;
 
 #[tauri::command]
 pub async fn start_bilibili_danmaku_listener(

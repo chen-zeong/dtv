@@ -3,6 +3,7 @@ use reqwest::header::HeaderMap;
 use reqwest::StatusCode;
 use serde::Deserialize;
 use std::time::{SystemTime, UNIX_EPOCH};
+use md5::{Digest, Md5};
 
 // WBI signing constants and functions (extracted)
 const MIXIN_KEY_ENC_TAB: [usize; 64] = [
@@ -74,7 +75,10 @@ fn _encode_wbi(
         .map(|(k, v)| format!("{}={}", get_url_encoded(k), get_url_encoded(v)))
         .collect::<Vec<_>>()
         .join("&");
-    let web_sign = format!("{:x}", md5::compute(query.clone() + &mixin_key));
+    let mut hasher = Md5::new();
+    hasher.update((query.clone() + &mixin_key).as_bytes());
+    let digest = hasher.finalize();
+    let web_sign = format!("{:x}", digest);
     query + &format!("&w_rid={}", web_sign)
 }
 
@@ -112,7 +116,7 @@ pub const USER_AGENT: &str =
     "Mozilla/5.0 (X11; Linux x86_64; rv:138.0) Gecko/20100101 Firefox/138.0";
 
 /// Get UID using cookie (optional). If request fails or no cookie, returns (status, body).
-pub fn init_uid(headers: HeaderMap) -> (StatusCode, String) {
+pub fn init_uid(headers: HeaderMap) -> (reqwest::StatusCode, String) {
     let client = reqwest::blocking::Client::builder()
         .https_only(true)
         .build()
@@ -122,23 +126,27 @@ pub fn init_uid(headers: HeaderMap) -> (StatusCode, String) {
     request_headers.insert("user-agent", USER_AGENT.parse().unwrap());
 
     let response = client.get(UID_INIT_URL).headers(request_headers).send();
-    let stat: StatusCode;
+    let stat: reqwest::StatusCode;
     let body: String;
     match response {
         Ok(resp) => {
-            stat = resp.status();
-            body = resp.text().unwrap_or_default();
+            let s: reqwest::StatusCode = resp.status();
+            stat = s;
+            match resp.text() {
+                Ok(b) => body = b,
+                Err(e) => body = format!("{{\"error\":\"{}\"}}", e),
+            }
         }
-        Err(_) => {
-            stat = StatusCode::INTERNAL_SERVER_ERROR;
-            body = String::new();
+        Err(err) => {
+            stat = reqwest::StatusCode::INTERNAL_SERVER_ERROR;
+            body = format!("{{\"error\":\"{}\"}}", err);
         }
     }
     (stat, body)
 }
 
 /// Query danmaku server host list and token via signed URL, with given headers
-pub fn init_host_server(headers: HeaderMap, room_id: u64) -> (StatusCode, String) {
+pub fn init_host_server(headers: HeaderMap, room_id: u64) -> (reqwest::StatusCode, String) {
     let client = reqwest::blocking::Client::builder()
         .https_only(true)
         .build()
@@ -165,22 +173,23 @@ pub fn init_host_server(headers: HeaderMap, room_id: u64) -> (StatusCode, String
     let url = format!("{}?{}", DANMAKU_SERVER_CONF_URL, signed_query);
 
     let response = client.get(url).headers(request_headers).send();
-    let stat: StatusCode;
+    let stat: reqwest::StatusCode;
     let body: String;
     match response {
         Ok(resp) => {
-            stat = resp.status();
+            let s: reqwest::StatusCode = resp.status();
+            stat = s;
             body = resp.text().unwrap_or_default();
         }
         Err(_) => {
-            stat = StatusCode::INTERNAL_SERVER_ERROR;
+            stat = reqwest::StatusCode::INTERNAL_SERVER_ERROR;
             body = String::new();
         }
     }
     (stat, body)
 }
 
-use crate::models::AuthMessage;
+use super::models::AuthMessage;
 use serde_json::Value;
 use std::collections::HashMap;
 

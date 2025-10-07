@@ -36,7 +36,7 @@ tauri = { version = "2.7.0", features = ["macos-private-api"] }
  futures-util = "0.3"
  urlencoding = "2.1.0"
  percent-encoding = "2.1"
- reqwest = { version = "0.11", features = ["json", "stream", "cookies", "brotli"] }
+ reqwest = { version = "0.11", features = ["json", "stream", "cookies", "brotli", "blocking"] }
  actix-web = "4"
  actix-cors = "0.7"
  awc = { version = "3.4.0", features = ["tls-rustls-0_22"] }
@@ -61,14 +61,17 @@ tauri = { version = "2.7.0", features = ["macos-private-api"] }
  
  specta = { version = "2.0.0-rc.9", features = ["serde", "derive", "function"] }
  tauri-plugin-os = "2.3.0"
- danmu_fetch = { path = "../danmu_fetch" }
+ # danmu_fetch 已迁移到本项目模块，移除依赖
+ # 添加 websocket 所需依赖
+ tungstenite = { version = "0.21", features = ["native-tls"] }
+ brotlic = "0.8"
 
-[features]
-# default = ["custom-protocol"] # Removed problematic line
+ [features]
+ # default = ["custom-protocol"] # Removed problematic line
 
-[profile.release]
-panic = "abort"
-codegen-units = 1
-lto = true
-opt-level = "z"
-strip = true
+ [profile.release]
+ panic = "abort"
+ codegen-units = 1
+ lto = true
+ opt-level = "z"
+ strip = true
