@@ -56,15 +56,16 @@ pub async fn start_douyin_danmu_listener(
                     fetcher.fetch_room_details().await.map_err(|e| format!("Failed to fetch room details: {}", e))?;
                     
                     let actual_room_id = fetcher.get_room_id().await?;
-                    let ttwid = fetcher.get_ttwid().await?;
-                    
-                    println!("[Douyin Danmaku] Using: room_id={}, ttwid={}", actual_room_id, ttwid);
-    
-                    let (read_stream, ack_tx) = 
+                    let cookie_header = fetcher.get_dy_cookie().await?;
+                    let user_unique_id = fetcher.get_user_unique_id().await?;
+                    println!("[Douyin Danmaku] Using: room_id={}, user_unique_id={}", actual_room_id, user_unique_id);
+                     
+                     let (read_stream, ack_tx) = 
                         crate::platforms::douyin::danmu::websocket_connection::connect_and_manage_websocket(
                             &fetcher, 
                             &actual_room_id, 
-                            &ttwid
+                            &cookie_header,
+                            &user_unique_id
                         ).await?;
                     
                     println!("[Douyin Danmaku] WebSocket connected for room: {}", actual_room_id);

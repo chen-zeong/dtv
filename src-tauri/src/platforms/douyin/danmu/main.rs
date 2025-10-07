@@ -16,10 +16,11 @@ pub mod douyin {
 async fn connect_and_process_websocket(
     fetcher: &web_fetcher::DouyinLiveWebFetcher,
     room_id: &str,
-    ttwid: &str
+    cookie_header: &str,
+    user_unique_id: &str,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let (read_stream, ack_tx) = 
-        websocket_connection::connect_and_manage_websocket(fetcher, room_id, ttwid).await?;
+        websocket_connection::connect_and_manage_websocket(fetcher, room_id, cookie_header, user_unique_id).await?;
 
     message_handler::handle_received_messages(read_stream, ack_tx).await?;
 
@@ -31,11 +32,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let live_id = "427138916527";
     let mut fetcher = web_fetcher::DouyinLiveWebFetcher::new(live_id)?;
     
-    fetcher.get_room_status().await?;
+    fetcher.fetch_room_details().await?;
     
     let room_id = fetcher.get_room_id().await?;
-    let ttwid = fetcher.get_ttwid().await?;
-    connect_and_process_websocket(&fetcher, &room_id, &ttwid).await?;
+    let cookie_header = fetcher.get_dy_cookie().await?;
+    let user_unique_id = fetcher.get_user_unique_id().await?;
+    connect_and_process_websocket(&fetcher, &room_id, &cookie_header, &user_unique_id).await?;
 
     tokio::time::sleep(Duration::from_secs(60)).await;
 
