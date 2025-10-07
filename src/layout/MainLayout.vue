@@ -54,6 +54,8 @@ const handleStreamerSelect = (streamer: FollowedStreamer) => {
     routeName = 'douyinPlayer';
   } else if (streamer.platform === Platform.HUYA) {
     routeName = 'huyaPlayer';
+  } else if (streamer.platform === Platform.BILIBILI) {
+    routeName = 'bilibiliPlayer';
   } else {
     console.error('Unsupported platform for player:', streamer.platform);
     return;
@@ -61,9 +63,9 @@ const handleStreamerSelect = (streamer: FollowedStreamer) => {
 
   router.push({
     name: routeName,
-    params: { 
-      roomId: streamer.id
-    }
+    params: {
+      roomId: streamer.id,
+    },
   });
 }
 

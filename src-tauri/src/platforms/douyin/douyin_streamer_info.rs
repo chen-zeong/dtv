@@ -1,7 +1,9 @@
 use crate::platforms::common::http_client::HttpClient;
 use crate::platforms::douyin::models::*;
 use crate::platforms::douyin::utils::setup_douyin_cookies;
-use reqwest::header::{REFERER, ACCEPT, ACCEPT_LANGUAGE, USER_AGENT, HeaderName};
+use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, ACCEPT_LANGUAGE, COOKIE, REFERER, USER_AGENT};
+use serde_json::Value;
+use regex::Regex;
 use tauri::command;
 
 
@@ -24,142 +26,198 @@ pub async fn fetch_douyin_streamer_info(
         });
     }
 
-    // 使用直连HTTP客户端，绕过所有代理设置
-    let mut http_client =
-        HttpClient::new_direct_connection().map_err(|e| format!("Failed to create direct connection HttpClient: {}", e))?;
+    // 直连 HTTP 客户端，绕过所有代理（与 detail 保持一致）
+    let mut http_client = HttpClient::new_direct_connection()
+        .map_err(|e| format!("Failed to create direct connection HttpClient: {}", e))?;
 
-    if let Err(e) = setup_douyin_cookies(&mut http_client, &room_id_str).await {
-        return Ok(crate::platforms::common::LiveStreamInfo {
-            title: None,
-            anchor_name: None,
-            avatar: None,
-            stream_url: None,
-            status: None,
-            error_message: Some(format!("Cookie setup failed: {}", e)),
-        });
-    }
+    // 保证 ttwid 存在（与 detail 保持一致）
+    ensure_ttwid(&mut http_client).await.ok();
 
-    // 设置与JS文件一致的headers
-    http_client.insert_header(ACCEPT, "application/json, text/plain, */*")?;
-    http_client.insert_header(ACCEPT_LANGUAGE, "zh-CN,zh;q=0.9")?;
-    http_client.insert_header(HeaderName::from_static("priority"), "u=1, i")?;
-    http_client.insert_header(REFERER, "https://live.douyin.com/7254458840")?;
-    http_client.insert_header(HeaderName::from_static("sec-ch-ua"), "\"Chromium\";v=\"140\", \"Not=A?Brand\";v=\"24\", \"Google Chrome\";v=\"140\"")?;
-    http_client.insert_header(HeaderName::from_static("sec-ch-ua-mobile"), "?0")?;
-    http_client.insert_header(HeaderName::from_static("sec-ch-ua-platform"), "\"macOS\"")?;
-    http_client.insert_header(HeaderName::from_static("sec-fetch-dest"), "empty")?;
-    http_client.insert_header(HeaderName::from_static("sec-fetch-mode"), "cors")?;
-    http_client.insert_header(HeaderName::from_static("sec-fetch-site"), "same-origin")?;
-    http_client.insert_header(USER_AGENT, "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36")?;
+    // 根据长度判断是 webRid 还是 roomId（与 detail 一致）
+    if room_id_str.len() <= 16 {
+        // HTML 解析路径
+        match fetch_room_detail_by_web_rid_html(&http_client, &room_id_str).await {
+            Ok(state_json) => {
+                // 提取所需字段
+                let room_info = state_json.get("roomStore").and_then(|v| v.get("roomInfo"));
+                let (room, anchor) = match room_info {
+                    Some(ri) => (ri.get("room"), ri.get("anchor")),
+                    None => (None, None),
+                };
+                let room = match room { Some(r) => r, None => {
+                    return Ok(crate::platforms::common::LiveStreamInfo {
+                        title: None,
+                        anchor_name: None,
+                        avatar: None,
+                        stream_url: None,
+                        status: None,
+                        error_message: Some("未能从 HTML state 中解析到房间详情".to_string()),
+                    });
+                }};
+                let status = room.get("status").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
+                let title = room.get("title").and_then(|v| v.as_str()).map(|s| s.to_string());
+                let owner = room.get("owner");
+                let anchor_name = if status == 2 {
+                    owner.and_then(|o| o.get("nickname")).and_then(|v| v.as_str()).map(|s| s.to_string())
+                } else {
+                    anchor.and_then(|a| a.get("nickname")).and_then(|v| v.as_str()).map(|s| s.to_string())
+                };
+                let avatar = if status == 2 {
+                    owner.and_then(|o| o.get("avatar_thumb")).and_then(|a| a.get("url_list")).and_then(|ul| ul.get(0)).and_then(|v| v.as_str()).map(|s| s.to_string())
+                } else {
+                    anchor.and_then(|a| a.get("avatar_thumb")).and_then(|a| a.get("url_list")).and_then(|ul| ul.get(0)).and_then(|v| v.as_str()).map(|s| s.to_string())
+                };
 
-    let api_url = format!(
-        "https://live.douyin.com/webcast/room/web/enter/?aid=6383&app_name=douyin_web&live_id=1&device_platform=web&language=zh-CN&enter_from=web_homepage_follow&cookie_enabled=true&screen_width=1920&screen_height=1080&browser_language=zh-CN&browser_platform=MacIntel&browser_name=Chrome&browser_version=140.0.0.0&web_rid={}&enter_source=&is_need_double_stream=false&insert_task_id=&live_reason=&msToken=djIQSLNfdq3BLVY9-hIFbpJVQs238wUtsl1_Zvc2-rkmUSUy44JUt-L_jMcpo--kcwpK8Sc4C7fUvX-QL-mrqE1RM0E65tIZ8Rz4UoVXrzbCAhvwNKSX0TG8r1KNdI3K9dbBvI3Lb6W62nr7LStyw-41pkfZkFW2Vfi9zqnnLDSM-NMhCJTrxQ%3D%3D&a_bogus=EJ0fkF67Dx%2FfPdKGuObyCHlU2lxMNB8yQZixWCluCNzJOXUTjuP7gcbZboqs4doR3bpsiHIHTx0lYEncTdUs1ZrkumkfSmzyJzACVgsL8qwsGFJQgHfZeukFqwBN0Rsqa%2FcIE1g78sBK2d5W9HAQldBaC5Pa5QmDWHqydM9bj9WbDAyPu3rROMEWiEwPBQ2-rf%3D%3D",
-        room_id_str
-    );
-    println!("[Douyin Info RS] Constructed API URL: {}", api_url);
-
-    let api_response: DouyinApiResponse = {
-        let mut attempt: u32 = 1;
-        loop {
-            match http_client.get_json(&api_url).await {
-                Ok(resp) => break resp,
-                Err(e) => {
-                    if attempt >= 5 {
-                        let raw_error_text = http_client
-                            .get_text(&api_url)
-                            .await
-                            .unwrap_or_else(|_| "Failed to get raw error text".to_string());
-                        let debug_headers = http_client.get_debug_headers();
-                        let debug_cookies = http_client.get_debug_cookies(&api_url);
-
-                        println!("[Douyin Info RS] API request failed after {} attempts.", attempt);
-                        println!("URL: {}", api_url);
-                        println!("Headers:\n{}", debug_headers);
-                        println!("Cookies: {}", debug_cookies);
-                        println!("Error: {}", e);
-                        println!("Raw error text: {}", raw_error_text);
-
+                Ok(crate::platforms::common::LiveStreamInfo {
+                    title,
+                    anchor_name,
+                    avatar,
+                    stream_url: None,
+                    status: Some(status),
+                    error_message: None,
+                })
+            }
+            Err(e) => {
+                return Ok(crate::platforms::common::LiveStreamInfo {
+                    title: None,
+                    anchor_name: None,
+                    avatar: None,
+                    stream_url: None,
+                    status: None,
+                    error_message: Some(format!("HTML 解析失败: {}", e)),
+                });
+            }
+        }
+    } else {
+        // 通过 reflow info 接口（与 detail 保持一致的 Cookie/Headers/URL 参数）
+        match fetch_room_detail_by_room_id(&http_client, &room_id_str).await {
+            Ok(json) => {
+                let room = match json.get("data").and_then(|d| d.get("room")) {
+                    Some(r) => r,
+                    None => {
                         return Ok(crate::platforms::common::LiveStreamInfo {
                             title: None,
                             anchor_name: None,
                             avatar: None,
                             stream_url: None,
                             status: None,
-                            error_message: Some(format!(
-                                "API request failed after {} attempts: {}. URL: {}",
-                                attempt, e, api_url
-                            )),
+                            error_message: Some("未能从 reflow info 中解析到房间详情".to_string()),
                         });
-                    } else {
-                        println!(
-                            "[Douyin Streamer Info WARN] API request attempt {} failed: {}. Retrying...",
-                            attempt, e
-                        );
-                        // 直接重试，不等待
-                        attempt += 1;
-                        continue;
                     }
-                }
+                };
+                let owner = room.get("owner").cloned().unwrap_or(Value::Null);
+                let status = room.get("status").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
+                let title = room.get("title").and_then(|v| v.as_str()).map(|s| s.to_string());
+                let anchor_name = owner.get("nickname").and_then(|v| v.as_str()).map(|s| s.to_string());
+                let avatar = owner
+                    .get("avatar_thumb")
+                    .and_then(|a| a.get("url_list"))
+                    .and_then(|ul| ul.get(0))
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string());
+
+                Ok(crate::platforms::common::LiveStreamInfo {
+                    title,
+                    anchor_name,
+                    avatar,
+                    stream_url: None,
+                    status: Some(status),
+                    error_message: None,
+                })
+            }
+            Err(e) => {
+                return Ok(crate::platforms::common::LiveStreamInfo {
+                    title: None,
+                    anchor_name: None,
+                    avatar: None,
+                    stream_url: None,
+                    status: None,
+                    error_message: Some(format!("Reflow 接口请求失败: {}", e)),
+                });
             }
         }
-    };
-
-    if api_response.status_code != 0 {
-        let prompts = api_response
-            .data
-            .as_ref()
-            .and_then(|d| d.prompts.as_ref())
-            .cloned()
-            .unwrap_or_else(|| "Unknown API error".to_string());
-        return Ok(crate::platforms::common::LiveStreamInfo {
-            title: None,
-            anchor_name: None,
-            avatar: None,
-            stream_url: None,
-            status: None,
-            error_message: Some(format!(
-                "API error (status_code: {}): {}",
-                api_response.status_code, prompts
-            )),
-        });
     }
+}
 
-    let main_data = match api_response.data {
-        Some(d) => d,
-        None => {
-            return Ok(crate::platforms::common::LiveStreamInfo {
-                title: None,
-                anchor_name: None,
-                avatar: None,
-                stream_url: None,
-                status: None,
-                error_message: Some("API response contained no main 'data' object".to_string()),
-            })
-        }
-    };
+// 与 douyin_streamer_detail.rs 保持一致的 ttwid 获取逻辑
+async fn ensure_ttwid(http_client: &mut HttpClient) -> Result<(), String> {
+    let live_url = "https://live.douyin.com/";
+    let response = http_client
+        .get_with_cookies(live_url)
+        .await
+        .map_err(|e| format!("获取 {} 响应失败: {}", live_url, e))?;
 
-    let room_data_entry = main_data
-        .data
-        .as_ref()
-        .and_then(|data_vec| data_vec.first())
-        .ok_or_else(|| "No room data entry (data.data[0]) found in API response".to_string())?;
+    if let Some(ttwid_cookie) = response
+        .cookies()
+        .find(|c| c.name() == "ttwid")
+        .map(|c| c.value().to_string())
+    {
+        let cookie_header_val = format!("ttwid={};", ttwid_cookie);
+        http_client
+            .insert_header(COOKIE, &cookie_header_val)
+            .map_err(|e| format!("设置 ttwid cookie 失败: {}", e))?;
+    }
+    Ok(())
+}
 
-    let current_status = room_data_entry.status;
+// 与 douyin_streamer_detail.rs 中 fetch_room_detail_by_room_id 相同的请求结构（headers/cookies）
+async fn fetch_room_detail_by_room_id(http_client: &HttpClient, room_id: &str) -> Result<Value, String> {
+    let url = "https://webcast.amemv.com/webcast/room/reflow/info/";
+    let params = vec![
+        ("type_id", "0"),
+        ("live_id", "1"),
+        ("room_id", room_id),
+        ("sec_user_id", ""),
+        ("version_code", "99.99.99"),
+        ("app_id", "6383"),
+    ];
+    let mut query = String::new();
+    for (i, (k, v)) in params.iter().enumerate() {
+        if i > 0 { query.push('&'); }
+        query.push_str(&format!("{}={}", k, v));
+    }
+    let full_url = format!("{}?{}", url, query);
 
-    // Unlike get_douyin_live_stream_url, we don't need to fetch actual stream URLs here.
-    // We just return the metadata.
+    let mut headers = HeaderMap::new();
+    headers.insert(REFERER, HeaderValue::from_static(DouyinSitePyDefaults::REFERER));
+    headers.insert(USER_AGENT, HeaderValue::from_static(DouyinSitePyDefaults::ua()));
+    headers.insert(ACCEPT, HeaderValue::from_static("application/json, text/plain, */*"));
+    headers.insert(ACCEPT_LANGUAGE, HeaderValue::from_static("zh-CN,zh;q=0.9"));
 
-    Ok(crate::platforms::common::LiveStreamInfo {
-        title: room_data_entry.title.clone(),
-        anchor_name: main_data.user.as_ref().and_then(|u| u.nickname.clone()),
-        avatar: main_data
-            .user
-            .as_ref()
-            .and_then(|u| u.avatar_thumb.as_ref())
-            .and_then(|at| at.url_list.as_ref())
-            .and_then(|ul| ul.first().cloned()),
-        stream_url: None, // Explicitly None, as we are not fetching/proxying the stream
-        status: Some(current_status),
-        error_message: None, // No stream-specific errors here, API errors handled above.
-    })
+    http_client
+        .get_json_with_headers(&full_url, Some(headers))
+        .await
+        .map_err(|e| format!("请求 reflow info 失败: {}", e))
+}
+
+// 与 douyin_streamer_detail.rs 中 fetch_room_detail_by_web_rid_html 相同的请求结构（headers）
+async fn fetch_room_detail_by_web_rid_html(http_client: &HttpClient, web_rid: &str) -> Result<Value, String> {
+    let room_url = format!("https://live.douyin.com/{}", web_rid);
+    let mut headers = HeaderMap::new();
+    headers.insert(USER_AGENT, HeaderValue::from_str(DouyinSitePyDefaults::ua()).unwrap());
+    headers.insert(REFERER, HeaderValue::from_static(DouyinSitePyDefaults::REFERER));
+
+    let text = http_client
+        .get_text_with_headers(&room_url, Some(headers))
+        .await
+        .map_err(|e| format!("获取房间页面失败: {}", e))?;
+
+    let re = Regex::new(r#"\{\\\"state\\\":\{\\\"appStore.*?\]\\n"#)
+        .map_err(|e| format!("构建正则失败: {}", e))?;
+    let m = re
+        .find(&text)
+        .ok_or_else(|| "未能在 HTML 中解析到 Douyin state 数据".to_string())?;
+    let raw = m.as_str().trim();
+    let s = raw.replace("\\\"", "\"").replace("\\\\", "\\").replace("]\\n", "");
+    let data: Value = serde_json::from_str(&s).map_err(|e| format!("解析 state JSON 失败: {}", e))?;
+    Ok(data["state"].clone())
+}
+
+// 与 detail.rs 保持一致的 UA/Referer
+struct DouyinSitePyDefaults;
+impl DouyinSitePyDefaults {
+    const REFERER: &'static str = "https://live.douyin.com";
+    fn ua() -> &'static str {
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36 Edg/125.0.0.0"
+    }
 }

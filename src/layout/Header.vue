@@ -133,6 +133,26 @@ const emit = defineEmits(['selectAnchor']);
 const themeStore = useThemeStore();
 const route = useRoute();
 
+// Proxy support for Bilibili avatar images in search results
+const proxyBase = ref<string | null>(null);
+const ensureProxyStarted = async () => {
+  if (!proxyBase.value) {
+    try {
+      const base = await invoke<string>('start_static_proxy_server');
+      proxyBase.value = base;
+    } catch (e) {
+      console.error('[Header] Failed to start static proxy server', e);
+    }
+  }
+};
+const proxify = (url?: string | null): string | null => {
+  if (!url) return null;
+  if (proxyBase.value) {
+    return `${proxyBase.value}/image?url=${encodeURIComponent(url)}`;
+  }
+  return url;
+};
+
 const effectiveTheme = computed(() => themeStore.getEffectiveTheme());
 
 const currentPlatform = computed<Platform>(() => {
@@ -147,6 +167,7 @@ const placeholderText = computed(() => {
   if (currentPlatform.value === Platform.DOUYU) return '搜索斗鱼主播';
   if (currentPlatform.value === Platform.HUYA) return '搜索虎牙主播';
   if (currentPlatform.value === Platform.DOUYIN) return '搜索抖音房间ID';
+  if (currentPlatform.value === Platform.BILIBILI) return '搜索B站房间号';
   return '搜索主播';
 });
 
@@ -186,6 +207,8 @@ const performSearchBasedOnInput = async () => {
     await performDouyinIdSearch(query);
   } else if (currentPlatform.value === Platform.HUYA) {
     await performHuyaSearch(query);
+  } else if (currentPlatform.value === Platform.BILIBILI) {
+    await performBilibiliIdSearch(query);
   } else {
     await performDouyuSearch(query);
   }
@@ -310,6 +333,42 @@ const handleBlur = () => {
        showResults.value = false;
     }
   }, 300);
+};
+
+const performBilibiliIdSearch = async (userInputRoomId: string) => {
+  searchResults.value = [];
+  searchError.value = null;
+  isLoadingSearch.value = true;
+  try {
+    const payloadData = { args: { room_id_str: userInputRoomId } };
+    const biliInfo = await invoke<DouyinApiStreamInfo>('fetch_bilibili_streamer_info', {
+      payload: payloadData,
+    });
+    // Ensure static proxy server is running for avatar images
+    await ensureProxyStarted();
+    isLoadingSearch.value = false;
+    if (biliInfo) {
+      if (biliInfo.error_message) {
+        searchError.value = '没有搜索到主播。';
+      } else {
+        const isLive = biliInfo.status === 1;
+        searchResults.value = [{
+          platform: Platform.BILIBILI,
+          roomId: userInputRoomId,
+          userName: biliInfo.anchor_name || '未知B站主播',
+          roomTitle: biliInfo.title || null,
+          avatar: proxify(biliInfo.avatar),
+          liveStatus: isLive,
+          rawStatus: biliInfo.status,
+        }];
+      }
+    } else {
+      searchError.value = '没有搜索到主播。';
+    }
+  } catch (e) {
+    isLoadingSearch.value = false;
+    searchError.value = '没有搜索到主播。';
+  }
 };
 
 const selectAnchor = (anchor: SearchResultItem) => {
