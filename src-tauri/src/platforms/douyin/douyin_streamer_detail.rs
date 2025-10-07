@@ -8,7 +8,9 @@ use serde_json::Value;
 use tauri::{command, AppHandle, State};
 use regex::Regex;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone)
+]
+#[allow(dead_code)]
 struct DetailInfo {
     web_rid: Option<String>,
     room_id: Option<String>,
@@ -265,7 +267,7 @@ fn extract_detail_from_reflow(json: &Value) -> Option<DetailInfo> {
     let web_rid = owner.get("web_rid").and_then(|v| v.as_str()).map(|s| s.to_string());
     let room_id = room.get("id_str").and_then(|v| v.as_str()).map(|s| s.to_string()).or_else(|| room.get("id").and_then(|v| v.as_i64()).map(|n| n.to_string()));
     let title = room.get("title").and_then(|v| v.as_str()).map(|s| s.to_string());
-    let cover = room.get("cover").and_then(|c| c.get("url_list")).and_then(|ul| ul.get(0)).and_then(|v| v.as_str()).map(|s| s.to_string());
+    let _cover = room.get("cover").and_then(|c| c.get("url_list")).and_then(|ul| ul.get(0)).and_then(|v| v.as_str()).map(|s| s.to_string());
     let owner_nickname = owner.get("nickname").and_then(|v| v.as_str()).map(|s| s.to_string());
     let avatar = owner.get("avatar_thumb").and_then(|a| a.get("url_list")).and_then(|ul| ul.get(0)).and_then(|v| v.as_str()).map(|s| s.to_string());
     let stream_url = room.get("stream_url").cloned();
@@ -287,7 +289,7 @@ fn extract_detail_from_html_state(web_rid: &str, state: &Value) -> Option<Detail
     let anchor = room_info.get("anchor").cloned().unwrap_or(Value::Null);
     let status = room.get("status")?.as_i64()? as i32;
     let title = room.get("title").and_then(|v| v.as_str()).map(|s| s.to_string());
-    let cover = room.get("cover").and_then(|c| c.get("url_list")).and_then(|ul| ul.get(0)).and_then(|v| v.as_str()).map(|s| s.to_string());
+    let _cover = room.get("cover").and_then(|c| c.get("url_list")).and_then(|ul| ul.get(0)).and_then(|v| v.as_str()).map(|s| s.to_string());
     let owner = room.get("owner").cloned().unwrap_or(Value::Null);
     let owner_nickname = if status == 2 {
         owner.get("nickname").and_then(|v| v.as_str()).map(|s| s.to_string())
@@ -314,6 +316,7 @@ fn extract_detail_from_html_state(web_rid: &str, state: &Value) -> Option<Detail
 }
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct QualityEntry {
     quality: String,
     sort: i32,

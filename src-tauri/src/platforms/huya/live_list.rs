@@ -22,6 +22,7 @@ pub struct HuyaLiveListFrontendResponse {
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct HuyaApiResponse {
     #[serde(rename = "vList")] 
     v_list: Option<Vec<serde_json::Value>>, // Items are dynamic; we'll map selectively

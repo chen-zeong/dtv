@@ -24,6 +24,7 @@ pub struct CommonPlatformCategoryRust {
 }
 
 // Struct mirroring TypeScript CommonCategoryGroup
+#[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct CommonCategoryGroupRust {
     #[serde(rename = "groupName")]

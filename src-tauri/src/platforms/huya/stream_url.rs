@@ -12,6 +12,7 @@ use serde::Serialize;
 
 
 #[derive(Clone, Debug, Serialize)]
+#[allow(non_snake_case)]
 pub struct HuyaUnifiedStreamEntry {
     pub quality: String,
     pub bitRate: i32,
@@ -19,6 +20,7 @@ pub struct HuyaUnifiedStreamEntry {
 }
 
 #[derive(Clone, Debug, Serialize)]
+#[allow(non_snake_case)]
 pub struct HuyaUnifiedResponse {
     pub title: Option<String>,
     pub nick: Option<String>,
@@ -41,7 +43,7 @@ fn current_millis() -> i64 {
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap_or(Duration::from_secs(0));
-    (now.as_millis() as i64)
+    now.as_millis() as i64
 }
 
 fn asia_shanghai_sv() -> String {
@@ -152,6 +154,7 @@ fn process_anticode(anticode: &str, stream_name: &str, cookie: Option<&str>) -> 
         .join("&")
 }
 
+#[allow(dead_code)]
 async fn check_live_status(client: &reqwest::Client, room_id: &str) -> Result<bool, Box<dyn Error>> {
     let url = format!("https://m.huya.com/{}", room_id);
     let mut headers = HeaderMap::new();
@@ -192,7 +195,9 @@ struct RoomDetail {
     bit_rates: Vec<(String, i32)>, // (name, bitRate)
     title: Option<String>,
     nick: Option<String>,
+    #[allow(dead_code)]
     cover: Option<String>,
+    #[allow(dead_code)]
     area: Option<String>,
     avatar180: Option<String>,
 }
@@ -403,3 +408,5 @@ fn build_flv_tx_urls(detail: &RoomDetail) -> Vec<HuyaUnifiedStreamEntry> {
 
     entries
 }
+#[allow(dead_code)]
+const HEARTBEAT_BASE64: &str = "ABQdAAwsNgBM"; // same as Python

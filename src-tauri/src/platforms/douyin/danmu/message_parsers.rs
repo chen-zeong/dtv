@@ -1,7 +1,5 @@
 use super::gen::{ChatMessage, LikeMessage, MemberMessage, RoomStatsMessage}; // Updated to directly use types from gen
 use prost::Message as ProstMessage; // For .decode()
-use serde::Serialize; // For an AppHandle.emit_all payload
-use specta; // Keep the main crate import if needed, or just specta::Type
 use crate::platforms::common::DanmakuFrontendPayload; // Use shared payload type
 
 // Parser for ChatMessage

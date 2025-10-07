@@ -1,3 +1,4 @@
+#![allow(unused_imports)]
 use crate::platforms::common::http_client::HttpClient;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
@@ -50,6 +51,7 @@ impl DouyinLiveWebFetcher {
         })
     }
 
+    #[allow(dead_code)]
     pub async fn get_ttwid(&mut self) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
         if let Some(ttwid) = &self.ttwid {
             return Ok(ttwid.clone());
@@ -159,6 +161,7 @@ impl DouyinLiveWebFetcher {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub async fn get_room_status(
         &mut self,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {

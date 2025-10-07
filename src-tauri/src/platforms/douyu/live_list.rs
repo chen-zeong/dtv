@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use tauri::command;
 
 #[derive(Debug, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct LiveStreamer {
     rid: String,
     room_name: String,

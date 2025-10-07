@@ -28,11 +28,8 @@ pub struct FrontendCate1Item {
 
 // This is what the command will return
 #[derive(Debug, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct FrontendCategoryResponse {
-    // No longer embedding error/msg here, Result handles it.
-    // error: i32,
-    // msg: Option<String>,
-    // data: Option<Vec<FrontendCate1Item>>,
     #[serde(rename = "cate1List")]
     cate1_list: Vec<FrontendCate1Item>,
 }

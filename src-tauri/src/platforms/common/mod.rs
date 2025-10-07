@@ -1,3 +1,4 @@
+#![allow(unused_imports)]
 pub mod http_client;
 pub mod types;
 pub mod types_rust;

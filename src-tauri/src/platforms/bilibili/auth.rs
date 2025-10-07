@@ -1,5 +1,6 @@
 // src/auth.rs
 use reqwest::header::HeaderMap;
+#[allow(unused_imports)]
 use reqwest::StatusCode;
 use serde::Deserialize;
 use std::time::{SystemTime, UNIX_EPOCH};
