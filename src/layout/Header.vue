@@ -4,7 +4,7 @@
       <div class="search-box">
         <input 
           v-model="searchQuery" 
-          placeholder="搜索斗鱼主播 / 抖音房间ID" 
+          :placeholder="placeholderText" 
           @input="handleSearch"
           @focus="showResults = true"
           @blur="handleBlur"
@@ -54,10 +54,11 @@
               <span class="platform-tag styled-badge" 
                     :class="[anchor.platform.toLowerCase(), { 
                       'douyu': anchor.platform === Platform.DOUYU, 
-                      'douyin': anchor.platform === Platform.DOUYIN 
+                      'douyin': anchor.platform === Platform.DOUYIN,
+                      'huya': anchor.platform === Platform.HUYA 
                     }]"
               >
-                {{ anchor.platform === Platform.DOUYU ? '斗鱼' : (anchor.platform === Platform.DOUYIN ? '抖音' : anchor.platform) }}
+                {{ anchor.platform === Platform.DOUYU ? '斗鱼' : (anchor.platform === Platform.DOUYIN ? '抖音' : (anchor.platform === Platform.HUYA ? '虎牙' : anchor.platform)) }}
               </span>
             </div>
 
@@ -91,6 +92,7 @@ import { ref, computed } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import { Platform } from '../platforms/common/types';
 import { useThemeStore } from '../stores/theme';
+import { useRoute } from 'vue-router';
 
 interface DouyinApiStreamInfo {
   title?: string | null;
@@ -98,6 +100,14 @@ interface DouyinApiStreamInfo {
   avatar?: string | null;
   status?: number | null;
   error_message?: string | null;
+}
+
+interface HuyaAnchorItem {
+  room_id: string;
+  avatar: string;
+  user_name: string;
+  live_status: boolean;
+  title: string;
 }
 
 interface SearchResultItem {
@@ -121,8 +131,24 @@ const isLoadingSearch = ref(false);
 const emit = defineEmits(['selectAnchor']);
 
 const themeStore = useThemeStore();
+const route = useRoute();
 
 const effectiveTheme = computed(() => themeStore.getEffectiveTheme());
+
+const currentPlatform = computed<Platform>(() => {
+  const path = route.path;
+  if (path.startsWith('/douyin')) return Platform.DOUYIN;
+  if (path.startsWith('/huya')) return Platform.HUYA;
+  if (path.startsWith('/bilibili')) return Platform.BILIBILI;
+  return Platform.DOUYU; // default for '/'
+});
+
+const placeholderText = computed(() => {
+  if (currentPlatform.value === Platform.DOUYU) return '搜索斗鱼主播';
+  if (currentPlatform.value === Platform.HUYA) return '搜索虎牙主播';
+  if (currentPlatform.value === Platform.DOUYIN) return '搜索抖音房间ID';
+  return '搜索主播';
+});
 
 const toggleTheme = () => {
   const currentTheme = themeStore.getEffectiveTheme();
@@ -156,10 +182,10 @@ const performSearchBasedOnInput = async () => {
     return;
   }
 
-  const douyinIdRegex = /^\d{10,}$/;
-
-  if (douyinIdRegex.test(query)) {
+  if (currentPlatform.value === Platform.DOUYIN) {
     await performDouyinIdSearch(query);
+  } else if (currentPlatform.value === Platform.HUYA) {
+    await performHuyaSearch(query);
   } else {
     await performDouyuSearch(query);
   }
@@ -197,6 +223,33 @@ const performDouyinIdSearch = async (userInputRoomId: string) => {
       searchError.value = '没有搜索到主播。';
     }
   } catch (e: any) {
+    isLoadingSearch.value = false;
+    searchError.value = '没有搜索到主播。';
+  }
+  showResults.value = true;
+};
+
+const performHuyaSearch = async (keyword: string) => {
+  searchResults.value = [];
+  searchError.value = null;
+  isLoadingSearch.value = true;
+  try {
+    const items = await invoke<HuyaAnchorItem[]>('search_huya_anchors', { keyword, page: 1 });
+    isLoadingSearch.value = false;
+    if (Array.isArray(items) && items.length > 0) {
+      searchResults.value = items.map((item): SearchResultItem => ({
+        platform: Platform.HUYA,
+        roomId: item.room_id,
+        userName: item.user_name || '虎牙主播',
+        roomTitle: item.title || null,
+        avatar: item.avatar || null,
+        liveStatus: !!item.live_status,
+      }));
+      searchError.value = null;
+    } else {
+      searchError.value = '没有搜索到主播。';
+    }
+  } catch (e) {
     isLoadingSearch.value = false;
     searchError.value = '没有搜索到主播。';
   }
@@ -286,6 +339,8 @@ const selectAnchor = (anchor: SearchResultItem) => {
   --h-douyu-platform-text-color: #FFFFFF;
   --h-douyin-platform-color: #2A0D2E; /* Deep Purple-Black for Douyin */
   --h-douyin-platform-text-color: #FFFFFF;
+  --h-huya-platform-color: #ff4d4f; /* Tiger Red for Huya tag */
+  --h-huya-platform-text-color: #FFFFFF;
   --h-text-primary: #E1E3E8; /* Light Grayish White (Main Text) */
   --h-text-secondary: #969BAD; /* Neutral Cool Light Gray (Secondary Text/Icons) */
   --h-border: #2C2E33; /* Darker Gray, slightly lighter than BG (Header Bottom Border) */
@@ -325,6 +380,8 @@ const selectAnchor = (anchor: SearchResultItem) => {
   --h-douyu-platform-text-color: #FFFFFF;
   --h-douyin-platform-color: #3C003C; /* Lighter Purple-Black for Douyin */
   --h-douyin-platform-text-color: #FFFFFF;
+  --h-huya-platform-color: #ff7a45; /* Light Tiger Red */
+  --h-huya-platform-text-color: #FFFFFF;
   --h-text-primary: #2c3e50; /* Dark Slate Blue (Main Text) */
   --h-text-secondary: #7f8c8d; /* Neutral Gray (Secondary Text/Icons) */
   --h-border: #e0e0e0; /* Light Gray (Header Bottom Border) */
@@ -603,6 +660,11 @@ const selectAnchor = (anchor: SearchResultItem) => {
 .platform-tag.douyin {
   background-color: var(--h-douyin-platform-color);
   color: var(--h-douyin-platform-text-color);
+}
+
+.platform-tag.huya {
+  background-color: var(--h-huya-platform-color);
+  color: var(--h-huya-platform-text-color);
 }
 
 .search-results-wrapper::-webkit-scrollbar {

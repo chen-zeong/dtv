@@ -52,6 +52,8 @@ const handleStreamerSelect = (streamer: FollowedStreamer) => {
     routeName = 'douyuPlayer';
   } else if (streamer.platform === Platform.DOUYIN) {
     routeName = 'douyinPlayer';
+  } else if (streamer.platform === Platform.HUYA) {
+    routeName = 'huyaPlayer';
   } else {
     console.error('Unsupported platform for player:', streamer.platform);
     return;

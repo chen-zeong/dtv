@@ -191,6 +191,7 @@ fn main() {
             platforms::bilibili::live_list::fetch_bilibili_live_list,
             platforms::bilibili::stream_url::get_bilibili_live_stream_url_with_quality,
             platforms::bilibili::streamer_info::fetch_bilibili_streamer_info,
+            platforms::huya::search::search_huya_anchors,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
