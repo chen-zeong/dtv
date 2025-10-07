@@ -53,8 +53,8 @@
             <div class="item-content">
               <div class="avatar-container">
                 <img 
-                  v-if="streamer.avatarUrl" 
-                  :src="getAvatarSrc(streamer)" 
+                  v-if="streamer.avatarUrl && (streamer.platform !== Platform.BILIBILI || !!proxyBase)"
+                  :src="getAvatarSrc(streamer)"
                   :alt="streamer.nickname"
                   @error="handleImgError($event, streamer)"
                   class="avatar-image"
@@ -155,6 +155,11 @@
     if (!target) return;
     const base = proxyBase.value;
     const isProxied = !!base && target.src.startsWith(base);
+    // 如果是代理后的 B 站图片加载失败，不再回退到原始地址（避免 403 报错）
+    if (s.platform === Platform.BILIBILI) {
+      // 可选择在此设置占位图，当前保持不变以显示 fallback 文本
+      return;
+    }
     if (isProxied) {
       target.src = s.avatarUrl || '';
     }
@@ -315,16 +320,32 @@
               updatedStreamerData = await refreshDouyinFollowedStreamer(streamer);
             } else if (streamer.platform === Platform.HUYA) {
               // 使用统一虎牙命令获取房间信息
-              const res: any = await invoke('get_huya_unified_cmd', { roomId: streamer.id, quality: '原画' });
-              const live: boolean = !!(res && res.is_live);
-              const liveStatus: LiveStatus = live ? 'LIVE' : 'OFFLINE';
-              updatedStreamerData = {
-                liveStatus,
-                isLive: live,
-                nickname: (res && res.nick) ? res.nick : streamer.nickname,
-                roomTitle: (res && res.title) ? res.title : streamer.roomTitle,
-                avatarUrl: (res && res.avatar) ? res.avatar : streamer.avatarUrl,
-              };
+              try {
+                const res: any = await invoke('get_huya_unified_cmd', { roomId: streamer.id, quality: '原画' });
+                const live: boolean = !!(res && res.is_live);
+                const liveStatus: LiveStatus = live ? 'LIVE' : 'OFFLINE';
+                updatedStreamerData = {
+                  liveStatus,
+                  isLive: live,
+                  nickname: (res && res.nick) ? res.nick : streamer.nickname,
+                  roomTitle: (res && res.title) ? res.title : streamer.roomTitle,
+                  avatarUrl: (res && res.avatar) ? res.avatar : streamer.avatarUrl,
+                };
+              } catch (err: any) {
+                const msg = typeof err === 'string' ? err : (err?.message || '');
+                if (msg.includes('主播未开播或获取虎牙房间详情失败')) {
+                  // 将该错误视为正常离线状态，避免上抛并降低噪声
+                  updatedStreamerData = {
+                    liveStatus: 'OFFLINE',
+                    isLive: false,
+                    nickname: streamer.nickname,
+                    roomTitle: streamer.roomTitle,
+                    avatarUrl: streamer.avatarUrl,
+                  };
+                } else {
+                  throw err;
+                }
+              }
             } else if (streamer.platform === Platform.BILIBILI) {
               const payload = { args: { room_id_str: streamer.id } };
               const savedCookie = (typeof localStorage !== 'undefined') ? (localStorage.getItem('bilibili_cookie') || null) : null;
@@ -381,7 +402,12 @@
     }
   };
   
-  onMounted(() => {
+  onMounted(async () => {
+    // 在初次渲染前，若包含 B 站主播则先启动静态代理，避免头像首次以原始地址加载导致 403
+    const hasBili = props.followedAnchors.some(s => s.platform === Platform.BILIBILI);
+    if (hasBili) {
+      await ensureProxyStarted();
+    }
     refreshList();
   });
   
