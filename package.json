@@ -16,6 +16,7 @@
     "@vueuse/core": "^12.5.0",
     "artplayer": "^5.2.2",
     "artplayer-plugin-danmuku": "^5.1.4",
+    "hls.js": "^1.4.12",
     "mpegts.js": "1.7.3",
     "pinia": "^2.1.7",
     "uuid": "^11.1.0",

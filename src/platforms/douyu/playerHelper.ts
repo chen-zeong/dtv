@@ -3,6 +3,7 @@ import { listen, type Event as TauriEvent } from '@tauri-apps/api/event';
 import Artplayer from 'artplayer';
 import { Ref } from 'vue';
 import type { DanmakuMessage } from '../../components/player/types';
+import { v4 as uuidv4 } from 'uuid';
 
 // 统一的 Rust 弹幕事件负载（与 Douyin/Huya 保持一致）
 export interface UnifiedRustDanmakuPayload {
@@ -89,6 +90,7 @@ export async function startDouyuDanmakuListener(
       if (rustP.room_id && rustP.room_id !== roomId) return;
 
       const frontendDanmaku: DanmakuMessage = {
+        id: uuidv4(),
         nickname: rustP.user || '未知用户',
         content: rustP.content || '',
         level: String(rustP.user_level || 0),

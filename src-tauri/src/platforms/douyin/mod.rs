@@ -4,7 +4,6 @@ pub mod douyin_streamer_detail;
 pub mod douyin_streamer_info;
 pub mod douyin_streamer_list;
 pub mod models;
-pub mod utils;
 
 
 pub use self::danmu::web_fetcher::fetch_douyin_room_info;

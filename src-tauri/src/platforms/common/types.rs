@@ -28,6 +28,16 @@ pub struct GetStreamUrlPayload {
     pub args: GetStreamUrlArgs,
 }
 
+// 描述一个可用的播放流变体（用于调试/导出所有地址）
+#[derive(Serialize, Clone, Debug)]
+pub struct StreamVariant {
+    pub url: String,
+    pub format: Option<String>,    // e.g. flv, ts, mp4
+    pub desc: Option<String>,      // e.g. 原画/高清
+    pub qn: Option<i32>,           // B 站的清晰度编号
+    pub protocol: Option<String>,  // e.g. http, https, ws/hls
+}
+
 // For the return type of get_douyin_live_stream_url
 // Matches LiveStreamInfo interface in DouyinLive.vue
 #[derive(Serialize, Clone, Debug)]
@@ -38,6 +48,10 @@ pub struct LiveStreamInfo {
     pub stream_url: Option<String>,
     pub status: Option<i32>,
     pub error_message: Option<String>,
+    // 新增：上游真实地址（未经过本地代理）
+    pub upstream_url: Option<String>,
+    // 新增：所有可用的播放地址列表（调试/导出用）
+    pub available_streams: Option<Vec<StreamVariant>>,
 }
 
 #[derive(Default, Clone)]

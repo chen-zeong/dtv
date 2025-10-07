@@ -1,6 +1,7 @@
 use md5::{Digest, Md5};
 
-use crate::platforms::bilibili::state::BilibiliState;
+// 引入 generate_bilibili_w_webid 以便在缺失时后端自动初始化
+use crate::platforms::bilibili::state::{BilibiliState, generate_bilibili_w_webid};
 
 #[tauri::command]
 pub async fn fetch_bilibili_live_list(
@@ -14,7 +15,19 @@ pub async fn fetch_bilibili_live_list(
     let w_webid_opt = { state.w_webid.lock().unwrap().clone() };
     let w_webid = match w_webid_opt {
         Some(v) => v,
-        None => return Err("w_webid not initialized. Call generate_bilibili_w_webid first.".to_string()),
+        None => {
+            // 后端兜底：如果未初始化，则尝试自动生成 w_webid，避免前端竞态导致的报错
+            match generate_bilibili_w_webid(state).await {
+                Ok(id) => {
+                    println!("[Bilibili] w_webid was missing; auto-generated: {}", id);
+                    id
+                },
+                Err(e) => {
+                    eprintln!("[Bilibili] Failed to auto-generate w_webid: {}", e);
+                    return Err(format!("w_webid 初始化失败: {}", e));
+                }
+            }
+        },
     };
 
     let wts = SystemTime::now().duration_since(UNIX_EPOCH).map_err(|e| e.to_string())?.as_secs() as i64;

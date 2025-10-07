@@ -15,23 +15,7 @@ pub struct LiveStreamInfo {
 
 // --- Structs for parsing the Douyin API response (e.g., from /webcast/room/web/enter/) ---
 
-// Represents the overall JSON response from the API
-#[derive(Debug, Deserialize, Clone)]
-pub struct DouyinApiResponse {
-    pub status_code: i32,
-    pub data: Option<MainDataContainer>, // data can be null or an object on error
-                                         // pub prompts: Option<String>, // Example: "该内容暂时无法无法查看"
-                                         // ... other top-level fields if any (e.g., extra, log_pb)
-}
-
-#[derive(Debug, Deserialize, Clone)]
-pub struct MainDataContainer {
-    // The actual room data is often nested in an array, typically with one element
-    pub data: Option<Vec<RoomDataEntry>>, // Corresponds to data.data[0] in the demo
-    pub user: Option<UserData>,
-    // pub partition_road_map: Option<Value>, // If category info is needed later
-    pub prompts: Option<String>, // Prompts can also be inside data object
-}
+// [REMOVED] DouyinApiResponse and MainDataContainer as unused per user request
 
 #[derive(Debug, Deserialize, Clone)]
 #[allow(dead_code)]
@@ -61,6 +45,7 @@ pub struct UserData {
 }
 
 #[derive(Debug, Deserialize, Clone)]
+#[allow(dead_code)]
 pub struct AvatarData {
     #[serde(rename = "url_list")]
     pub url_list: Option<Vec<String>>,

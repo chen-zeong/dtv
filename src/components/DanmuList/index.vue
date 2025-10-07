@@ -14,7 +14,7 @@
           <p v-else>暂无弹幕或连接中...</p> <!-- Simplified placeholder -->
         </div>
 
-        <div v-for="(danmaku) in messages" :key="danmaku.id || danmaku.content + danmaku.nickname" 
+        <div v-for="(danmaku, idx) in messages" :key="danmaku.id || `${danmaku.room_id || ''}-${danmaku.nickname}-${danmaku.content}-${idx}`" 
              :class="['danmu-item', { 'system-message': danmaku.isSystem, 'success': danmaku.isSystem && danmaku.type === 'success' }]"
         >
           <div class="danmu-meta-line" v-if="!danmaku.isSystem">
@@ -51,6 +51,7 @@
     color?: string;
     isSystem?: boolean; // 系统消息
     type?: string;
+    room_id?: string; // 补充房间ID以便 key 生成更稳定
   }
   
   const props = defineProps<{

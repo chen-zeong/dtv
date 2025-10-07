@@ -299,8 +299,11 @@
     isRefreshing.value = true;
     
     try {
-      // 启动静态代理（用于头像等图片代理）
-      await ensureProxyStarted();
+      // 仅在包含 B 站主播时启动静态代理（用于头像等图片代理）
+      const hasBili = props.followedAnchors.some(s => s.platform === Platform.BILIBILI);
+      if (hasBili) {
+        await ensureProxyStarted();
+      }
   
       const updates = await Promise.all(
         props.followedAnchors.map(async (streamer) => {

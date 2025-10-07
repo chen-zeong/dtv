@@ -107,6 +107,15 @@ export interface CommonCategoryGroup {
   categories: CommonPlatformCategory[];
 }
 
+// 描述一个可用的播放流变体（与后端保持一致）
+export interface StreamVariant {
+  url: string;
+  format?: string | null;
+  desc?: string | null;
+  qn?: number | null;
+  protocol?: string | null;
+}
+
 // Added for stream details fetched by platform-specific commands
 export interface LiveStreamInfo {
   title?: string | null;
@@ -115,5 +124,9 @@ export interface LiveStreamInfo {
   stream_url?: string | null;
   status?: number | null; // Add status field, consistent with Rust struct
   error_message?: string | null;
+  // 新增：上游真实地址（未经过本地代理）
+  upstream_url?: string | null;
+  // 新增：所有可用的播放地址列表（调试/导出用）
+  available_streams?: StreamVariant[] | null;
   // Potentially other platform-specific fields if not covered by StreamRoomDetails
 }

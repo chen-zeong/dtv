@@ -3,6 +3,7 @@ import { listen, type Event as TauriEvent } from '@tauri-apps/api/event';
 import Artplayer from 'artplayer';
 import { Ref } from 'vue';
 import type { DanmakuMessage } from '../../components/player/types';
+import { v4 as uuidv4 } from 'uuid';
 
 export interface HuyaUnifiedEntry { quality: string; bitRate: number; url: string; }
 
@@ -92,6 +93,7 @@ export async function startHuyaDanmakuListener(
     }
 
     const frontendDanmaku: DanmakuMessage = {
+      id: uuidv4(),
       nickname: event.payload.user || '未知用户',
       content: event.payload.content,
       level: String(event.payload.user_level ?? 0),

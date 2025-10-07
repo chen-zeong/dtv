@@ -379,6 +379,101 @@ async function initializePlayerAndStream(
                     console.error(`[Player ${platformForLog}] Failed to load mpegts.js component:`, e);
                     streamError.value = '加载FLV播放组件失败。'; 
                 });
+            },
+            m3u8: function(video: HTMLVideoElement, url: string) {
+                const platformForLog = pPlatform;
+                import('hls.js').then(HlsModule => {
+                    const Hls = HlsModule.default || HlsModule;
+                    // 如果浏览器原生支持 HLS（如 Safari），优先使用原生播放，避免 MSE 带来的卡顿
+                    const canNativeHls = typeof video.canPlayType === 'function' && video.canPlayType('application/vnd.apple.mpegURL');
+                    if (!Hls.isSupported() && canNativeHls) {
+                        try { if (flvPlayerInstance.value) { flvPlayerInstance.value.destroy(); flvPlayerInstance.value = null; } } catch (e) { console.error(`[Player ${platformForLog}] Error destroying previous mpegts.js before native HLS init:`, e); }
+                        try {
+                            video.preload = 'auto';
+                            video.crossOrigin = 'anonymous';
+                            (video as any).src = url;
+                            video.addEventListener('loadedmetadata', () => {
+                                video.play().catch(err => console.error(`[Player ${platformForLog}] Native HLS auto-play error:`, err));
+                            }, { once: true });
+                        } catch (e) {
+                            console.error(`[Player ${platformForLog}] Native HLS setup failed:`, e);
+                            streamError.value = '原生HLS播放初始化失败。';
+                        }
+                        return;
+                    }
+                    if (Hls.isSupported()) {
+                        // 销毁旧的 flv 实例，避免冲突
+                        if (flvPlayerInstance.value) {
+                            try { flvPlayerInstance.value.destroy(); } catch (e) { console.error(`[Player ${platformForLog}] Error destroying previous mpegts.js before HLS init:`, e); }
+                            flvPlayerInstance.value = null;
+                        }
+                        // 更稳妥的 HLS 配置，针对直播优化，减少卡顿
+                        const hls = new Hls({
+                            liveDurationInfinity: true,
+                            maxLiveSyncPlaybackRate: 1.5,
+                            liveSyncDurationCount: 3,
+                            liveMaxLatencyDurationCount: 10,
+                            maxBufferLength: 10,
+                            backBufferLength: 60,
+                            enableWorker: true,
+                            lowLatencyMode: false,
+                        });
+                        try {
+                            video.preload = 'auto';
+                            video.crossOrigin = 'anonymous';
+                            hls.attachMedia(video);
+                        } catch (e) {
+                            console.error(`[Player ${platformForLog}] HLS attachMedia failed:`, e);
+                            streamError.value = 'HLS播放器绑定失败。';
+                            return;
+                        }
+                        hls.on(Hls.Events.MEDIA_ATTACHED, () => {
+                            try {
+                                hls.loadSource(url);
+                            } catch (e) {
+                                console.error(`[Player ${platformForLog}] HLS loadSource failed:`, e);
+                                streamError.value = 'HLS资源加载失败。';
+                            }
+                        });
+                        // 输出一些有用的调试信息，观察直播段长与是否为直播
+                        hls.on(Hls.Events.LEVEL_LOADED, (_evt: any, data: any) => {
+                            try {
+                                const td = data?.details?.targetduration;
+                                const live = data?.details?.live;
+                                console.info(`[HLS ${platformForLog}] level loaded: targetduration=${td}, live=${live}`);
+                            } catch {}
+                        });
+                        hls.on(Hls.Events.ERROR, (_event: any, data: any) => {
+                            console.error(`[HLS ${platformForLog}] Error:`, data);
+                            if (data && data.details) {
+                                streamError.value = `HLS错误: ${data.details}`;
+                            }
+                            // 遇到致命错误时的自动恢复逻辑
+                            if (data?.fatal) {
+                                try {
+                                    if (data.type === (Hls as any).ErrorTypes.NETWORK_ERROR) {
+                                        console.warn('[HLS] Fatal network error, try to restart load');
+                                        hls.startLoad();
+                                    } else if (data.type === (Hls as any).ErrorTypes.MEDIA_ERROR) {
+                                        console.warn('[HLS] Fatal media error, try to recoverMediaError');
+                                        hls.recoverMediaError();
+                                    } else {
+                                        console.warn('[HLS] Fatal other error, destroy and hint retry');
+                                        hls.destroy();
+                                    }
+                                } catch (e) {
+                                    console.error('[HLS] Recovery handling failed:', e);
+                                }
+                            }
+                        });
+                    } else {
+                        console.error(`[Player ${platformForLog}] Browser does not support HLS.`);
+                        streamError.value = '浏览器不支持HLS播放。';
+                    }
+                }).catch((e) => {
+                    console.error(`[Player ${platformForLog}] Failed to load hls.js component:`, e);
+                    streamError.value = '加载HLS播放组件失败。';
+                });
             }
         },
     };

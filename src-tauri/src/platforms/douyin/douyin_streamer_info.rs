@@ -1,6 +1,4 @@
 use crate::platforms::common::http_client::HttpClient;
-use crate::platforms::douyin::models::*;
-use crate::platforms::douyin::utils::setup_douyin_cookies;
 use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, ACCEPT_LANGUAGE, COOKIE, REFERER, USER_AGENT};
 use serde_json::Value;
 use regex::Regex;
@@ -23,6 +21,8 @@ pub async fn fetch_douyin_streamer_info(
             stream_url: None,
             status: None,
             error_message: Some("Room ID cannot be empty.".to_string()),
+            upstream_url: None,
+            available_streams: None,
         });
     }
 
@@ -52,6 +52,8 @@ pub async fn fetch_douyin_streamer_info(
                         stream_url: None,
                         status: None,
                         error_message: Some("未能从 HTML state 中解析到房间详情".to_string()),
+                        upstream_url: None,
+                        available_streams: None,
                     });
                 }};
                 let status = room.get("status").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
@@ -75,6 +77,8 @@ pub async fn fetch_douyin_streamer_info(
                     stream_url: None,
                     status: Some(status),
                     error_message: None,
+                    upstream_url: None,
+                    available_streams: None,
                 })
             }
             Err(e) => {
@@ -85,6 +89,8 @@ pub async fn fetch_douyin_streamer_info(
                     stream_url: None,
                     status: None,
                     error_message: Some(format!("HTML 解析失败: {}", e)),
+                    upstream_url: None,
+                    available_streams: None,
                 });
             }
         }
@@ -102,6 +108,8 @@ pub async fn fetch_douyin_streamer_info(
                             stream_url: None,
                             status: None,
                             error_message: Some("未能从 reflow info 中解析到房间详情".to_string()),
+                            upstream_url: None,
+                            available_streams: None,
                         });
                     }
                 };
@@ -123,6 +131,8 @@ pub async fn fetch_douyin_streamer_info(
                     stream_url: None,
                     status: Some(status),
                     error_message: None,
+                    upstream_url: None,
+                    available_streams: None,
                 })
             }
             Err(e) => {
@@ -133,6 +143,8 @@ pub async fn fetch_douyin_streamer_info(
                     stream_url: None,
                     status: None,
                     error_message: Some(format!("Reflow 接口请求失败: {}", e)),
+                    upstream_url: None,
+                    available_streams: None,
                 });
             }
         }

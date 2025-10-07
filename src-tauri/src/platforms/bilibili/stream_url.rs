@@ -4,6 +4,7 @@ use tauri::{command, AppHandle, State};
 
 use crate::StreamUrlStore;
 use crate::proxy::{start_proxy, ProxyServerHandle};
+use crate::platforms::common::types::StreamVariant;
 
 #[command]
 pub async fn get_bilibili_live_stream_url_with_quality(
@@ -23,6 +24,8 @@ pub async fn get_bilibili_live_stream_url_with_quality(
             stream_url: None,
             status: None,
             error_message: Some("房间ID未提供".to_string()),
+            upstream_url: None,
+            available_streams: None,
         });
     }
 
@@ -38,6 +41,8 @@ pub async fn get_bilibili_live_stream_url_with_quality(
         }
     }
 
+    // 添加必要的 Origin，以符合部分接口对 CSRF 的检查
+    headers.insert(reqwest::header::ORIGIN, HeaderValue::from_static("https://live.bilibili.com"));
     let client = reqwest::Client::builder()
         .default_headers(headers)
         .build()
@@ -50,8 +55,8 @@ pub async fn get_bilibili_live_stream_url_with_quality(
             ("room_id", room_id.to_string()),
             ("protocol", "0,1".to_string()),
             ("format", "0,1,2".to_string()),
-            ("codec", "0".to_string()),
-            ("platform", "html5".to_string()),
+            ("codec", "0,1".to_string()),
+            ("platform", "web".to_string()),
             ("dolby", "5".to_string()),
         ];
         if let Some(q) = qn { params.push(("qn", q.to_string())); }
@@ -80,6 +85,13 @@ pub async fn get_bilibili_live_stream_url_with_quality(
             qn_map.push((qn, desc));
         }
     }
+    // 调试输出：可用的 qn 列表及描述
+    if !qn_map.is_empty() {
+        let qn_str = qn_map.iter().map(|(q, d)| format!("{}:{}", q, d)).collect::<Vec<_>>().join(", ");
+        eprintln!("[Bilibili] qn_map for room {} => [{}]", room_id, qn_str);
+    } else {
+        eprintln!("[Bilibili] qn_map is empty for room {}", room_id);
+    }
 
     // Choose qn by desired quality text
     fn match_qn(qn_map: &[(i32, String)], quality: &str) -> Option<i32> {
@@ -94,6 +106,8 @@ pub async fn get_bilibili_live_stream_url_with_quality(
         qn_map.iter().map(|(qn, _)| *qn).max()
     }
     let selected_qn = match_qn(&qn_map, &quality);
+    let selected_desc = selected_qn.and_then(|qn| qn_map.iter().find(|(q, _)| *q == qn).map(|(_, d)| d.clone()));
+    eprintln!("[Bilibili] selected quality '{}' -> qn={:?}, desc={:?}", quality, selected_qn, selected_desc);
 
     // 2) Second request with selected qn (if any)
     let playinfo2 = request_playinfo(&client, &room_id, selected_qn).await?;
@@ -113,28 +127,45 @@ pub async fn get_bilibili_live_stream_url_with_quality(
             stream_url: None,
             status: Some(0),
             error_message: None,
+            upstream_url: None,
+            available_streams: None,
         });
     }
 
-    // Pick FLV URL
-    let mut final_url: Option<String> = None;
+    // 收集所有可用的播放地址（包含不同 host）
+    let mut variants: Vec<StreamVariant> = Vec::new();
+    let mut final_url_ts: Option<String> = None;
+    let mut final_url_flv: Option<String> = None;
     if let Some(streams) = playurl2.get("stream").and_then(|v| v.as_array()) {
-        'outer: for stream_item in streams {
+        for stream_item in streams {
+            let protocol = stream_item.get("protocol_name").and_then(|v| v.as_str()).map(|s| s.to_string());
             if let Some(formats) = stream_item.get("format").and_then(|v| v.as_array()) {
                 for format_item in formats {
                     let format_name = format_item.get("format_name").and_then(|v| v.as_str()).unwrap_or("");
-                    if format_name == "flv" {
-                        if let Some(codecs) = format_item.get("codec").and_then(|v| v.as_array()) {
-                            for codec_item in codecs {
-                                let base_url = codec_item.get("base_url").and_then(|v| v.as_str()).unwrap_or("");
-                                if let Some(url_infos) = codec_item.get("url_info").and_then(|v| v.as_array()) {
-                                    for ui in url_infos {
-                                        let host = ui.get("host").and_then(|v| v.as_str()).unwrap_or("");
-                                        let extra = ui.get("extra").and_then(|v| v.as_str()).unwrap_or("");
-                                        let composed = format!("{}{}{}", host, base_url, extra);
-                                        if !composed.is_empty() {
-                                            final_url = Some(composed);
-                                            break 'outer;
+                    if let Some(codecs) = format_item.get("codec").and_then(|v| v.as_array()) {
+                        for codec_item in codecs {
+                            let base_url = codec_item.get("base_url").and_then(|v| v.as_str()).unwrap_or("");
+                            if let Some(url_infos) = codec_item.get("url_info").and_then(|v| v.as_array()) {
+                                for ui in url_infos {
+                                    let host = ui.get("host").and_then(|v| v.as_str()).unwrap_or("");
+                                    let extra = ui.get("extra").and_then(|v| v.as_str()).unwrap_or("");
+                                    let composed = format!("{}{}{}", host, base_url, extra);
+                                    if !composed.is_empty() {
+                                        // 记录到 variants
+                                        variants.push(StreamVariant {
+                                            url: composed.clone(),
+                                            format: Some(format_name.to_string()),
+                                            desc: selected_desc.clone(),
+                                            qn: selected_qn,
+                                            protocol: protocol.clone(),
+                                        });
+                                        // 优先选择第一个 TS(M3U8) 地址作为默认播放地址
+                                        if final_url_ts.is_none() && format_name == "ts" {
+                                            final_url_ts = Some(composed.clone());
+                                        }
+                                        // 其次选择第一个 FLV 地址作为备用
+                                        if final_url_flv.is_none() && format_name == "flv" {
+                                            final_url_flv = Some(composed.clone());
                                         }
                                     }
                                 }
@@ -146,29 +177,37 @@ pub async fn get_bilibili_live_stream_url_with_quality(
         }
     }
 
-    if final_url.is_none() {
+    if final_url_ts.is_none() && final_url_flv.is_none() {
         return Ok(crate::platforms::common::LiveStreamInfo {
             title: init_json["data"]["title"].as_str().map(|s| s.to_string()),
             anchor_name: init_json["data"]["uname"].as_str().map(|s| s.to_string()),
             avatar: None,
             stream_url: None,
             status: Some(2),
-            error_message: Some("未从播放信息中获取到FLV地址".to_string()),
+            error_message: Some("未从播放信息中获取到M3U8或FLV地址".to_string()),
+            upstream_url: None,
+            available_streams: Some(variants),
         });
     }
 
-    let real_url = final_url.unwrap();
+    let real_url = if let Some(u) = final_url_ts.clone() { u } else { final_url_flv.clone().unwrap() };
 
-    // Set stream URL directly in store and start proxy
-    {
-        let mut current_url_in_store = stream_url_store.url.lock().unwrap();
-        *current_url_in_store = real_url.clone();
-    }
-    let proxied_url = match start_proxy(app_handle, proxy_server_handle, stream_url_store).await {
-        Ok(proxy) => Some(proxy),
-        Err(e) => {
-            eprintln!("[Bilibili] Failed to start proxy: {}", e);
-            None
+    // 根据是否为 HLS 选择是否启动本地代理（目前直接返回 M3U8 上游地址，FLV 仍通过代理）
+    let proxied_url = if final_url_ts.is_some() {
+        // HLS：直接使用上游 M3U8 地址
+        Some(real_url.clone())
+    } else {
+        // FLV：写入到 Store 并启动代理
+        {
+            let mut current_url_in_store = stream_url_store.url.lock().unwrap();
+            *current_url_in_store = real_url.clone();
+        }
+        match start_proxy(app_handle, proxy_server_handle, stream_url_store).await {
+            Ok(proxy) => Some(proxy),
+            Err(e) => {
+                eprintln!("[Bilibili] Failed to start proxy: {}", e);
+                None
+            }
         }
     };
 
@@ -181,5 +220,7 @@ pub async fn get_bilibili_live_stream_url_with_quality(
         stream_url: proxied_url,
         status: Some(2),
         error_message: final_error_message,
+        upstream_url: Some(real_url),
+        available_streams: Some(variants),
     })
 }

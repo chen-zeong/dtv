@@ -5,6 +5,7 @@ import { Ref } from 'vue';
 import { Platform } from '../common/types';
 import type { DanmakuMessage, RustGetStreamUrlPayload } from '../../components/player/types';
 import type { LiveStreamInfo } from '../common/types';
+import { v4 as uuidv4 } from 'uuid';
 
 
 export interface DouyinRustDanmakuPayload {
@@ -118,6 +119,7 @@ export async function startDouyinDanmakuListener(
     if (artInstance && artInstance.plugins && artInstance.plugins.artplayerPluginDanmuku && event.payload) {
       const rustP = event.payload;
       const frontendDanmaku: DanmakuMessage = {
+        id: uuidv4(),
         nickname: rustP.user || '未知用户',
         content: rustP.content || '',
         level: String(rustP.user_level || 0),

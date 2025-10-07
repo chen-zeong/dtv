@@ -56,6 +56,8 @@ pub async fn get_douyin_live_stream_url_with_quality(
             stream_url: None,
             status: None,
             error_message: Some("Room ID cannot be empty.".to_string()),
+            upstream_url: None,
+            available_streams: None,
         });
     }
 
@@ -80,6 +82,8 @@ pub async fn get_douyin_live_stream_url_with_quality(
                     stream_url: None,
                     status: None,
                     error_message: Some(format!("HTML 解析失败: {}", e)),
+                    upstream_url: None,
+                    available_streams: None,
                 });
             }
         }
@@ -96,6 +100,8 @@ pub async fn get_douyin_live_stream_url_with_quality(
                     stream_url: None,
                     status: None,
                     error_message: Some(format!("Reflow 接口请求失败: {}", e)),
+                    upstream_url: None,
+                    available_streams: None,
                 });
             }
         }
@@ -110,6 +116,8 @@ pub async fn get_douyin_live_stream_url_with_quality(
             stream_url: None,
             status: Some(detail.status),
             error_message: None,
+            upstream_url: None,
+            available_streams: None,
         });
     }
 
@@ -123,6 +131,8 @@ pub async fn get_douyin_live_stream_url_with_quality(
                 stream_url: None,
                 status: Some(detail.status),
                 error_message: Some("主播在线，但未找到 stream_url".to_string()),
+                upstream_url: None,
+                available_streams: None,
             })
         }
     };
@@ -161,6 +171,8 @@ pub async fn get_douyin_live_stream_url_with_quality(
                     stream_url: Some(real_url),
                     status: Some(detail.status),
                     error_message: Some(format!("代理启动失败: {}", e)),
+                    upstream_url: None,
+                    available_streams: None,
                 });
             }
         };
@@ -172,6 +184,8 @@ pub async fn get_douyin_live_stream_url_with_quality(
             stream_url: Some(proxied_url),
             status: Some(detail.status),
             error_message: None,
+            upstream_url: Some(real_url),
+            available_streams: None,
         })
     } else {
         Ok(CommonLiveStreamInfo {
@@ -181,6 +195,8 @@ pub async fn get_douyin_live_stream_url_with_quality(
             stream_url: None,
             status: Some(detail.status),
             error_message: Some("未能解析到任何可用的播放地址".to_string()),
+            upstream_url: None,
+            available_streams: None,
         })
     }
 }
@@ -249,7 +265,7 @@ async fn fetch_room_detail_by_web_rid_html(http_client: &HttpClient, web_rid: &s
         .map_err(|e| format!("获取房间页面失败: {}", e))?;
 
     // 解析内嵌的 state JSON（与 Python 版逻辑一致）
-    let re = Regex::new(r#"\{\\"state\\":\{\\"appStore.*?\]\\n"#)
+    let re = Regex::new(r#"\{\\\"state\\\":\{\\\"appStore.*?\]\\n"#)
         .map_err(|e| format!("构建正则失败: {}", e))?;
     let m = re
         .find(&text)

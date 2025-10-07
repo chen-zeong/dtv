@@ -1,9 +1,10 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen, type Event as TauriEvent } from '@tauri-apps/api/event';
 import Artplayer from 'artplayer';
-import type { LiveStreamInfo } from '../common/types';
+import type { LiveStreamInfo, StreamVariant } from '../common/types';
 import type { Ref } from 'vue';
 import type { DanmakuMessage } from '../../components/player/types';
+import { v4 as uuidv4 } from 'uuid';
 
 export async function getBilibiliStreamConfig(
   roomId: string,
@@ -25,7 +26,29 @@ export async function getBilibiliStreamConfig(
   if (!result.stream_url) {
     throw new Error('未获取到直播流地址');
   }
-  return { streamUrl: result.stream_url, streamType: 'flv' };
+
+  // 调试输出：真实上游地址与所有可用地址
+  if (result.upstream_url) {
+    console.info('[Bilibili] 上游真实地址（可用于 VLC 测试）:', result.upstream_url);
+  }
+  if (result.available_streams && Array.isArray(result.available_streams)) {
+    console.info(`[Bilibili] 可用播放地址（共 ${result.available_streams.length} 条）:`);
+    (result.available_streams as StreamVariant[]).forEach((v, idx) => {
+      const meta = [v.format, v.desc, v.qn?.toString(), v.protocol].filter(Boolean).join(' | ');
+      console.info(`  [${idx + 1}] ${v.url}${meta ? `  <<< ${meta}` : ''}`);
+    });
+  }
+
+  // 根据 available_streams 决定播放类型：优先 m3u8，其次 flv
+  let streamType: string | undefined = undefined;
+  if (Array.isArray(result.available_streams)) {
+    const hasM3U8 = (result.available_streams as StreamVariant[]).some(v => (v.format || '').toLowerCase() === 'ts' || v.url.includes('.m3u8'));
+    const hasFlv = (result.available_streams as StreamVariant[]).some(v => (v.format || '').toLowerCase() === 'flv' || v.url.endsWith('.flv'));
+    if (hasM3U8) streamType = 'm3u8';
+    else if (hasFlv) streamType = 'flv';
+  }
+
+  return { streamUrl: result.stream_url, streamType };
 }
 
 // 统一的 Rust 弹幕事件负载（与 Douyin/Douyu/Huya 保持一致）
@@ -54,6 +77,7 @@ export async function startBilibiliDanmakuListener(
     if (!event.payload || event.payload.room_id !== roomId) return;
 
     const frontendDanmaku: DanmakuMessage = {
+      id: uuidv4(),
       nickname: event.payload.user || '未知用户',
       content: event.payload.content,
       level: String(event.payload.user_level ?? 0),

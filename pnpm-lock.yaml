@@ -26,6 +26,9 @@ importers:
       artplayer-plugin-danmuku:
         specifier: ^5.1.4
         version: 5.1.6
+      hls.js:
+        specifier: ^1.4.12
+        version: 1.6.13
       mpegts.js:
         specifier: 1.7.3
         version: 1.7.3
@@ -554,6 +557,9 @@ packages:
   he@1.2.0:
     resolution: {integrity: sha512-F/1DnUGPopORZi0ni+CvrCgHQ5FyEAHRLSApuYWMmrbSwoN2Mn/7k+Gl38gJnR7yyDZk6WLXwiGod1JOWNDKGw==}
     hasBin: true
+
+  hls.js@1.6.13:
+    resolution: {integrity: sha512-hNEzjZNHf5bFrUNvdS4/1RjIanuJ6szpWNfTaX5I6WfGynWXGT7K/YQLYtemSvFExzeMdgdE4SsyVLJbd5PcZA==}
 
   kind-of@6.0.3:
     resolution: {integrity: sha512-dcS1ul+9tmeD95T+x28/ehLgd9mENa3LsvDTtzm3vyBEO7RPptvAD+t44WVXaUjTBRcrpFeFlC8WCruUR456hw==}
@@ -1090,6 +1096,8 @@ snapshots:
     optional: true
 
   he@1.2.0: {}
+
+  hls.js@1.6.13: {}
 
   kind-of@6.0.3: {}
 
