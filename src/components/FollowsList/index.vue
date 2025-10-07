@@ -54,8 +54,9 @@
               <div class="avatar-container">
                 <img 
                   v-if="streamer.avatarUrl" 
-                  :src="streamer.avatarUrl" 
+                  :src="getAvatarSrc(streamer)" 
                   :alt="streamer.nickname"
+                  @error="handleImgError($event, streamer)"
                   class="avatar-image"
                 >
                 <div v-else class="avatar-fallback">{{ streamer.nickname[0] }}</div>
@@ -90,6 +91,7 @@
 
   import { refreshDouyuFollowedStreamer } from '../../platforms/douyu/followListHelper';
   import { refreshDouyinFollowedStreamer } from '../../platforms/douyin/followListHelper';
+  import { invoke } from '@tauri-apps/api/core';
   
   // Updated DouyinRoomInfo to match the Rust struct DouyinFollowListRoomInfo
   // interface DouyinRoomInfo { // This will be the type for `data` from invoke
@@ -113,6 +115,50 @@
   const justAddedIds = ref<string[]>([]);
   const animationTimeout = ref<number | null>(null);
   
+  // 头像代理：用于 B 站等站点需要 Referer 的图片
+  const proxyBase = ref<string>('');
+  async function ensureProxyStarted(): Promise<void> {
+    try {
+      if (!proxyBase.value) {
+        const base = await invoke<string>('start_static_proxy_server');
+        proxyBase.value = base || '';
+      }
+    } catch (e) {
+      console.warn('[FollowsList] ensureProxyStarted failed:', e);
+    }
+  }
+  function proxify(url: string | null | undefined): string {
+    const u = (url || '').trim();
+    if (!u) return '';
+    try {
+      const parsed = new URL(u);
+      if (parsed.hostname === '127.0.0.1' || parsed.hostname === 'localhost') {
+        return u;
+      }
+    } catch {}
+    if (!proxyBase.value) return u;
+    const base = proxyBase.value.endsWith('/') ? proxyBase.value.slice(0, -1) : proxyBase.value;
+    return `${base}/image?url=${encodeURIComponent(u)}`;
+  }
+
+  function getAvatarSrc(s: FollowedStreamer): string {
+    const u = s.avatarUrl || '';
+    if (!u) return '';
+    if (s.platform === Platform.BILIBILI) {
+      return proxify(u);
+    }
+    return u;
+  }
+
+  function handleImgError(ev: Event, s: FollowedStreamer) {
+    const target = ev.target as HTMLImageElement | null;
+    if (!target) return;
+    const base = proxyBase.value;
+    const isProxied = !!base && target.src.startsWith(base);
+    if (isProxied) {
+      target.src = s.avatarUrl || '';
+    }
+  }
   const MIN_ANIMATION_DURATION = 1500;
   
   const getLiveStatusSortOrder = (status: LiveStatus | undefined): number => {
@@ -253,6 +299,9 @@
     isRefreshing.value = true;
     
     try {
+      // 启动静态代理（用于头像等图片代理）
+      await ensureProxyStarted();
+  
       const updates = await Promise.all(
         props.followedAnchors.map(async (streamer) => {
           let updatedStreamerData: Partial<FollowedStreamer> = {};
@@ -261,6 +310,30 @@
               updatedStreamerData = await refreshDouyuFollowedStreamer(streamer);
             } else if (streamer.platform === Platform.DOUYIN) {
               updatedStreamerData = await refreshDouyinFollowedStreamer(streamer);
+            } else if (streamer.platform === Platform.HUYA) {
+              // 使用统一虎牙命令获取房间信息
+              const res: any = await invoke('get_huya_unified_cmd', { roomId: streamer.id, quality: '原画' });
+              const live: boolean = !!(res && res.is_live);
+              const liveStatus: LiveStatus = live ? 'LIVE' : 'OFFLINE';
+              updatedStreamerData = {
+                liveStatus,
+                isLive: live,
+                nickname: (res && res.nick) ? res.nick : streamer.nickname,
+                roomTitle: (res && res.title) ? res.title : streamer.roomTitle,
+                avatarUrl: (res && res.avatar) ? res.avatar : streamer.avatarUrl,
+              };
+            } else if (streamer.platform === Platform.BILIBILI) {
+              const payload = { args: { room_id_str: streamer.id } };
+              const savedCookie = (typeof localStorage !== 'undefined') ? (localStorage.getItem('bilibili_cookie') || null) : null;
+              const res: any = await invoke('fetch_bilibili_streamer_info', { payload, cookie: savedCookie });
+              const liveStatus: LiveStatus = (res && res.status === 1) ? 'LIVE' : 'OFFLINE';
+              updatedStreamerData = {
+                liveStatus,
+                isLive: liveStatus === 'LIVE',
+                nickname: (res && res.anchor_name) ? res.anchor_name : streamer.nickname,
+                roomTitle: (res && res.title) ? res.title : streamer.roomTitle,
+                avatarUrl: (res && res.avatar) ? res.avatar : streamer.avatarUrl,
+              };
             } else {
               console.warn(`Unsupported platform for refresh: ${streamer.platform}`);
               return streamer;
