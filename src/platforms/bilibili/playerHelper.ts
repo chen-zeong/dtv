@@ -15,10 +15,12 @@ export async function getBilibiliStreamConfig(
     throw new Error('房间ID未提供');
   }
   const payloadData = { args: { room_id_str: roomId } };
+  // 若未显式传入 cookie，则尝试从 localStorage 读取，以确保最高画质可用
+  const effectiveCookie = cookie ?? (typeof localStorage !== 'undefined' ? (localStorage.getItem('bilibili_cookie') || undefined) : undefined);
   const result = await invoke<LiveStreamInfo>('get_bilibili_live_stream_url_with_quality', {
     payload: payloadData,
     quality,
-    cookie: cookie || null,
+    cookie: effectiveCookie || null,
   });
   if (result.error_message) {
     throw new Error(result.error_message);
@@ -60,10 +62,11 @@ export async function startBilibiliDanmakuListener(
   danmakuMessagesRef: Ref<DanmakuMessage[]>,
   cookie?: string,
 ): Promise<() => void> {
-  // 启动后端 B 站弹幕监听（cookie 可选）
+  // 启动后端 B 站弹幕监听（cookie 可选）；若未传，则从 localStorage 兜底读取
+  const effectiveCookie = cookie ?? (typeof localStorage !== 'undefined' ? (localStorage.getItem('bilibili_cookie') || undefined) : undefined);
   await invoke('start_bilibili_danmaku_listener', {
     payload: { args: { room_id_str: roomId } },
-    cookie: cookie || null,
+    cookie: effectiveCookie || null,
   });
 
   const eventName = 'danmaku-message';

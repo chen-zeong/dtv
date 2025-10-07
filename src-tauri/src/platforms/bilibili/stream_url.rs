@@ -36,8 +36,19 @@ pub async fn get_bilibili_live_stream_url_with_quality(
     headers.insert(USER_AGENT, HeaderValue::from_str(ua).unwrap());
     headers.insert(REFERER, HeaderValue::from_static("https://live.bilibili.com/"));
     if let Some(c) = cookie.as_ref() {
-        if !c.is_empty() {
-            headers.insert(COOKIE, HeaderValue::from_str(c).unwrap_or(HeaderValue::from_static("")));
+        let c_trimmed = c.trim();
+        if !c_trimmed.is_empty() {
+            match HeaderValue::from_str(c_trimmed) {
+                Ok(val) => {
+                    headers.insert(COOKIE, val);
+                    eprintln!("[Bilibili] Cookie header set (content hidden)");
+                }
+                Err(err) => {
+                    eprintln!("[Bilibili] Invalid cookie header, skipping. Error: {}", err);
+                }
+            }
+        } else {
+            eprintln!("[Bilibili] Cookie provided is empty after trimming, skipping insertion.");
         }
     }
 
@@ -55,8 +66,9 @@ pub async fn get_bilibili_live_stream_url_with_quality(
             ("room_id", room_id.to_string()),
             ("protocol", "0,1".to_string()),
             ("format", "0,1,2".to_string()),
-            ("codec", "0,1".to_string()),
-            ("platform", "web".to_string()),
+            // 与参考 Python 版本保持一致：codec 使用 0，platform 使用 html5
+            ("codec", "0".to_string()),
+            ("platform", "html5".to_string()),
             ("dolby", "5".to_string()),
         ];
         if let Some(q) = qn { params.push(("qn", q.to_string())); }
@@ -85,26 +97,73 @@ pub async fn get_bilibili_live_stream_url_with_quality(
             qn_map.push((qn, desc));
         }
     }
-    // 调试输出：可用的 qn 列表及描述
+    // 解析 accept_qn（首个 stream/format/codec 的可选清晰度）
+    let mut accept_qn: Vec<i32> = vec![];
+    if let Some(streams) = playurl.get("stream").and_then(|v| v.as_array()) {
+        if let Some(first_format) = streams
+            .get(0)
+            .and_then(|s| s.get("format")).and_then(|v| v.as_array())
+            .and_then(|arr| arr.get(0))
+        {
+            if let Some(first_codec) = first_format.get("codec").and_then(|v| v.as_array()).and_then(|arr| arr.get(0)) {
+                if let Some(arr) = first_codec.get("accept_qn").and_then(|v| v.as_array()) {
+                    for q in arr { if let Some(i) = q.as_i64() { accept_qn.push(i as i32); } }
+                }
+            }
+        }
+    }
+    // 调试输出：可用的 qn 列表及描述 + accept_qn
     if !qn_map.is_empty() {
         let qn_str = qn_map.iter().map(|(q, d)| format!("{}:{}", q, d)).collect::<Vec<_>>().join(", ");
         eprintln!("[Bilibili] qn_map for room {} => [{}]", room_id, qn_str);
     } else {
         eprintln!("[Bilibili] qn_map is empty for room {}", room_id);
     }
+    if !accept_qn.is_empty() {
+        let accept_str = accept_qn.iter().map(|q| q.to_string()).collect::<Vec<_>>().join(", ");
+        eprintln!("[Bilibili] accept_qn => [{}]", accept_str);
+    }
 
-    // Choose qn by desired quality text
+    // Choose qn by desired quality text（更严格的匹配与优先规则）
     fn match_qn(qn_map: &[(i32, String)], quality: &str) -> Option<i32> {
         let q = quality.trim();
-        // Try exact desc includes
-        for (qn, desc) in qn_map.iter() {
-            if (q == "原画" && desc.contains("原")) || (q == "高清" && desc.contains("高清")) || (q == "标清" && (desc.contains("标清") || desc.contains("清"))) {
-                return Some(*qn);
+        let mut qns: Vec<i32> = qn_map.iter().map(|(qn, _)| *qn).collect();
+        qns.sort();
+        let has = |v: i32| qns.binary_search(&v).is_ok();
+
+        match q {
+            "原画" => {
+                if has(10000) { Some(10000) } else { qns.last().copied() }
+            }
+            "高清" => {
+                // 优先固定值 400；否则按描述关键字匹配（高清/超清/HD）；再兜底选择次高值
+                if has(400) { return Some(400); }
+                for (qn, desc) in qn_map.iter() {
+                    if desc.contains("高清") || desc.contains("超清") || desc.contains("HD") {
+                        return Some(*qn);
+                    }
+                }
+                // 兜底：选择小于最大值的次高 qn（例如只有 10000 和 250 时，选 250）
+                let max = qns.last().copied();
+                if let Some(m) = max { qns.into_iter().rev().find(|&x| x < m) } else { None }
+            }
+            "标清" => {
+                // 优先固定值 250；否则按描述关键字匹配（标清/流畅/SD）；再兜底选择最小值
+                if has(250) { return Some(250); }
+                for (qn, desc) in qn_map.iter() {
+                    if desc.contains("标清") || desc.contains("流畅") || desc.contains("SD") {
+                        return Some(*qn);
+                    }
+                }
+                qns.first().copied()
+            }
+            _ => {
+                // 未识别文案：兜底最大值
+                qns.last().copied()
             }
         }
-        // Fallback: choose max qn
-        qn_map.iter().map(|(qn, _)| *qn).max()
     }
+
     let selected_qn = match_qn(&qn_map, &quality);
     let selected_desc = selected_qn.and_then(|qn| qn_map.iter().find(|(q, _)| *q == qn).map(|(_, d)| d.clone()));
     eprintln!("[Bilibili] selected quality '{}' -> qn={:?}, desc={:?}", quality, selected_qn, selected_desc);
