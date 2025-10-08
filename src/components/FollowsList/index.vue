@@ -15,6 +15,8 @@
                 <path d="M3 3v5h5"></path>
               </svg>
             </span>
+            <!-- 新增：刷新进度 -->
+            <span v-if="isRefreshing" class="progress-label">{{ progressCurrent }}/{{ progressTotal }}</span>
           </button>
           <!-- 新增：展开悬浮关注列表按钮 -->
           <button 
@@ -30,6 +32,8 @@
             </span>
           </button>
         </div>
+        <!-- 新增：刷新完成提示 -->
+        <div v-if="showRefreshToast" class="refresh-toast">刷新完成</div>
       </div>
       
       <div class="list-content" ref="listRef">
@@ -328,10 +332,19 @@
     }
   };
   
+  // 新增：刷新进度与完成提示
+  const progressCurrent = ref(0);
+  const progressTotal = ref(0);
+  const showRefreshToast = ref(false);
+
   const refreshList = async () => {
     if (isRefreshing.value) return;
     const startTime = Date.now();
     isRefreshing.value = true;
+
+    // 初始化进度
+    progressCurrent.value = 0;
+    progressTotal.value = props.followedAnchors.length;
     
     try {
       // 仅在包含 B 站主播时启动静态代理（用于头像等图片代理）
@@ -340,68 +353,72 @@
         await ensureProxyStarted();
       }
   
-      const updates = await Promise.all(
-        props.followedAnchors.map(async (streamer) => {
-          let updatedStreamerData: Partial<FollowedStreamer> = {};
-          try {
-            if (streamer.platform === Platform.DOUYU) {
-              updatedStreamerData = await refreshDouyuFollowedStreamer(streamer);
-            } else if (streamer.platform === Platform.DOUYIN) {
-              updatedStreamerData = await refreshDouyinFollowedStreamer(streamer);
-            } else if (streamer.platform === Platform.HUYA) {
-              // 使用统一虎牙命令获取房间信息
-              try {
-                const res: any = await invoke('get_huya_unified_cmd', { roomId: streamer.id, quality: '原画' });
-                const live: boolean = !!(res && res.is_live);
-                const liveStatus: LiveStatus = live ? 'LIVE' : 'OFFLINE';
-                updatedStreamerData = {
-                  liveStatus,
-                  isLive: live,
-                  nickname: (res && res.nick) ? res.nick : streamer.nickname,
-                  roomTitle: (res && res.title) ? res.title : streamer.roomTitle,
-                  avatarUrl: (res && res.avatar) ? res.avatar : streamer.avatarUrl,
-                };
-              } catch (err: any) {
-                const msg = typeof err === 'string' ? err : (err?.message || '');
-                if (msg.includes('主播未开播或获取虎牙房间详情失败')) {
-                  // 将该错误视为正常离线状态，避免上抛并降低噪声
-                  updatedStreamerData = {
-                    liveStatus: 'OFFLINE',
-                    isLive: false,
-                    nickname: streamer.nickname,
-                    roomTitle: streamer.roomTitle,
-                    avatarUrl: streamer.avatarUrl,
-                  };
-                } else {
-                  throw err;
-                }
-              }
-            } else if (streamer.platform === Platform.BILIBILI) {
-              const payload = { args: { room_id_str: streamer.id } };
-              const savedCookie = (typeof localStorage !== 'undefined') ? (localStorage.getItem('bilibili_cookie') || null) : null;
-              const res: any = await invoke('fetch_bilibili_streamer_info', { payload, cookie: savedCookie });
-              const liveStatus: LiveStatus = (res && res.status === 1) ? 'LIVE' : 'OFFLINE';
+      // 顺序刷新以便显示进度
+      const updates: FollowedStreamer[] = [];
+      for (const streamer of props.followedAnchors) {
+        let updatedStreamerData: Partial<FollowedStreamer> = {};
+        try {
+          if (streamer.platform === Platform.DOUYU) {
+            updatedStreamerData = await refreshDouyuFollowedStreamer(streamer);
+          } else if (streamer.platform === Platform.DOUYIN) {
+            updatedStreamerData = await refreshDouyinFollowedStreamer(streamer);
+          } else if (streamer.platform === Platform.HUYA) {
+            try {
+              const res: any = await invoke('get_huya_unified_cmd', { roomId: streamer.id, quality: '原画' });
+              const live: boolean = !!(res && res.is_live);
+              const liveStatus: LiveStatus = live ? 'LIVE' : 'OFFLINE';
               updatedStreamerData = {
                 liveStatus,
-                isLive: liveStatus === 'LIVE',
-                nickname: (res && res.anchor_name) ? res.anchor_name : streamer.nickname,
+                isLive: live,
+                nickname: (res && res.nick) ? res.nick : streamer.nickname,
                 roomTitle: (res && res.title) ? res.title : streamer.roomTitle,
                 avatarUrl: (res && res.avatar) ? res.avatar : streamer.avatarUrl,
               };
-            } else {
-              console.warn(`Unsupported platform for refresh: ${streamer.platform}`);
-              return streamer;
+            } catch (err: any) {
+              const msg = typeof err === 'string' ? err : (err?.message || '');
+              if (msg.includes('主播未开播或获取虎牙房间详情失败')) {
+                updatedStreamerData = {
+                  liveStatus: 'OFFLINE',
+                  isLive: false,
+                  nickname: streamer.nickname,
+                  roomTitle: streamer.roomTitle,
+                  avatarUrl: streamer.avatarUrl,
+                };
+              } else {
+                throw err;
+              }
             }
-            return {
-              ...streamer,
-              ...updatedStreamerData,
-            } as FollowedStreamer;
-          } catch (e) {
-            console.error(`[FollowsList] Error during refresh for ${streamer.platform}/${streamer.id}, returning original:`, e);
-            return streamer; 
+          } else if (streamer.platform === Platform.BILIBILI) {
+            const payload = { args: { room_id_str: streamer.id } };
+            const savedCookie = (typeof localStorage !== 'undefined') ? (localStorage.getItem('bilibili_cookie') || null) : null;
+            const res: any = await invoke('fetch_bilibili_streamer_info', { payload, cookie: savedCookie });
+            const liveStatus: LiveStatus = (res && res.status === 1) ? 'LIVE' : 'OFFLINE';
+            updatedStreamerData = {
+              liveStatus,
+              isLive: liveStatus === 'LIVE',
+              nickname: (res && res.anchor_name) ? res.anchor_name : streamer.nickname,
+              roomTitle: (res && res.title) ? res.title : streamer.roomTitle,
+              avatarUrl: (res && res.avatar) ? res.avatar : streamer.avatarUrl,
+            };
+          } else {
+            console.warn(`Unsupported platform for refresh: ${streamer.platform}`);
+            updates.push(streamer);
+            progressCurrent.value++;
+            continue;
           }
-        })
-      );
+
+          updates.push({
+            ...streamer,
+            ...updatedStreamerData,
+          } as FollowedStreamer);
+        } catch (e) {
+          console.error(`[FollowsList] Error during refresh for ${streamer.platform}/${streamer.id}, returning original:`, e);
+          updates.push(streamer);
+        } finally {
+          // 更新进度
+          progressCurrent.value++;
+        }
+      }
 
       const validUpdates = updates.filter((update: FollowedStreamer | undefined): update is FollowedStreamer => !!update && typeof update.id !== 'undefined');
       
@@ -420,14 +437,19 @@
       }
     } finally {
       const elapsedTime = Date.now() - startTime;
+      const finish = () => {
+        isRefreshing.value = false;
+        showRefreshToast.value = true;
+        setTimeout(() => { showRefreshToast.value = false; }, 1500);
+      };
       if (elapsedTime < MIN_ANIMATION_DURATION) {
         clearAnimationTimeout();
         animationTimeout.value = window.setTimeout(() => {
-          isRefreshing.value = false;
+          finish();
           animationTimeout.value = null;
         }, MIN_ANIMATION_DURATION - elapsedTime);
       } else {
-        isRefreshing.value = false;
+        finish();
       }
     }
   };

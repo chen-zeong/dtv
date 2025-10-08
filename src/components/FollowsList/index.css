@@ -31,7 +31,46 @@
   background-color: var(--control-hover-bg-light, #edf2f7);
 }
 .header-title { font-size: 0.9rem; font-weight: 600; color: var(--primary-text, #ffffff); margin: 0; line-height: 1.2; }
-.header-actions { display: flex; gap: 8px; }
+.header-actions { display: flex; gap: 8px; align-items: center; }
+
+/* 刷新进度数字样式 */
+.progress-label {
+  margin-left: 6px;
+  font-size: 12px;
+  color: var(--secondary-text);
+  background: rgba(255,255,255,0.06);
+  padding: 2px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+}
+:root[data-theme="light"] .progress-label {
+  color: var(--text-secondary-light, #718096);
+  background: rgba(0,0,0,0.03);
+}
+
+/* 刷新完成提示 */
+.refresh-toast {
+  margin-left: auto;
+  font-size: 12px;
+  color: #22c55e;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.25);
+  animation: toast-pop 0.28s ease;
+}
+.refresh-toast::before {
+  content: '✓';
+  font-weight: 700;
+}
+@keyframes toast-pop { 0% { transform: translateY(-6px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
+
+/* 优化刷新按钮旋转动画速度与样式 */
+.icon.refreshing { color: rgba(80, 130, 255, 0.9); animation: spin 1.2s linear infinite; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
 
 /* Action buttons */
 .action-btn {
@@ -61,6 +100,32 @@
 .icon.refreshing { color: rgba(80, 130, 255, 0.9); animation: spin 2s linear infinite; }
 .refresh-btn { background: rgba(255, 255, 255, 0.05); }
 .refresh-btn:disabled { background: rgba(80, 130, 255, 0.15); cursor: default; transform: none; }
+.refresh-btn {
+  width: auto; /* 允许进度数字显示 */
+  min-width: 32px;
+  height: 32px;
+  padding: 0 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(180deg, rgba(80, 130, 255, 0.15), rgba(80, 130, 255, 0.08));
+  border: 1px solid rgba(80, 130, 255, 0.35);
+}
+.refresh-btn .icon svg { filter: drop-shadow(0 1px 2px rgba(0,0,0,0.25)); }
+.refresh-btn:hover {
+  background: linear-gradient(180deg, rgba(80, 130, 255, 0.22), rgba(80, 130, 255, 0.1));
+}
+:root[data-theme="light"] .refresh-btn {
+  background: linear-gradient(180deg, rgba(80, 130, 255, 0.12), rgba(80, 130, 255, 0.06));
+  border-color: rgba(80, 130, 255, 0.3);
+}
+.refresh-btn:disabled {
+  background: rgba(80, 130, 255, 0.12);
+  border-color: rgba(80, 130, 255, 0.25);
+}
+/* 微交互：hover 时图标轻微旋转 */
+.refresh-btn:hover .icon:not(.refreshing) { animation: nudge-rotate 0.5s ease; }
+@keyframes nudge-rotate { 0% { transform: rotate(0deg); } 50% { transform: rotate(20deg); } 100% { transform: rotate(0deg); } }
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
 
 /* Content */
