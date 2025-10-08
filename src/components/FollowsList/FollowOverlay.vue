@@ -7,6 +7,13 @@
             class="follow-overlay-panel" 
             :style="{ top: `${panelTop}px`, left: `${(alignLeft ?? 240)}px`, height: `${panelHeight}px` }"
           >
+            <!-- 将关闭按钮移动到面板右上角 -->
+            <button class="overlay-close-btn" title="关闭" @click="emit('close')">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
             <div class="overlay-header" ref="headerRef">
               <div class="overlay-header-left">
                 <!-- 移除标题：关注列表 -->
@@ -22,10 +29,10 @@
                   <span class="refresh-label">刷新</span>
                   <span class="refresh-spinner" aria-hidden="true"></span>
                 </button>
-                <button class="overlay-text-btn" @click="emit('close')">关闭</button>
+                <!-- 原关闭按钮已移除到面板右上角 -->
               </div>
             </div>
-            <div class="overlay-content" :style="{ maxHeight: `${Math.max(120, panelHeight - headerHeight)}px` }">
+            <div class="overlay-content" :style="{ height: `${Math.max(120, panelHeight - headerHeight)}px`, overflow: shouldScroll ? 'auto' : 'hidden' }">
               <div v-if="!items || items.length === 0" class="overlay-empty">
                 <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather feather-heart">
                   <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
@@ -91,11 +98,14 @@ watch(() => props.isRefreshing, (newVal, oldVal) => {
 const PANEL_MIN = 220;
 const PANEL_MAX_MARGIN = 120; // 留出顶部/底部边距
 const DEFAULT_CARD_H = 76; // 估算：48头像 + 24内边距 + 2边框
+const LIST_PAD_TOP = 6;
+const LIST_PAD_BOTTOM = 6;
 const panelHeight = ref<number>(400);
 const panelTop = ref<number>(64);
 const headerHeight = ref<number>(56);
 const headerRef = ref<HTMLElement | null>(null);
 const listEl = ref<HTMLElement | null>(null);
+const shouldScroll = ref<boolean>(false);
 
 function clamp(n: number, min: number, max: number) { return Math.max(min, Math.min(max, n)); }
 function computePanelMetrics() {
@@ -119,10 +129,11 @@ function computePanelMetrics() {
     const count = Array.isArray(props.items) ? props.items.length : 0;
     const columns = 4;
     const rows = Math.max(1, Math.ceil(count / columns));
-    const contentHeight = rows * cardH + (rows - 1) * gapPx;
+    const contentHeight = rows * cardH + (rows - 1) * gapPx + LIST_PAD_TOP + LIST_PAD_BOTTOM;
     const desired = headerHeight.value + contentHeight + 8 + 10; // overlay-content padding: 上8 下10
     const maxH = (typeof window !== 'undefined') ? (window.innerHeight - PANEL_MAX_MARGIN) : desired;
     panelHeight.value = clamp(desired, PANEL_MIN, maxH);
+    shouldScroll.value = desired > maxH;
     const vh = (typeof window !== 'undefined') ? window.innerHeight : panelHeight.value;
     panelTop.value = Math.max(16, Math.round((vh - panelHeight.value) / 2));
   });
@@ -180,7 +191,7 @@ watch(() => props.show, (v) => { if (v) computePanelMetrics(); });
   align-items: center; 
   gap: 4px; /* 缩小刷新与关闭按钮间距 */
   margin-left: auto; /* 靠右显示 */
-  position: relative;
+  position: relative; /* 保持分隔线伪元素定位 */
 }
 .overlay-header-actions::before {
   content: '';
@@ -257,7 +268,7 @@ watch(() => props.show, (v) => { if (v) computePanelMetrics(); });
   gap: 14px;
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 6px 0; /* 上下各加一点 padding，已纳入高度计算 */
   contain: paint;
   transform: translateZ(0);
 }
@@ -287,4 +298,48 @@ watch(() => props.show, (v) => { if (v) computePanelMetrics(); });
 .overlay-pop-leave-active { transition: transform 0.22s ease, opacity 0.22s ease; }
 .overlay-pop-enter-from { transform: translateY(8px); opacity: 0; }
 .overlay-pop-leave-to { transform: translateY(8px); opacity: 0; }
+.overlay-close-btn {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.9);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  position: absolute; /* 固定在面板右上角 */
+  top: 12px;
+  right: 12px;
+  z-index: 100;
+}
+.overlay-close-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.1);
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+.overlay-close-btn:active { transform: scale(0.95); }
+.overlay-close-btn svg { width: 16px; height: 16px; }
+
+/* 浅色主题适配 */
+:root[data-theme="light"] .overlay-close-btn {
+  background: var(--button-bg-light, rgba(255, 255, 255, 0.8));
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  border: 1px solid var(--button-border-light, rgba(0, 0, 0, 0.1));
+  color: var(--button-text-light, #333333);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+:root[data-theme="light"] .overlay-close-btn:hover {
+  background: var(--button-hover-bg-light, rgba(245, 245, 245, 0.9));
+  border-color: var(--button-hover-border-light, rgba(0, 0, 0, 0.15));
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12);
+}
 </style>

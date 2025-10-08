@@ -160,11 +160,12 @@ defineExpose({ router });
   background: var(--sidebar-nav-item-active-border-dark, #00DAC6);
   box-shadow: 0 0 10px var(--sidebar-nav-item-active-border-shadow-dark, rgba(0, 218, 198, 0.4));
 }
-/* Dark Mode text color for active item (original blue) */
+/* Dark Mode active/inactive backgrounds */
+:root[data-theme="dark"] .nav-item { background: #242427; }
 :root[data-theme="dark"] .nav-item.is-active {
+  background: #25272f;
   color: #FFFFFF;
   font-weight: 600;
-  background: rgba(255, 255, 255, 0.05);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 :root[data-theme="dark"] .nav-item:hover {
@@ -205,21 +206,6 @@ defineExpose({ router });
   box-shadow: 0 0 8px var(--sidebar-nav-item-active-border-light, rgba(66, 153, 225, 0.5)); /* Shadow for light active border */
 }
 
-/* Night Mode: Specific background for Douyu and Douyin nav items */
-:root[data-theme="dark"] .nav-item[href="/"],
-:root[data-theme="dark"] .nav-item[href="/douyin"] {
-  background-color: #2d2f38;
-}
-
-/* Ensure hover and active states also use this specific background in night mode for Douyu and Douyin */
-:root[data-theme="dark"] .nav-item[href="/"]:hover,
-:root[data-theme="dark"] .nav-item[href="/douyin"]:hover,
-:root[data-theme="dark"] .nav-item[href="/"].is-active,
-:root[data-theme="dark"] .nav-item[href="/douyin"].is-active {
-  background-color: #2d2f38;
-  /* If other hover/active effects like text color or shadow need to be different for these specific items, 
-     they would need to be specified here as well. For now, only background is changed. */
-}
 
 .follow-list-component {
   flex-grow: 1;

@@ -63,6 +63,14 @@ export const useFollowStore = defineStore('follow', {
         this.followedStreamers[index] = { ...this.followedStreamers[index], ...updatedStreamer };
         this._saveFollows();
       }
+    },
+    // Replace a followed streamer's ID (used for Douyin webRid -> room_id migration)
+    replaceStreamerId(platform: Platform, oldId: string, newId: string) {
+      const index = this.followedStreamers.findIndex((s: FollowedStreamer) => s.platform === platform && s.id === oldId);
+      if (index !== -1) {
+        this.followedStreamers[index] = { ...this.followedStreamers[index], id: newId } as FollowedStreamer;
+        this._saveFollows();
+      }
     }
   },
-}); 
+});

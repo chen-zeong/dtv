@@ -279,6 +279,12 @@ const handleToggleInternalExpand = () => {
   box-shadow: 0 2px 5px rgba(0,0,0,0.12);
 }
 
+:root[data-theme="light"] .cate2-card:not(.active) .cate2-name {
+  color: #000000;
+}
+:root[data-theme="light"] .cate2-card.active .cate2-name {
+  color: #FFFFFF;
+}
 .cate2-name {
   font-size: 14px;
   white-space: nowrap;

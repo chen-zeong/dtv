@@ -49,7 +49,8 @@ function onCategorySelected(evt: CategorySelectedEvent) {
 
 .left-panel {
   width: 100%; /* 顶部区域占满宽度 */
-  border-bottom: 1px solid var(--border-color-light); /* 改为底部分隔线 */
+  /* 移除贯通的横线，保持与其他平台一致 */
+  border-bottom: none;
   overflow: hidden;
 }
 
