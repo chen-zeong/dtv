@@ -16,6 +16,19 @@
               </svg>
             </span>
           </button>
+          <!-- 新增：展开悬浮关注列表按钮 -->
+          <button 
+            ref="expandBtnRef"
+            @click="openOverlay" 
+            class="action-btn expand-btn"
+            title="展开关注列表"
+          >
+            <span class="icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M4 6h16v2H4V6zm0 5h16v2H4v-2zm0 5h16v2H4v-2z"/>
+              </svg>
+            </span>
+          </button>
         </div>
       </div>
       
@@ -50,35 +63,41 @@
             @mousedown="handleMouseDown($event, index)"
             @click="handleClick($event, streamer)"
           >
-            <div class="item-content">
-              <div class="avatar-container">
-                <img 
-                  v-if="streamer.avatarUrl && (streamer.platform !== Platform.BILIBILI || !!proxyBase)"
-                  :src="getAvatarSrc(streamer)"
-                  :alt="streamer.nickname"
-                  @error="handleImgError($event, streamer)"
-                  class="avatar-image"
-                >
-                <div v-else class="avatar-fallback">{{ streamer.nickname[0] }}</div>
-              </div>
-              
-              <div class="streamer-details">
-                <div class="primary-row">
-                  <span class="nickname" :title="streamer.nickname">{{ streamer.nickname }}</span>
-                </div>
-                
-                <div class="secondary-row" :title="streamer.roomTitle">
-                  {{ streamer.roomTitle || '暂无直播标题' }}
-                </div>
-              </div>
-            </div>
-            
-            <div class="status-container">
-              <div class="live-indicator" :class="getLiveIndicatorClass(streamer)"></div>
-            </div>
+            <StreamerItem 
+              :streamer="streamer"
+              :getAvatarSrc="getAvatarSrc"
+              :handleImgError="handleImgError"
+              :getLiveIndicatorClass="getLiveIndicatorClass"
+              :proxyBase="proxyBase"
+              @clickItem="(s) => emit('selectAnchor', s)"
+            />
           </li>
         </TransitionGroup>
       </div>
+
+      <!-- 悬浮关注列表：使用组件 FollowOverlay -->
+      <FollowOverlay 
+        :show="showOverlay"
+        :items="filteredStreamers"
+        :getAvatarSrc="getAvatarSrc"
+        :handleImgError="handleImgError"
+        :getLiveIndicatorClass="getLiveIndicatorClass"
+        :proxyBase="proxyBase"
+        :alignTop="overlayAlignTop"
+        :alignLeft="overlayAlignLeft"
+        :isRefreshing="isRefreshing"
+        @select="selectFromOverlay"
+        @close="closeOverlay"
+        @refresh="refreshList"
+      >
+        <template #filters>
+          <FilterChips 
+            :visiblePlatforms="visiblePlatforms"
+            :activeFilter="activeFilter"
+            @update:activeFilter="setFilter"
+          />
+        </template>
+      </FollowOverlay>
     </div>
   </template>
   
@@ -92,6 +111,14 @@
   import { refreshDouyuFollowedStreamer } from '../../platforms/douyu/followListHelper';
   import { refreshDouyinFollowedStreamer } from '../../platforms/douyin/followListHelper';
   import { invoke } from '@tauri-apps/api/core';
+  import StreamerItem from './StreamerItem.vue';
+  import FollowOverlay from './FollowOverlay.vue';
+  import FilterChips from './FilterChips.vue';
+  import { useImageProxy } from './useProxy';
+
+  const expandBtnRef = ref<HTMLButtonElement | null>(null)
+  const overlayAlignTop = ref<number>(64)
+  const overlayAlignLeft = ref<number>(240)
   
   // Updated DouyinRoomInfo to match the Rust struct DouyinFollowListRoomInfo
   // interface DouyinRoomInfo { // This will be the type for `data` from invoke
@@ -115,39 +142,11 @@
   const justAddedIds = ref<string[]>([]);
   const animationTimeout = ref<number | null>(null);
   
-  // 头像代理：用于 B 站等站点需要 Referer 的图片
-  const proxyBase = ref<string>('');
-  async function ensureProxyStarted(): Promise<void> {
-    try {
-      if (!proxyBase.value) {
-        const base = await invoke<string>('start_static_proxy_server');
-        proxyBase.value = base || '';
-      }
-    } catch (e) {
-      console.warn('[FollowsList] ensureProxyStarted failed:', e);
-    }
-  }
-  function proxify(url: string | null | undefined): string {
-    const u = (url || '').trim();
-    if (!u) return '';
-    try {
-      const parsed = new URL(u);
-      if (parsed.hostname === '127.0.0.1' || parsed.hostname === 'localhost') {
-        return u;
-      }
-    } catch {}
-    if (!proxyBase.value) return u;
-    const base = proxyBase.value.endsWith('/') ? proxyBase.value.slice(0, -1) : proxyBase.value;
-    return `${base}/image?url=${encodeURIComponent(u)}`;
-  }
+  // 头像代理：使用可复用的组合式函数
+  const { proxyBase, ensureProxyStarted, getAvatarSrc: proxyGetAvatarSrc } = useImageProxy();
 
   function getAvatarSrc(s: FollowedStreamer): string {
-    const u = s.avatarUrl || '';
-    if (!u) return '';
-    if (s.platform === Platform.BILIBILI) {
-      return proxify(u);
-    }
-    return u;
+    return proxyGetAvatarSrc(s.platform as unknown as string, s.avatarUrl);
   }
 
   function handleImgError(ev: Event, s: FollowedStreamer) {
@@ -177,6 +176,37 @@
   };
 
   const streamers = computed(() => props.followedAnchors);
+  
+  // Overlay: floating full follow list with platform filters
+  const showOverlay = ref(false);
+  type FilterType = 'ALL' | Platform;
+  const activeFilter = ref<FilterType>('ALL');
+  const openOverlay = () => { 
+    const headerRect = document.querySelector('.app-header')?.getBoundingClientRect() as DOMRect | undefined
+    overlayAlignTop.value = headerRect ? Math.round(headerRect.bottom + 8) : 72
+    const rect = expandBtnRef.value?.getBoundingClientRect()
+    overlayAlignLeft.value = rect ? Math.round(rect.right + 12) : 240
+    showOverlay.value = true; 
+  };
+  const closeOverlay = () => { showOverlay.value = false; };
+  const setFilter = (f: FilterType) => { activeFilter.value = f; };
+  const platformsOrder: Platform[] = [Platform.DOUYU, Platform.DOUYIN, Platform.HUYA, Platform.BILIBILI];
+  const visiblePlatforms = computed(() => {
+    const present = new Set<Platform>();
+    for (const s of streamers.value) {
+      if (s.platform !== undefined) present.add(s.platform);
+    }
+    return platformsOrder.filter(p => present.has(p));
+  });
+  const filteredStreamers = computed(() => {
+    if (activeFilter.value === 'ALL') return streamers.value;
+    return streamers.value.filter(s => s.platform === activeFilter.value);
+  });
+
+  const selectFromOverlay = (s: FollowedStreamer) => {
+    emit('selectAnchor', s);
+    closeOverlay();
+  };
   
   // Method to determine class for the list item itself
   const getStreamerItemClass = (streamer: FollowedStreamer) => {
@@ -416,455 +446,4 @@
   });
   </script>
   
-  <style scoped>
-  .follow-list {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    background: var(--sidebar-bg-dark, #1a1b1e);
-    border-radius: 8px;
-    padding: 8px;
-    box-sizing: border-box;
-    overflow: hidden;
-  }
-  
-  /* Light Theme Overrides for Follow List itself */
-  :root[data-theme="light"] .follow-list {
-    background: var(--sidebar-bg-light, #f6f6f6);
-  }
-  
-  /* Header styles */
-  .list-header {
-    padding: 8px 12px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 8px;
-    border-bottom: 1px solid var(--border-color-softer, rgba(255, 255, 255, 0.05));
-    background: transparent;
-    flex-shrink: 0;
-    border-radius: 0;
-  }
-  
-  :root[data-theme="light"] .list-header {
-    border-bottom-color: var(--border-color-light-softer, rgba(0,0,0,0.05));
-  }
-  
-  :root[data-theme="light"] .list-header .header-title {
-    color: var(--text-primary-light, #2d3748);
-  }
-  :root[data-theme="light"] .list-header .action-btn {
-    color: var(--text-secondary-light, #718096);
-  }
-  :root[data-theme="light"] .list-header .action-btn:hover {
-    color: var(--text-primary-light, #2d3748);
-    background-color: var(--control-hover-bg-light, #edf2f7);
-  }
-  
-  .header-title {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--primary-text, #ffffff);
-    margin: 0;
-    line-height: 1.2;
-  }
-  
-  .header-actions {
-    display: flex;
-    gap: 8px;
-  }
-  
-  .action-btn {
-    background: rgba(255, 255, 255, 0.05);
-    border: none;
-    border-radius: 8px;
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--secondary-text, rgba(255, 255, 255, 0.6));
-    cursor: pointer;
-    transition: all 0.2s ease;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  }
-  
-  .action-btn:hover {
-    background: var(--button-hover-bg, rgba(255, 255, 255, 0.15));
-    color: var(--primary-text, #ffffff);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  }
-  
-  .action-btn:active {
-    transform: scale(0.95);
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
-  }
-  
-  /* Night mode specific hover/active for refresh button */
-  :root[data-theme="dark"] .refresh-btn:not(:disabled):hover {
-    background-color: rgba(255, 255, 255, 0.2);
-    color: #ffffff;
-  }
-  
-  :root[data-theme="dark"] .refresh-btn:not(:disabled):active {
-    background-color: rgba(255, 255, 255, 0.25);
-    color: #ffffff;
-  }
-  
-  .icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  
-  .icon.refreshing {
-    color: rgba(80, 130, 255, 0.9);
-    animation: spin 2s linear infinite;
-  }
-  
-  .refresh-btn {
-    background: rgba(255, 255, 255, 0.05);
-  }
-  
-  .refresh-btn:disabled {
-    background: rgba(80, 130, 255, 0.15); /* This purplish background is for when it's actually refreshing/disabled */
-    cursor: default;
-    transform: none;
-  }
-  
-  @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(-360deg); }
-  }
-  
-  /* Content area */
-  .list-content {
-    flex: 1;
-    overflow-y: auto;
-    padding: 0 8px;
-  }
-  
-  /* Empty state */
-  .empty-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    color: var(--secondary-text, rgba(255, 255, 255, 0.6));
-    padding: 16px;
-    text-align: center;
-  }
-  
-  :root[data-theme="light"] .empty-state .empty-title {
-    color: var(--text-primary-light, #333);
-  }
-  :root[data-theme="light"] .empty-state .empty-text {
-    color: var(--text-secondary-light, #666);
-  }
-  :root[data-theme="light"] .empty-state .empty-image svg {
-    stroke: var(--text-secondary-light, #aaa);
-  }
-  
-  .empty-image {
-    margin-bottom: 16px;
-    opacity: 0.2;
-  }
-  
-  .empty-title {
-    margin: 0 0 8px;
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--primary-text, #ffffff);
-  }
-  
-  .empty-text {
-    margin: 0;
-    font-size: 14px;
-  }
-  
-  /* Streamer list */
-  .streamers-list {
-    list-style: none;
-    margin: 0 auto;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    width: 100%;
-  }
-  
-  :root[data-theme="light"] .streamer-item {
-    background: var(--card-bg-light, #ffffff);
-    color: var(--text-primary-light, #2d3748);
-    box-shadow: var(--card-shadow-light, 0 1px 3px rgba(0,0,0,0.1));
-    border: 1px solid var(--border-color-light, #e2e8f0);
-  }
-  
-  .streamer-item {
-    display: flex;
-    align-items: center;
-    padding: 5px 8px;
-    border-radius: 12px;
-    cursor: pointer;
-    transition: all 0.2s ease-in-out;
-    position: relative;
-    overflow: hidden; /* Important for rounded corners with backdrop-filter */
-    
-    /* Night mode default background */
-    background: #252730; 
-    /* backdrop-filter: blur(12px); removed as background is opaque */
-    /* -webkit-backdrop-filter: blur(12px); removed as background is opaque */
-    color: var(--text-primary-dark, #e0e0e0);
-    border: 1px solid var(--streamer-item-border-dark-glass, rgba(255, 255, 255, 0.1)); 
-    box-shadow: var(--streamer-item-shadow-dark, 0 2px 5px rgba(0,0,0,0.2)); 
-  }
-  
-  :root[data-theme="light"] .streamer-item:hover {
-    background: var(--card-hover-bg-light, #f7fafc);
-    box-shadow: var(--card-hover-shadow-light, 0 4px 6px rgba(0,0,0,0.1));
-  }
-  
-  .streamer-item:hover {
-    background: #2C2E33;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  }
-  
-  .streamer-item:active {
-    transform: translateY(0);
-    border: 1px solid rgba(16, 185, 129, 0.15);
-    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.1);
-  }
-  
-  /* Live streamer styling - Restored card look */
-  .streamer-item.is-live {
-    background: linear-gradient(to right, 
-      rgba(16, 185, 129, 0.15) 0%,
-      rgba(16, 185, 129, 0.20) 50%,
-      rgba(16, 185, 129, 0.15) 100%
-    );
-    border: 1px solid rgba(16, 185, 129, 0.4);
-    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
-  }
-  
-  :root[data-theme="light"] .streamer-item.is-live {
-    background: linear-gradient(to right, 
-      rgba(16, 185, 129, 0.08) 0%,
-      rgba(16, 185, 129, 0.12) 50%,
-      rgba(16, 185, 129, 0.08) 100%
-    );
-    border: 1px solid rgba(16, 185, 129, 0.3);
-    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.15);
-  }
-  
-  .streamer-item.is-live:hover {
-    background: linear-gradient(to right, 
-      rgba(16, 185, 129, 0.2) 0%,
-      rgba(16, 185, 129, 0.25) 50%,
-      rgba(16, 185, 129, 0.2) 100%
-    );
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
-  }
-  
-  :root[data-theme="light"] .streamer-item.is-live:hover {
-    background: var(--card-hover-bg-light, #f7fafc);
-    box-shadow: var(--card-hover-shadow-light, 0 4px 6px rgba(0,0,0,0.1));
-  }
-  
-  .streamer-item.is-dragging {
-    opacity: 0.7;
-    transform: scale(1.02);
-    z-index: 10;
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
-  }
-  
-  .streamer-item.just-added {
-    animation: glow-new 2s ease;
-  }
-  
-  @keyframes glow-new {
-    0% { box-shadow: 0 0 0 rgba(16, 185, 129, 0); border-color: rgba(16, 185, 129, 0.1); }
-    30% { box-shadow: 0 0 15px rgba(16, 185, 129, 0.3); border-color: rgba(16, 185, 129, 0.4); }
-    100% { box-shadow: 0 0 0 rgba(16, 185, 129, 0); border-color: transparent; }
-  }
-  
-  .item-content {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-grow: 1;
-    min-width: 0;
-  }
-  
-  .avatar-container {
-    position: relative;
-    width: 40px;
-    height: 40px;
-    flex-shrink: 0;
-    border-radius: 10px;
-    overflow: hidden;
-    background: var(--card-bg, rgba(255, 255, 255, 0.03));
-  }
-  
-  :root[data-theme="light"] .avatar-container {
-    background: var(--card-bg-light, #e2e8f0); 
-  }
-  
-  .avatar-image {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    font-size: 16px;
-    font-weight: 600;
-  }
-  
-  .avatar-fallback {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg, #a0aec0, #718096);
-    color: #ffffff;
-  }
-  
-  :root[data-theme="light"] .avatar-fallback {
-    background: linear-gradient(135deg, #a0aec0, #718096); 
-    color: #ffffff;
-  }
-  
-  .status-container {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 16px;
-    height: 16px;
-    flex-shrink: 0;
-  }
-  
-  .live-indicator {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background-color: #757575;
-    transition: background-color 0.3s ease;
-  }
-  
-  .live-indicator.is-live {
-    background-color: #4CAF50;
-  }
-  
-  .live-indicator.is-replay {
-    background-color: #ffc107;
-  }
-  
-  .live-indicator.is-offline {
-    background-color: #757575;
-  }
-  
-  .streamer-details {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-  
-  .primary-row {
-    display: flex;
-    align-items: center;
-  }
-  
-  .nickname {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--primary-text, #ffffff);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    flex: 1;
-    min-width: 0;
-    letter-spacing: 0.2px;
-    text-align: left;
-  }
-  
-  :root[data-theme="light"] .nickname {
-    color: var(--text-primary-light, #2d3748);
-  }
-  
-  /* Live streamer text styling */
-  .streamer-item.is-live .nickname {
-    color: rgba(16, 185, 129, 0.9);
-    text-shadow: 0 0 8px rgba(16, 185, 129, 0.3);
-  }
-  
-  :root[data-theme="light"] .streamer-item.is-live .nickname {
-    color: #0F7C6F; 
-    text-shadow: none; 
-  }
-  
-  .secondary-row {
-    font-size: 12px;
-    color: #9298a8;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    line-height: 1.3;
-    text-align: left;
-  }
-  
-  /* Live streamer subtitle styling for dark mode */
-  .streamer-item.is-live .secondary-row {
-    color: #9298a8;
-  }
-  
-  :root[data-theme="light"] .secondary-row {
-    color: var(--text-secondary-light, #718096);
-  }
-  
-  /* Live streamer subtitle styling for light mode */
-  :root[data-theme="light"] .streamer-item.is-live .secondary-row {
-    color: var(--text-secondary-light, #718096);
-  }
-  
-  /* List transitions */
-  .streamer-list-enter-active,
-  .streamer-list-leave-active {
-    transition: all 0.3s ease;
-  }
-  
-  .streamer-list-enter-from {
-    opacity: 0;
-    transform: translateX(20px);
-  }
-  
-  .streamer-list-leave-to {
-    opacity: 0;
-    transform: translateX(-20px);
-  }
-  
-  .streamer-list-move {
-    transition: transform 0.5s ease;
-  }
-  
-  /* Scrollbar styles */
-  .list-content::-webkit-scrollbar {
-    width: 4px;
-  }
-  
-  .list-content::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  
-  .list-content::-webkit-scrollbar-thumb {
-    background: var(--border-color, rgba(255, 255, 255, 0.1));
-    border-radius: 2px;
-  }
-  
-  .list-content::-webkit-scrollbar-thumb:hover {
-    background: var(--secondary-text, rgba(255, 255, 255, 0.2));
-  }
-  </style>
+  <style src="./index.css" scoped></style>
