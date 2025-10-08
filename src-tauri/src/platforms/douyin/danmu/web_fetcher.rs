@@ -75,38 +75,57 @@ impl DouyinLiveWebFetcher {
         }
     }
 
-    // Collect cookies and parse HTML to obtain real room_id and user_unique_id
     pub async fn collect_cookies_and_ids(&mut self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let url = format!("https://live.douyin.com/{}", self.live_id);
-        // HEAD to collect initial cookies
-        let head_resp = self.http_client.inner
-            .head(&url)
+        // 改为不解析房间 HTML，统一只收集站点 Cookie，并使用传入的值作为 room_id。
+        // 说明：前端现已传入真实的 room_id，因此此处无需再根据 web_rid 解析。
+        let homepage_url = "https://live.douyin.com/";
+
+        // 先通过 HEAD 请求收集初始 Cookie
+        let head_resp = self
+            .http_client
+            .inner
+            .head(homepage_url)
             .header("User-Agent", &self.user_agent)
             .header("Referer", "https://live.douyin.com")
             .header("Authority", "live.douyin.com")
             .send()
             .await?;
+
         let mut dy_cookie = String::new();
         for val in head_resp.headers().get_all("set-cookie").iter() {
             if let Ok(s) = val.to_str() {
                 let first = s.split(';').next().unwrap_or("");
-                if first.contains("ttwid") || first.contains("__ac_nonce") || first.contains("msToken") || first.contains("s_v_web_id") || first.contains("tt_scid") {
+                if first.contains("ttwid")
+                    || first.contains("__ac_nonce")
+                    || first.contains("msToken")
+                    || first.contains("s_v_web_id")
+                    || first.contains("tt_scid")
+                {
                     dy_cookie.push_str(first);
                     dy_cookie.push(';');
                 }
             }
         }
-        // GET to complete cookies and fetch HTML
-        let get_resp = self.http_client.inner
-            .get(&url)
+
+        // 再通过 GET 请求补全 Cookie
+        let get_resp = self
+            .http_client
+            .inner
+            .get(homepage_url)
             .header("User-Agent", &self.user_agent)
             .header("Referer", "https://live.douyin.com")
             .send()
             .await?;
+
         for val in get_resp.headers().get_all("set-cookie").iter() {
             if let Ok(s) = val.to_str() {
                 let first = s.split(';').next().unwrap_or("");
-                if first.contains("ttwid") || first.contains("__ac_nonce") || first.contains("msToken") || first.contains("s_v_web_id") || first.contains("tt_scid") {
+                if first.contains("ttwid")
+                    || first.contains("__ac_nonce")
+                    || first.contains("msToken")
+                    || first.contains("s_v_web_id")
+                    || first.contains("tt_scid")
+                {
                     if !dy_cookie.contains(first) {
                         dy_cookie.push_str(first);
                         dy_cookie.push(';');
@@ -114,51 +133,86 @@ impl DouyinLiveWebFetcher {
                 }
             }
         }
-        let html = get_resp.text().await?;
-        // Parse renderData to extract room_id and user_unique_id
-        let re = Regex::new(r#"\{\\\"state\\\":\{\\\"appStore.*?\]\\n"#).unwrap();
-        let render = match re.find(&html) {
-            Some(m) => m.as_str().to_string(),
-            None => {
-                return Err("Failed to locate renderData in Douyin room HTML".into());
+
+        // 从 Cookie 中提取 user_unique_id（优先使用 s_v_web_id），失败则回退到 ttwid，最后生成一个临时值
+        let mut user_unique_id = String::new();
+        for kv in dy_cookie.split(';') {
+            let kv = kv.trim();
+            if let Some(v) = kv.strip_prefix("s_v_web_id=") {
+                user_unique_id = v.to_string();
+                break;
             }
-        };
-        let json_str = render.trim().replace("\\\"", "\"").replace("\\\\", "\\").replace("]\\n", "");
-        let v: serde_json::Value = serde_json::from_str(&json_str)?;
-        let state = &v["state"];
-        let real_room_id = state["roomStore"]["roomInfo"]["room"]["id_str"].as_str().unwrap_or("").to_string();
-        let user_unique_id = state["userStore"]["odin"]["user_unique_id"].as_str().unwrap_or("").to_string();
-        if real_room_id.is_empty() || user_unique_id.is_empty() {
-            return Err("Failed to parse room_id or user_unique_id from HTML state".into());
         }
-        self.room_id = Some(real_room_id);
-        self.user_unique_id = Some(user_unique_id);
+        if user_unique_id.is_empty() {
+            for kv in dy_cookie.split(';') {
+                let kv = kv.trim();
+                if let Some(v) = kv.strip_prefix("ttwid=") {
+                    user_unique_id = v.to_string();
+                    break;
+                }
+            }
+        }
+        if user_unique_id.is_empty() {
+            // 生成一个简单的基于当前时间戳的 ID，避免为空导致签名/连接失败
+            let millis = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis();
+            user_unique_id = format!("{}", millis);
+        }
+
+        // 设置 room_id：如果尚未设置，且传入的 live_id 是纯数字，则直接视为 room_id
+        if self.room_id.is_none() {
+            if self.live_id.chars().all(|c| c.is_ascii_digit()) {
+                self.room_id = Some(self.live_id.clone());
+            } else {
+                return Err("Expected numeric room_id; HTML parsing path removed".into());
+            }
+        }
+
         self.dy_cookie = Some(dy_cookie);
+        self.user_unique_id = Some(user_unique_id);
         Ok(())
-    }
-
-    pub async fn get_room_id(&mut self) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-        if let Some(room_id) = &self.room_id { return Ok(room_id.clone()); }
-        self.collect_cookies_and_ids().await?;
-        Ok(self.room_id.clone().unwrap())
-    }
-
-    pub async fn get_user_unique_id(&mut self) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-        if let Some(uid) = &self.user_unique_id { return Ok(uid.clone()); }
-        self.collect_cookies_and_ids().await?;
-        Ok(self.user_unique_id.clone().unwrap())
-    }
-
-    pub async fn get_dy_cookie(&mut self) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-        if let Some(cookie) = &self.dy_cookie { return Ok(cookie.clone()); }
-        self.collect_cookies_and_ids().await?;
-        Ok(self.dy_cookie.clone().unwrap())
     }
 
     pub async fn fetch_room_details(&mut self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        // 仅依赖 HTML 解析，获取真实 room_id 和 user_unique_id，并收集 Cookie
+        // 仅收集 Cookie 与识别 user_unique_id，不再解析房间 HTML。
         self.collect_cookies_and_ids().await?;
         Ok(())
+    }
+
+    #[allow(dead_code)]
+    pub async fn get_room_id(&mut self) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+        if let Some(room_id) = &self.room_id {
+            return Ok(room_id.clone());
+        }
+        // Ensure cookies collected and numeric room_id inferred from live_id
+        self.collect_cookies_and_ids().await?;
+        self.room_id
+            .clone()
+            .ok_or_else(|| "room_id not set after cookie collection".into())
+    }
+
+    #[allow(dead_code)]
+    pub async fn get_user_unique_id(&mut self) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+        if let Some(uid) = &self.user_unique_id {
+            return Ok(uid.clone());
+        }
+        self.collect_cookies_and_ids().await?;
+        self.user_unique_id
+            .clone()
+            .ok_or_else(|| "user_unique_id not set after cookie collection".into())
+    }
+
+    #[allow(dead_code)]
+    pub async fn get_dy_cookie(&mut self) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+        if let Some(cookie) = &self.dy_cookie {
+            return Ok(cookie.clone());
+        }
+        self.collect_cookies_and_ids().await?;
+        self.dy_cookie
+            .clone()
+            .ok_or_else(|| "cookie not set after cookie collection".into())
     }
 
     #[allow(dead_code)]

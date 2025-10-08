@@ -29,7 +29,7 @@ export function useDouyinLiveRooms(
 
   const mapRawRoomToCommonStreamer = (rawRoom: any): CommonStreamer => {
     return {
-      room_id: rawRoom.web_rid?.toString() || `N/A_RID_${Math.random()}`,
+      room_id: rawRoom.room_id?.toString() || `N/A_RID_${Math.random()}`,
       title: rawRoom.title || '未知标题',
       nickname: rawRoom.owner_nickname || '未知主播',
       avatar: rawRoom.avatar_url || '',
