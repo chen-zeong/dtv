@@ -10,15 +10,15 @@
             title="刷新列表"
           >
             <span class="icon" :class="{ 'refreshing': isRefreshing }">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
-                <path d="M3 3v5h5"></path>
+              <svg v-if="!showCheckIcon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-rotate-cw-icon lucide-rotate-cw"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
+              <svg v-else xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 6L9 17l-5-5" />
               </svg>
             </span>
-            <!-- 新增：刷新进度 -->
-            <span v-if="isRefreshing" class="progress-label">{{ progressCurrent }}/{{ progressTotal }}</span>
           </button>
-          <!-- 新增：展开悬浮关注列表按钮 -->
+          <!-- 刷新进度（移到按钮外侧，保持方形按钮样式） -->
+          <span v-if="isRefreshing" class="progress-label">{{ progressCurrent }}/{{ progressTotal }}</span>
+          <!-- 展开悬浮关注列表按钮 -->
           <button 
             ref="expandBtnRef"
             @click="openOverlay" 
@@ -32,8 +32,7 @@
             </span>
           </button>
         </div>
-        <!-- 新增：刷新完成提示 -->
-        <div v-if="showRefreshToast" class="refresh-toast">刷新完成</div>
+
       </div>
       
       <div class="list-content" ref="listRef">
@@ -138,6 +137,15 @@
   }>();
   
   const isRefreshing = ref(false);
+  // 新增：刷新完成后显示打勾图标 1 秒
+  const showCheckIcon = ref(false);
+  watch(isRefreshing, (newVal, oldVal) => {
+    if (oldVal && !newVal) {
+      showCheckIcon.value = true;
+      setTimeout(() => { showCheckIcon.value = false; }, 1000);
+    }
+  });
+
   const listRef = ref<HTMLElement | null>(null);
   const isDragging = ref(false);
   const draggedIndex = ref(-1);
@@ -439,8 +447,9 @@
       const elapsedTime = Date.now() - startTime;
       const finish = () => {
         isRefreshing.value = false;
-        showRefreshToast.value = true;
-        setTimeout(() => { showRefreshToast.value = false; }, 1500);
+        // 改为显示打勾图标 1 秒，不再展示刷新完成 toast
+        showCheckIcon.value = true;
+        setTimeout(() => { showCheckIcon.value = false; }, 1000);
       };
       if (elapsedTime < MIN_ANIMATION_DURATION) {
         clearAnimationTimeout();

@@ -2,7 +2,7 @@
   <div class="player-view">
     <MainPlayer
       :key="playerKey"
-      :room-id="props.roomId"
+      :room-id="normalizedRoomId || props.roomId"
       :platform="Platform.DOUYIN"
       :is-followed="isFollowed"
       @follow="handleFollow"

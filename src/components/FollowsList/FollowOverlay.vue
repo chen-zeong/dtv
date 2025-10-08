@@ -306,7 +306,7 @@ watch(() => props.show, (v) => { if (v) computePanelMetrics(); });
   color: rgba(255, 255, 255, 0.9);
   width: 32px;
   height: 32px;
-  border-radius: 50%;
+  border-radius: 16px; /* 改为圆角方形，和关注列表按钮一致 */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -315,30 +315,26 @@ watch(() => props.show, (v) => { if (v) computePanelMetrics(); });
   padding: 0;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   position: absolute; /* 固定在面板右上角 */
-  top: 12px;
-  right: 12px;
+  top: -16px; /* 上移半个高度，使其一半在外一半在内 */
+  right: -16px; /* 右移半个宽度，使其一半在外一半在内 */
   z-index: 100;
 }
 .overlay-close-btn:hover {
   background: rgba(255, 255, 255, 0.2);
-  transform: scale(1.1);
+  transform: scale(1.08);
   border-color: rgba(255, 255, 255, 0.3);
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 .overlay-close-btn:active { transform: scale(0.95); }
 .overlay-close-btn svg { width: 16px; height: 16px; }
-
-/* 浅色主题适配 */
 :root[data-theme="light"] .overlay-close-btn {
-  background: var(--button-bg-light, rgba(255, 255, 255, 0.8));
-  backdrop-filter: blur(5px);
-  -webkit-backdrop-filter: blur(5px);
+  background: var(--button-bg-light, rgba(255, 255, 255, 0.9));
   border: 1px solid var(--button-border-light, rgba(0, 0, 0, 0.1));
   color: var(--button-text-light, #333333);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 :root[data-theme="light"] .overlay-close-btn:hover {
-  background: var(--button-hover-bg-light, rgba(245, 245, 245, 0.9));
+  background: var(--button-hover-bg-light, rgba(245, 245, 245, 0.95));
   border-color: var(--button-hover-border-light, rgba(0, 0, 0, 0.15));
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12);
 }
