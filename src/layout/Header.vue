@@ -258,6 +258,8 @@ const performHuyaSearch = async (keyword: string) => {
   isLoadingSearch.value = true;
   try {
     const items = await invoke<HuyaAnchorItem[]>('search_huya_anchors', { keyword, page: 1 });
+    // Ensure static proxy server is running for Huya avatars
+    await ensureProxyStarted();
     isLoadingSearch.value = false;
     if (Array.isArray(items) && items.length > 0) {
       searchResults.value = items.map((item): SearchResultItem => ({
@@ -265,7 +267,7 @@ const performHuyaSearch = async (keyword: string) => {
         roomId: item.room_id,
         userName: item.user_name || '虎牙主播',
         roomTitle: item.title || null,
-        avatar: item.avatar || null,
+        avatar: proxify(item.avatar || null),
         liveStatus: !!item.live_status,
       }));
       searchError.value = null;

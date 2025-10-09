@@ -1,6 +1,6 @@
 [package]
 name = "dtv"
-version = "1.3.2"
+version = "2.0.0"
 description = "A Tauri App"
 authors = ["c-zeong"]
 edition = "2021"
@@ -26,7 +26,6 @@ tauri = { version = "2.7.0", features = ["macos-private-api"] }
  md-5 = "0.10.6"
  deno_core = "0.288.0"
  regex = "1.10.4"
- isahc = { version = "1.7", features = ["json"] }
  tokio = { version = "1.37.0", features = ["full"] }
  tokio-tungstenite = { version = "0.20", features = ["native-tls"] }
  url = "2.4"

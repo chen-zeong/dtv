@@ -663,13 +663,15 @@
           isLive: !!(res && res.is_live),
         };
         roomDetails.value = mapped;
-        avatarUrl.value = normalizeAvatarUrl(mapped.avatarUrl);
+        await ensureProxyStarted();
+        avatarUrl.value = proxify(normalizeAvatarUrl(mapped.avatarUrl));
         showAvatarText.value = !avatarUrl.value;
       } catch (e: any) {
         console.error(`[StreamerInfo] HUYA fetchRoomDetails error for ${props.roomId}:`, e);
         error.value = e?.message || '获取虎牙房间信息失败';
         roomDetails.value = null;
-        avatarUrl.value = props.avatar || '';
+        await ensureProxyStarted();
+        avatarUrl.value = proxify(normalizeAvatarUrl(props.avatar || ''));
         showAvatarText.value = !props.avatar;
       } finally {
         isLoading.value = false;

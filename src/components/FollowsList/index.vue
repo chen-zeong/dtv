@@ -378,8 +378,8 @@
     progressTotal.value = props.followedAnchors.length;
     try {
       // 仅在包含 B 站主播时启动静态代理（用于头像等图片代理）
-      const hasBili = props.followedAnchors.some(s => s.platform === Platform.BILIBILI);
-      if (hasBili) {
+      const hasBiliOrHuya = props.followedAnchors.some(s => s.platform === Platform.BILIBILI || s.platform === Platform.HUYA);
+      if (hasBiliOrHuya) {
         await ensureProxyStarted();
       }
 

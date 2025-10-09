@@ -143,19 +143,6 @@ async fn search_anchor(keyword: String) -> Result<String, String> {
 
 // Main function corrected
 fn main() {
-    // 清理所有可能的代理相关环境变量，确保后端请求直连
-    for k in [
-        "HTTP_PROXY",
-        "http_proxy",
-        "HTTPS_PROXY",
-        "https_proxy",
-        "ALL_PROXY",
-        "all_proxy",
-        "NO_PROXY",
-        "no_proxy",
-    ] {
-        env::remove_var(k);
-    }
 
     // Create a new HTTP client instance to be managed by Tauri
     let client = reqwest::Client::builder()

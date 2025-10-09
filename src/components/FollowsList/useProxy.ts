@@ -32,8 +32,8 @@ export function useImageProxy() {
   function getAvatarSrc(platform: string, avatarUrl?: string | null) {
     const u = avatarUrl || ''
     if (!u) return ''
-    // Platform enum string names: expect 'BILIBILI'
-    if (platform === 'BILIBILI') {
+    // Proxy avatars for platforms that require it
+    if (platform === 'BILIBILI' || platform === 'HUYA') {
       return proxify(u)
     }
     return u

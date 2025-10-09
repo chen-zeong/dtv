@@ -1,8 +1,9 @@
 <div align="center">
   <img src="images/icon.png" alt="DTV Logo" width="128" height="128">
   <h1>DTV</h1>
-  <p>基于 Tauri 2.0 的跨平台斗鱼&抖音直播桌面客户端</p>
+  <p>基于 Tauri 2.0 的跨平台斗鱼、虎牙、抖音、bilibili直播桌面客户端</p>
 </div>
+
 
 
 
@@ -13,10 +14,18 @@
 2. 平台接口有访问频率限制，过于频繁的请求会触发验证码校验，建议合理使用
 3. 本项目仅供学习编程目的使用，未进行任何逆向工程
 
+### 支持平台
+
+| 平台 | 直播流 | 弹幕 | 搜索 |
+| --- | --- | --- | --- |
+| 斗鱼 | ✅ | ✅ | ✅ |
+| 虎牙 | ✅ | ✅ | ✅ |
+| bilibili | ✅ | ✅ | 仅房间号 |
+| 抖音 | 最高仅蓝光 | ✅ | 仅房间号 |
+
 ## 功能
 
-- 🔍 主播搜索：斗鱼支持搜索主播名称，抖音只支持搜索房间号
-- 📺 直播观看：同时观看斗鱼和抖音双平台主播，真正的原画画质
+- 📺 平台支持：支持斗鱼、虎牙、bilibili、抖音直播
 - 💬 弹幕显示：实时显示直播间弹幕，只显示聊天弹幕，不显示礼物等其他类型弹幕
 - ⭐ 主播收藏：支持收藏喜欢的主播，支持收藏列表手动拖拽排序
 - 📋 支持平台：Mac(Intel+Arm)，Windows(Win7需要自行安装Webview2)，Linux(包括Ubuntu和各类发行版)
@@ -26,14 +35,23 @@
 
 <div align="center">
   <p>日间模式</p>
-  <img src="images/iShot_light.png" alt="日间模式" style="width: 100%; max-width: 800px; display: block; margin-left: auto; margin-right: auto;">
+  <img src="images/iShot_light.webp" alt="日间模式" style="width: 100%; max-width: 800px; display: block; margin-left: auto; margin-right: auto;">
 </div>
+
 
 <br>
 
 <div align="center">
   <p>夜间模式</p>
-  <img src="images/iShot_dark.png" alt="夜间模式" style="width: 100%; max-width: 800px; display: block; margin-left: auto; margin-right: auto;">
+  <img src="images/iShot_dark.webp" alt="夜间模式" style="width: 100%; max-width: 800px; display: block; margin-left: auto; margin-right: auto;">
+</div>
+
+
+<br>
+
+<div align="center">
+  <p>收藏列表</p>
+  <img src="images/iShot_list.webp" alt="收藏列表" style="width: 100%; max-width: 800px; display: block; margin-left: auto; margin-right: auto;">
 </div>
 
 ## 安装方式
@@ -66,3 +84,6 @@ pnpm tauri build --target aarch64-apple-darwin
 
 - 斗鱼直播流获取参考了 [@wbt5/real-url](https://github.com/wbt5/real-url)  
 - 抖音弹幕参考了[@saermart/DouyinLiveWebFetcher](https://github.com/saermart/DouyinLiveWebFetcher)
+- 虎牙参考了https://github.com/liuchuancong/pure_live
+- b站弹幕参考了https://github.com/xfgryujk/blivedm
+
