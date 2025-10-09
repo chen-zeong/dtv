@@ -193,15 +193,6 @@
   }
   const MIN_ANIMATION_DURATION = 1500;
   
-  const getLiveStatusSortOrder = (status: LiveStatus | undefined): number => {
-    switch (status) {
-      case 'LIVE': return 1;
-      case 'REPLAY': return 2;
-      case 'OFFLINE': return 3;
-      case 'UNKNOWN': return 4;
-      default: return 5; // Should not happen with defined types
-    }
-  };
 
   const streamers = computed(() => props.followedAnchors);
   
@@ -359,7 +350,6 @@
   // 新增：刷新进度与完成提示
   const progressCurrent = ref(0);
   const progressTotal = ref(0);
-  const showRefreshToast = ref(false);
 
   // 简易并发控制器：限制同时运行的刷新任务数量
   async function runWithConcurrency<T>(items: T[], worker: (item: T, index: number) => Promise<void>, limit: number) {

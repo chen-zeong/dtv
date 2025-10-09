@@ -3,6 +3,7 @@
 
 use reqwest;
 use std::collections::HashMap;
+use std::env;
 use std::sync::{Arc, Mutex};
 use tokio::sync::oneshot;
 mod platforms;
@@ -142,9 +143,24 @@ async fn search_anchor(keyword: String) -> Result<String, String> {
 
 // Main function corrected
 fn main() {
+    // 清理所有可能的代理相关环境变量，确保后端请求直连
+    for k in [
+        "HTTP_PROXY",
+        "http_proxy",
+        "HTTPS_PROXY",
+        "https_proxy",
+        "ALL_PROXY",
+        "all_proxy",
+        "NO_PROXY",
+        "no_proxy",
+    ] {
+        env::remove_var(k);
+    }
+
     // Create a new HTTP client instance to be managed by Tauri
     let client = reqwest::Client::builder()
         .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+        .no_proxy()
         .build()
         .expect("Failed to create reqwest client");
 

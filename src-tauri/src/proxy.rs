@@ -216,7 +216,7 @@ pub async fn start_proxy(
     let server = match HttpServer::new(move || {
         let app_data_stream_url = stream_url_data_for_actix.clone();
         // Create reqwest::Client inside the closure for each worker thread
-        let app_data_reqwest_client = web::Data::new(Client::new()); // Changed to reqwest::Client
+        let app_data_reqwest_client = web::Data::new(Client::builder().no_proxy().build().expect("failed to build client")); // Changed to reqwest::Client
         App::new()
             .app_data(app_data_stream_url)
             .app_data(app_data_reqwest_client) // Provide reqwest client
@@ -272,7 +272,7 @@ pub async fn start_static_proxy_server(
 
     let server = match HttpServer::new(move || {
         let app_data_stream_url = stream_url_data_for_actix.clone();
-        let app_data_reqwest_client = web::Data::new(Client::new());
+        let app_data_reqwest_client = web::Data::new(Client::builder().no_proxy().build().expect("failed to build client"));
         App::new()
             .app_data(app_data_stream_url)
             .app_data(app_data_reqwest_client)

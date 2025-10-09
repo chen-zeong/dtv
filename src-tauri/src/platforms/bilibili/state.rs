@@ -14,6 +14,7 @@ pub async fn generate_bilibili_w_webid(state: tauri::State<'_, BilibiliState>) -
 
     let client = reqwest::Client::builder()
         .user_agent(ua)
+        .no_proxy()
         .build()
         .map_err(|e| format!("Failed to build client: {}", e))?;
 

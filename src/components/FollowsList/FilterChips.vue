@@ -18,7 +18,7 @@
 <script setup lang="ts">
 import { Platform } from '../../platforms/common/types';
 
-const props = defineProps<{
+defineProps<{
   visiblePlatforms: Platform[],
   activeFilter: 'ALL' | Platform,
 }>();

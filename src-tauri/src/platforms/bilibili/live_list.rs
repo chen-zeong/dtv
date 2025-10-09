@@ -73,6 +73,7 @@ pub async fn fetch_bilibili_live_list(
 
     let client = reqwest::Client::builder()
         .user_agent(ua)
+        .no_proxy()
         .build()
         .map_err(|e| format!("Failed to build client: {}", e))?;
 

@@ -350,6 +350,7 @@ fn pick_stream_url(detail: &RoomDetail, quality: &str) -> Option<String> {
 pub async fn get_huya_unified_cmd(room_id: String, quality: Option<String>) -> Result<HuyaUnifiedResponse, String> {
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(10))
+        .no_proxy()
         .build()
         .map_err(|e| e.to_string())?;
 

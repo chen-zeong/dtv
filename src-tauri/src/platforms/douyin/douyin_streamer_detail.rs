@@ -6,7 +6,6 @@ use crate::StreamUrlStore;
 use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, ACCEPT_LANGUAGE, COOKIE, REFERER, USER_AGENT};
 use serde_json::Value;
 use tauri::{command, AppHandle, State};
-use regex::Regex;
 use std::fs;
 use once_cell::sync::Lazy;
 use std::sync::Mutex;

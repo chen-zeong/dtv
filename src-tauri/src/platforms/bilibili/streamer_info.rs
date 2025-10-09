@@ -116,6 +116,7 @@ pub async fn fetch_bilibili_streamer_info(
 
     let client = reqwest::Client::builder()
         .default_headers(headers)
+        .no_proxy()
         .build()
         .map_err(|e| format!("Failed to build client: {}", e))?;
 

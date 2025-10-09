@@ -56,6 +56,7 @@ pub async fn get_bilibili_live_stream_url_with_quality(
     headers.insert(reqwest::header::ORIGIN, HeaderValue::from_static("https://live.bilibili.com"));
     let client = reqwest::Client::builder()
         .default_headers(headers)
+        .no_proxy()
         .build()
         .map_err(|e| format!("Failed to build client: {}", e))?;
 

@@ -17,7 +17,7 @@ const HEARTBEAT_BASE64: &str = "ABQdAAwsNgBM"; // same as Python
 
 async fn fetch_huya_ids(room_id: &str) -> Result<(i64, i64), String> {
     let url = format!("https://mp.huya.com/cache.php?m=Live&do=profileRoom&roomid={}&showSecret=1", room_id);
-    let client = reqwest::Client::builder().build().map_err(|e| e.to_string())?;
+    let client = reqwest::Client::builder().no_proxy().build().map_err(|e| e.to_string())?;
     let resp = client
         .get(url)
         .header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36")
@@ -351,7 +351,7 @@ async fn get_ws_info_tars(room_id_or_url: &str) -> Result<(String, Vec<u8>), Str
     println!("[Huya Danmaku] get_ws_info_tars rid={}", rid);
     info!("[Huya Danmaku] get_ws_info_tars rid={}", rid);
 
-    let client = reqwest::Client::new();
+    let client = reqwest::Client::builder().no_proxy().build().map_err(|e| e.to_string())?;
     let resp_text = client
         .get(format!("https://www.huya.com/{}", rid))
         .header("User-Agent", gen_ua())

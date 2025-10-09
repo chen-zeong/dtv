@@ -12,7 +12,7 @@ pub struct HuyaAnchorItem {
 
 #[tauri::command]
 pub async fn search_huya_anchors(keyword: String, page: Option<usize>) -> Result<Vec<HuyaAnchorItem>, String> {
-    let client = reqwest::Client::new();
+    let client = reqwest::Client::builder().no_proxy().build().map_err(|e| e.to_string())?;
     let url = "https://search.cdn.huya.com/";
     let mut headers = HeaderMap::new();
     headers.insert(USER_AGENT, HeaderValue::from_static("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36"));
