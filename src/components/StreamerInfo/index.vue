@@ -52,13 +52,13 @@
       <div v-if="isCookieModalOpen" class="cookie-modal-backdrop" @click.self="closeCookieModal">
         <div class="cookie-modal">
           <h4>B站 Cookie 设置</h4>
-          <textarea v-model="cookieInput" placeholder="在此粘贴你的 B站 Cookie（仅本地存储）"></textarea>
+          <textarea v-model="cookieInput" placeholder="在此粘贴你的 B站 Cookie（仅本地存储，不会上传），设置 Cookie 后可获取最高画质，并能接收更多、更完整的弹幕"></textarea>
           <div class="cookie-modal-actions">
             <button class="primary" @click="saveCookie">保存</button>
             <button class="danger" @click="clearCookie">清除</button>
             <button @click="closeCookieModal">取消</button>
           </div>
-          <p class="cookie-tip">提示：仅保存在本机的 localStorage，用于后端请求头。</p>
+          
         </div>
       </div>
     </div>
@@ -152,18 +152,26 @@
   /* Cookie status button */
   .cookie-status-btn {
     font-size: 0.75rem;
-    padding: 3px 8px;
-    border-radius: 6px;
-    border: none;
+    padding: 4px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
     cursor: pointer;
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    color: rgba(255, 255, 255, 0.85);
-    background: rgba(255, 255, 255, 0.08);
+    color: var(--secondary-text);
+    background: rgba(255, 255, 255, 0.06);
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.1s ease;
   }
-  .cookie-configured { color: #32b65c; display: inline-flex; align-items: center; gap: 4px; }
-  .cookie-unset { color: #888888; }
+  .cookie-status-btn:hover {
+    background: var(--hover-bg);
+    color: var(--primary-text);
+    border-color: var(--border-color-light);
+    transform: translateY(-1px);
+  }
+  .cookie-status-btn:active { transform: scale(0.98); }
+  .cookie-configured { color: var(--success-color); display: inline-flex; align-items: center; gap: 4px; }
+  .cookie-unset { color: var(--secondary-text); }
   
   .streamer-actions {
     display: flex;
@@ -349,24 +357,36 @@
   .cookie-modal {
     width: 520px;
     max-width: 90vw;
-    background: #1f232b;
-    border: 1px solid rgba(255,255,255,0.1);
-    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--card-shadow);
     border-radius: 12px;
     padding: 16px;
-    color: #fff;
+    color: var(--primary-text);
   }
   .cookie-modal h4 { margin: 0 0 10px 0; font-size: 16px; }
   .cookie-modal textarea {
     width: 100%;
-    min-height: 120px;
+    min-height: 140px;
     border-radius: 8px;
-    border: 1px solid rgba(255,255,255,0.15);
-    background: rgba(255,255,255,0.06);
-    color: #fff;
-    padding: 8px;
+    border: 1px solid var(--input-border);
+    background: var(--input-bg);
+    color: var(--input-text);
+    padding: 10px;
     box-sizing: border-box;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
   }
+  .cookie-modal textarea:focus {
+    border-color: var(--border-color-light);
+    box-shadow: 0 0 0 3px rgba(251, 114, 153, 0.25);
+  }
+  /* Thin Scrollbar (no white rim, theme-adaptive) */
+  .cookie-modal textarea::-webkit-scrollbar { width: 6px; height: 6px; }
+  .cookie-modal textarea::-webkit-scrollbar-track { background: var(--input-bg); border-radius: 3px; }
+  .cookie-modal textarea::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb-bg, #4b5563); border-radius: 3px; }
+  :root[data-theme="light"] .cookie-modal textarea::-webkit-scrollbar-track { background: var(--input-bg); }
+  :root[data-theme="light"] .cookie-modal textarea::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb-bg-light, #adb5bd); }
   .cookie-modal-actions {
     display: flex;
     gap: 10px;
@@ -377,12 +397,17 @@
     border: none;
     border-radius: 8px;
     cursor: pointer;
-    background: rgba(255,255,255,0.12);
-    color: #fff;
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--primary-text);
+    transition: background-color 0.2s ease, transform 0.1s ease;
   }
-  .cookie-modal-actions button.primary { background: #439ed9; }
-  .cookie-modal-actions button.danger { background: #d94343; }
-  .cookie-tip { margin-top: 8px; font-size: 12px; color: rgba(255,255,255,0.7); }
+  .cookie-modal-actions button:hover { background: var(--hover-bg); transform: translateY(-1px); }
+  .cookie-modal-actions button:active { transform: scale(0.98); }
+  .cookie-modal-actions button.primary { background: var(--button-bg); color: var(--button-text); }
+  .cookie-modal-actions button.primary:hover { background: var(--button-hover-bg); }
+  .cookie-modal-actions button.danger { background: rgba(255, 255, 255, 0.06); color: var(--primary-text); }
+  .cookie-modal-actions button.danger:hover { background: var(--hover-bg); }
+  .cookie-tip { margin-top: 8px; font-size: 12px; color: var(--secondary-text); }
   
   @keyframes idPulse {
     0% { text-shadow: 0 0 2px rgba(251, 114, 153, 0); }
