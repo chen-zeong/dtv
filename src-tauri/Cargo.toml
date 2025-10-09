@@ -61,13 +61,8 @@ tauri = { version = "2.7.0", features = ["macos-private-api"] }
  
  specta = { version = "2.0.0-rc.9", features = ["serde", "derive", "function"] }
  tauri-plugin-os = "2.3.0"
- # danmu_fetch 已迁移到本项目模块，移除依赖
- # 添加 websocket 所需依赖
  tungstenite = { version = "0.21", features = ["native-tls"] }
  brotlic = "0.8"
-
- [features]
- # default = ["custom-protocol"] # Removed problematic line
 
  [profile.release]
  panic = "abort"

@@ -30,6 +30,12 @@ jobs:
           - platform: 'windows-latest'
             args: ''
             arch: 'x64'
+          - platform: 'macos-13'
+            args: ''
+            arch: 'x64'
+          - platform: 'macos-14'
+            args: ''
+            arch: 'aarch64'
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -40,14 +46,26 @@ jobs:
         if: matrix.platform == 'ubuntu-22.04'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf protobuf-compiler
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf protobuf-compiler pkg-config perl build-essential
 
+      - name: Install dependencies (macOS)
+        if: startsWith(matrix.platform, 'macos-')
+        run: |
+          brew update
+          brew install protobuf pkg-config nasm
 
       - name: Install protobuf (Windows)
         if: matrix.platform == 'windows-latest'
         run: |
           choco install protoc
           echo "C:\ProgramData\chocolatey\lib\protoc\tools" >> $GITHUB_PATH
+
+      - name: Install OpenSSL build prerequisites (Windows)
+        if: matrix.platform == 'windows-latest'
+        run: |
+          choco install strawberryperl nasm -y
+          echo "C:\Program Files\NASM" >> $GITHUB_PATH
+          echo "C:\Strawberry\perl\bin" >> $GITHUB_PATH
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4

@@ -40,15 +40,6 @@ const isFollowed = computed(() => {
   return followStore.isFollowed(Platform.BILIBILI, props.roomId);
 });
 
-const saveCookie = () => {
-  localStorage.setItem('bilibili_cookie', cookieInput.value || '');
-};
-
-const clearCookie = () => {
-  cookieInput.value = '';
-  localStorage.removeItem('bilibili_cookie');
-};
-
 const handleFollow = () => {
   const streamerToFollow: Omit<FollowedStreamer, 'platform' | 'id' | 'roomTitle' | 'isLive'> = {
     nickname: `主播${props.roomId}`,
