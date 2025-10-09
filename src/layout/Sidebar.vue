@@ -52,25 +52,28 @@ const customSortedAnchors = ref<FollowedStreamer[]>([]);
 const sortedFollowedAnchors = computed(() => {
   if (!props.followedAnchors?.length) return [];
   
-  // If custom sort order exists and covers all current anchors, use it.
-  const currentAnchorIds = new Set(props.followedAnchors.map(a => a.id));
-  const customSortedIsValid = customSortedAnchors.value.length > 0 && 
-                            customSortedAnchors.value.length === props.followedAnchors.length && 
-                            customSortedAnchors.value.every(customAnchor => currentAnchorIds.has(customAnchor.id));
+  // Use composite key platform:id to avoid collisions across platforms
+  const toKey = (a: FollowedStreamer) => `${a.platform}:${a.id}`;
+  const currentKeys = new Set(props.followedAnchors.map(toKey));
 
+  const customSortedIsValid = customSortedAnchors.value.length > 0 && 
+    customSortedAnchors.value.length === props.followedAnchors.length && 
+    customSortedAnchors.value.every(customAnchor => currentKeys.has(toKey(customAnchor)));
+
+  let baseOrder: FollowedStreamer[];
   if (customSortedIsValid) {
-    const propsMap = new Map(props.followedAnchors.map(anchor => [anchor.id, anchor]));
-    return customSortedAnchors.value.map(customAnchor => propsMap.get(customAnchor.id)).filter(Boolean) as FollowedStreamer[];
+    const propsMap = new Map(props.followedAnchors.map(anchor => [toKey(anchor), anchor]));
+    baseOrder = customSortedAnchors.value
+      .map(customAnchor => propsMap.get(toKey(customAnchor)))
+      .filter(Boolean) as FollowedStreamer[];
+  } else {
+    baseOrder = [...props.followedAnchors];
   }
-  
-  return [...props.followedAnchors].sort((a, b) => {
-    const liveA = a.isLive ? 1 : 0;
-    const liveB = b.isLive ? 1 : 0;
-    if (liveB !== liveA) {
-      return liveB - liveA; 
-    }
-    return 0; 
-  });
+
+  // Group by live first (based on liveStatus), then non-live, preserving relative order within each group
+  const live = baseOrder.filter(a => a.liveStatus === 'LIVE');
+  const notLive = baseOrder.filter(a => a.liveStatus !== 'LIVE');
+  return [...live, ...notLive];
 });
 
 const handleSelectAnchor = (anchor: FollowedStreamer) => {

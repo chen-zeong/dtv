@@ -7,14 +7,14 @@
           <input type="checkbox" v-model="autoScroll" id="auto-scroll-toggle" class="hidden-toggle">
         </div>
       </div>
-      <div class="danmu-messages-area" ref="danmakuListEl" @scroll="handleScroll">
+      <div class="danmu-messages-area" ref="danmakuListEl" @scroll="handleScroll" @pointerdown="onPointerDown">
         <!-- Empty/Loading Placeholder -->
-        <div v-if="(!messages || messages.length === 0)" class="empty-danmu-placeholder">
+        <div v-if="(!renderMessages || renderMessages.length === 0)" class="empty-danmu-placeholder">
           <p v-if="!props.roomId">请先选择一个直播间</p>
           <p v-else>暂无弹幕或连接中...</p> <!-- Simplified placeholder -->
         </div>
 
-        <div v-for="(danmaku, idx) in messages" :key="danmaku.id || `${danmaku.room_id || ''}-${danmaku.nickname}-${danmaku.content}-${idx}`" 
+        <div v-for="(danmaku, idx) in renderMessages" :key="danmaku.id || `${danmaku.room_id || ''}-${danmaku.nickname}-${danmaku.content}-${idx}`" 
              :class="['danmu-item', { 'system-message': danmaku.isSystem, 'success': danmaku.isSystem && danmaku.type === 'success' }]"
         >
           <div class="danmu-meta-line" v-if="!danmaku.isSystem">
@@ -39,7 +39,7 @@
   </template>
   
   <script setup lang="ts">
-  import { ref, watch, nextTick } from 'vue';
+  import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue';
 
   interface DanmakuUIMessage {
     id?: string;
@@ -108,8 +108,8 @@
 
   watch(autoScroll, (newValue) => {
     if (newValue) {
-      userScrolled.value = false; 
-      scrollToBottom();
+      userScrolled.value = false;
+      scrollToBottomForce();
     }
   });
   
@@ -123,6 +123,69 @@
     userScrolled.value = false;
     autoScroll.value = true;
     // scrollToBottom(); // Optionally scroll to bottom if there are initial messages for the new room
+  });
+  
+  const renderMessages = ref<DanmakuUIMessage[]>([]);
+  const MAX_MSG = 200;
+  const PRUNE_BATCH = 100;
+  const pointerActive = ref(false);
+  
+  const onPointerDown = () => {
+    pointerActive.value = true;
+    autoScroll.value = false; // 用户主动拖动时暂停自动滚动
+  };
+  
+  const onGlobalPointerUp = () => {
+    if (pointerActive.value) {
+      pointerActive.value = false;
+      autoScroll.value = true; // 松开后恢复自动滚动
+      userScrolled.value = false;
+      scrollToBottomForce();
+    }
+  };
+  
+  const scrollToBottomForce = () => {
+    nextTick(() => {
+      const el = danmakuListEl.value;
+      if (!el) return;
+      requestAnimationFrame(() => {
+        el.scrollTop = el.scrollHeight;
+        requestAnimationFrame(() => {
+          el.scrollTop = el.scrollHeight; // 双RAF确保强制到底部，减少偶发失效
+        });
+      });
+    });
+  };
+
+  watch(() => props.messages, (newMessages, _oldMessages) => {
+    const msgs = Array.isArray(newMessages) ? newMessages : [];
+    if (msgs.length > MAX_MSG) {
+      // 批量裁剪，避免频繁处理导致性能问题
+      if (msgs.length % PRUNE_BATCH === 0 || msgs.length > MAX_MSG + PRUNE_BATCH) {
+        renderMessages.value = msgs.slice(-MAX_MSG);
+      } else {
+        renderMessages.value = msgs.slice(-MAX_MSG);
+      }
+    } else {
+      renderMessages.value = msgs;
+    }
+    if (autoScroll.value && !pointerActive.value) {
+      scrollToBottomForce();
+    }
+  }, { deep: true });
+
+  watch(() => props.roomId, (_newRoomId, _oldRoomId) => {
+    userScrolled.value = false;
+    autoScroll.value = true;
+    scrollToBottomForce();
+  });
+  
+  onMounted(() => {
+    window.addEventListener('pointerup', onGlobalPointerUp);
+  });
+  
+  onUnmounted(() => {
+    window.removeEventListener('pointerup', onGlobalPointerUp);
   });
   
   </script>

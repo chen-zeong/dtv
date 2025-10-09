@@ -4,20 +4,24 @@
         <h3 class="header-title">关注列表</h3>
         <div class="header-actions">
           <button 
+            v-if="!isRefreshing"
             @click="refreshList" 
             class="action-btn refresh-btn"
-            :disabled="isRefreshing"
             title="刷新列表"
           >
-            <span class="icon" :class="{ 'refreshing': isRefreshing }">
+            <span class="icon">
+              <!-- 刷新按钮保留默认图标/完成勾号，刷新完成后展示 1 秒 -->
               <svg v-if="!showCheckIcon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-rotate-cw-icon lucide-rotate-cw"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
               <svg v-else xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M20 6L9 17l-5-5" />
               </svg>
             </span>
           </button>
-          <!-- 刷新进度（移到按钮外侧，保持方形按钮样式） -->
-          <span v-if="isRefreshing" class="progress-label">{{ progressCurrent }}/{{ progressTotal }}</span>
+          <!-- 刷新转圈与进度文本合并为一个元素，转圈在左，进度在右；共享统一的圆角矩形背景 -->
+          <span v-if="isRefreshing" class="progress-with-spinner" aria-live="polite">
+            <span class="refresh-spinner-inline" aria-hidden="true"></span>
+            <span class="progress-label">{{ progressCurrent }}/{{ progressTotal }}</span>
+          </span>
           <!-- 展开悬浮关注列表按钮 -->
           <button 
             ref="expandBtnRef"
@@ -153,6 +157,18 @@
   const currentY = ref(0);
   const justAddedIds = ref<string[]>([]);
   const animationTimeout = ref<number | null>(null);
+
+  // 并发与延迟设置：降低启动时对后端的压力，优先让分类/主播列表完成首屏加载
+  const FOLLOW_REFRESH_CONCURRENCY = 4; // 可根据机器性能与后端并发能力调整
+  const REFRESH_INITIAL_DELAY_MS = 1500; // 首次进入页面延迟触发关注列表刷新
+  function requestIdle(fn: () => void, timeout = REFRESH_INITIAL_DELAY_MS) {
+    // 在浏览器空闲或设定超时后再触发，避免与首页的分类/主播列表争抢网络与后端资源
+    if (typeof (window as any).requestIdleCallback === 'function') {
+      (window as any).requestIdleCallback(fn, { timeout });
+    } else {
+      setTimeout(fn, timeout);
+    }
+  }
   
   // 头像代理：使用可复用的组合式函数
   const { proxyBase, ensureProxyStarted, getAvatarSrc: proxyGetAvatarSrc } = useImageProxy();
@@ -345,6 +361,23 @@
   const progressTotal = ref(0);
   const showRefreshToast = ref(false);
 
+  // 简易并发控制器：限制同时运行的刷新任务数量
+  async function runWithConcurrency<T>(items: T[], worker: (item: T, index: number) => Promise<void>, limit: number) {
+    let cursor = 0;
+    const runners: Promise<void>[] = [];
+    const runner = async () => {
+      while (cursor < items.length) {
+        const i = cursor++;
+        await worker(items[i], i);
+        // 让出事件循环，避免持续占用主线程
+        await new Promise(res => setTimeout(res, 0));
+      }
+    };
+    const n = Math.min(limit, items.length);
+    for (let k = 0; k < n; k++) runners.push(runner());
+    await Promise.all(runners);
+  }
+
   const refreshList = async () => {
     if (isRefreshing.value) return;
     const startTime = Date.now();
@@ -353,17 +386,17 @@
     // 初始化进度
     progressCurrent.value = 0;
     progressTotal.value = props.followedAnchors.length;
-    
     try {
       // 仅在包含 B 站主播时启动静态代理（用于头像等图片代理）
       const hasBili = props.followedAnchors.some(s => s.platform === Platform.BILIBILI);
       if (hasBili) {
         await ensureProxyStarted();
       }
-  
-      // 顺序刷新以便显示进度
+
       const updates: FollowedStreamer[] = [];
-      for (const streamer of props.followedAnchors) {
+      const items = [...props.followedAnchors];
+
+      await runWithConcurrency(items, async (streamer) => {
         let updatedStreamerData: Partial<FollowedStreamer> = {};
         try {
           if (streamer.platform === Platform.DOUYU) {
@@ -412,7 +445,7 @@
             console.warn(`Unsupported platform for refresh: ${streamer.platform}`);
             updates.push(streamer);
             progressCurrent.value++;
-            continue;
+            return;
           }
 
           updates.push({
@@ -426,28 +459,23 @@
           // 更新进度
           progressCurrent.value++;
         }
-      }
+      }, FOLLOW_REFRESH_CONCURRENCY);
 
       const validUpdates = updates.filter((update: FollowedStreamer | undefined): update is FollowedStreamer => !!update && typeof update.id !== 'undefined');
-      
       if (validUpdates.length > 0) {
-        const sortedUpdates = [...validUpdates].sort((a, b) => {
-          const statusOrderA = getLiveStatusSortOrder(a.liveStatus);
-          const statusOrderB = getLiveStatusSortOrder(b.liveStatus);
-          return statusOrderA - statusOrderB;
-        });
-        
-        const hasChanged = JSON.stringify(sortedUpdates) !== JSON.stringify(props.followedAnchors);
-
+        // Preserve original user-defined order: map updates back onto the original list order (use platform:id to avoid collisions)
+        const toKey = (s: FollowedStreamer) => `${s.platform}:${s.id}`;
+        const updateMap = new Map<string, FollowedStreamer>(validUpdates.map(u => [toKey(u), u]));
+        const reorderedPreservingOrder = props.followedAnchors.map(orig => updateMap.get(toKey(orig)) ?? orig);
+        const hasChanged = JSON.stringify(reorderedPreservingOrder) !== JSON.stringify(props.followedAnchors);
         if (hasChanged) {
-          emit('reorderList', sortedUpdates); 
+          emit('reorderList', reorderedPreservingOrder);
         }
       }
     } finally {
       const elapsedTime = Date.now() - startTime;
       const finish = () => {
         isRefreshing.value = false;
-        // 改为显示打勾图标 1 秒，不再展示刷新完成 toast
         showCheckIcon.value = true;
         setTimeout(() => { showCheckIcon.value = false; }, 1000);
       };
@@ -469,7 +497,8 @@
     if (hasBili) {
       await ensureProxyStarted();
     }
-    refreshList();
+    // 延迟到页面空闲或设定时间后再刷新关注列表，避免影响斗鱼分类/主播列表的首屏加载
+    requestIdle(() => { refreshList(); });
   });
   
   onUnmounted(() => {
@@ -478,3 +507,51 @@
   </script>
   
   <style src="./index.css" scoped></style>
+<style scoped>
+/* 让刷新按钮在刷新中显示与 FollowOverlay 相同的 spinner */
+.action-btn.refresh-btn .icon .refresh-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+}
+.action-btn.refresh-btn .icon.refreshing .refresh-spinner {
+  animation: spin 0.9s linear infinite;
+}
+
+/* 进度左侧的内联转圈样式 */
+.refresh-spinner-inline {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+  margin: 0; /* 使用容器的 gap 控制间距 */
+}
+
+/* 进度与转圈合并后的容器样式：共享统一圆角矩形背景 */
+.progress-with-spinner {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: 8px;
+  background: rgba(0, 218, 198, 0.12);
+}
+:root[data-theme="light"] .progress-with-spinner {
+  background: rgba(80, 130, 255, 0.10);
+}
+/* 去掉进度文本自身背景，统一由容器提供 */
+.progress-with-spinner .progress-label {
+  background: transparent;
+  padding: 0;
+  margin: 0;
+}
+
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+</style>

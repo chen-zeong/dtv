@@ -167,7 +167,7 @@ watch(() => props.show, (v) => { if (v) computePanelMetrics(); });
   color: var(--primary-text);
   border: 1px solid var(--border-color);
   box-shadow: 0 16px 40px rgba(0,0,0,0.38);
-  overflow: hidden;
+  overflow: visible;
   transform: translateZ(0);
 }
 .overlay-header {
