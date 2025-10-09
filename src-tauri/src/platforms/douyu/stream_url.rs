@@ -1,6 +1,5 @@
 use deno_core::{JsRuntime, RuntimeOptions};
-use isahc::config::{Configurable, RedirectPolicy};
-use isahc::{http, prelude::*, HttpClient, Request};
+use reqwest::{Client, header::{HeaderMap, HeaderValue}, redirect::Policy};
 use md5::Digest;
 use regex::Regex;
 use serde::Deserialize;
@@ -20,20 +19,39 @@ struct RoomInfoResponse {
 struct DouYu {
     did: String,
     rid: String,
-    client: HttpClient,
+    client: Client,
 }
 
 impl DouYu {
     async fn new(rid: &str) -> Result<Self, Box<dyn std::error::Error>> {
-        // 创建直接连接的HTTP客户端，不使用任何代理
-        let client = HttpClient::builder()
-            .redirect_policy(RedirectPolicy::Follow)
-            .proxy(None) // 明确禁用代理
-            .default_header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+        // 迁移到 reqwest：禁用系统代理、限制重定向、设置默认 UA/语言等头部
+        let mut default_headers = HeaderMap::new();
+        default_headers.insert(
+            "User-Agent",
+            HeaderValue::from_static("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"),
+        );
+        default_headers.insert(
+            "Accept-Language",
+            HeaderValue::from_static("zh-CN,zh;q=0.9"),
+        );
+        let client = Client::builder()
+            .redirect(Policy::limited(10))
+            .no_proxy()
+            .default_headers(default_headers)
             .build()?;
 
+        // 生成动态 did（与搜索接口一致），避免某些房间页面返回不同脚本结构
+        let mut hasher = md5::Md5::new();
+        hasher.update(
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)?
+                .as_nanos()
+                .to_string(),
+        );
+        let did = format!("{:x}", hasher.finalize());
+
         Ok(Self {
-            did: "10000000000000000000000000001501".to_string(),
+            did,
             rid: rid.to_string(),
             client,
         })
@@ -123,59 +141,76 @@ impl DouYu {
                 )));
             }
         }
-        
-        // 获取PC网页内容
-        let request = Request::builder()
-            .method(http::Method::GET)
-            .uri(&format!("https://www.douyu.com/{}", self.rid))
-            .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8")
-            .header("Accept-Language", "zh-CN,zh;q=0.9")
-            .header("Connection", "keep-alive")
-            .body(())?;
 
-        let text = self.client.send(request)?.text()?;
-        
-        // 提取JS函数
+        // 获取PC网页内容（保持与 isahc 等价的头部）
+        let page_url = format!("https://www.douyu.com/{}", self.rid);
+        let text = self.client
+            .get(page_url)
+            .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8")
+            // .header("Accept-Encoding", "gzip, deflate, br") // 交给 reqwest 自动处理
+            .header("Referer", format!("https://www.douyu.com/{}", self.rid))
+            .header("Upgrade-Insecure-Requests", "1")
+            .header("Host", "www.douyu.com")
+            .header("Cache-Control", "no-cache")
+            .header("Pragma", "no-cache")
+            .header("Cookie", format!("dy_did={}; acf_did={}", self.did, self.did))
+            .send()
+            .await?
+            .text()
+            .await?;
+
+        // 提取JS函数（主正则）
         let re = Regex::new(r"(vdwdae325w_64we[\s\S]*function ub98484234[\s\S]*?)function")?;
-        let result = re
+        let result_opt = re
             .captures(&text)
-            .ok_or("Cannot find js function")?
-            .get(1)
-            .ok_or("No capture group")?
-            .as_str();
-        
+            .and_then(|caps| caps.get(1).map(|m| m.as_str().to_string()));
+
+        // 若主正则未命中，尝试备用正则（页面结构差异时有用）
+        let result = if let Some(res) = result_opt {
+            res
+        } else {
+            let re_alt = Regex::new(r"(function\s+ub98484234[\s\S]*?)function")?;
+            match re_alt.captures(&text).and_then(|caps| caps.get(1).map(|m| m.as_str().to_string())) {
+                Some(res_alt) => res_alt,
+                None => {
+                    // 打印部分页面内容，便于定位问题
+                    let sample = &text.chars().take(800).collect::<String>();
+                    return Err(format!("Cannot find js function; page sample: {}", sample).into());
+                }
+            }
+        };
+
         let re_eval = Regex::new(r"eval.*?;\}")?;
-        let func_ub9 = re_eval.replace_all(result, "strc;}");
-        
+        let func_ub9 = re_eval.replace_all(&result, "strc;}");
+
         let t10 = SystemTime::now()
             .duration_since(UNIX_EPOCH)?
             .as_secs()
             .to_string();
-        
+
         let mut params = self.execute_js_functions(&func_ub9, &self.rid, &self.did, &t10).await?;
         params.push_str(&format!("&cdn={}&rate={}", cdn, rate));
-        
+
         // 获取真实URL
         let url = format!("https://www.douyu.com/lapi/live/getH5Play/{}", self.rid);
-        let request = Request::builder()
-            .method(http::Method::POST)
-            .uri(&url)
+        let json = self.client
+            .post(url)
             .header("Content-Type", "application/x-www-form-urlencoded")
             .header("Origin", "https://www.douyu.com")
             .header("Referer", format!("https://www.douyu.com/{}", self.rid))
-            .body(params)?;
+            .header("Cookie", format!("dy_did={}; acf_did={}", self.did, self.did))
+            .body(params)
+            .send()
+            .await?
+            .json::<serde_json::Value>()
+            .await?;
 
-        let mut response = self.client.send(request)?;
-        let json: serde_json::Value = response.json()?;
-        
-        let data = json["data"]
-            .as_object()
-            .ok_or("No data field in response")?;
+        let data = json["data"].as_object().ok_or("No data field in response")?;
         let rtmp_url = data["rtmp_url"].as_str().ok_or("No rtmp_url field")?;
         let rtmp_live = data["rtmp_live"].as_str().ok_or("No rtmp_live field")?;
-        
+
         let final_url = format!("{}/{}", rtmp_url, rtmp_live);
-        
+
         Ok(final_url)
     }
 
@@ -190,18 +225,14 @@ impl DouYu {
     async fn check_room_status(&self) -> Result<bool, Box<dyn std::error::Error>> {
         let room_api_url = format!("http://open.douyucdn.cn/api/RoomApi/room/{}", self.rid);
 
-        let request = Request::builder()
-            .method(http::Method::GET)
-            .uri(&room_api_url)
+        let response = self.client
+            .get(room_api_url)
             .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-            .body(())?;
-
-        let mut response = self.client.send_async(request).await?;
+            .send()
+            .await?;
 
         if !response.status().is_success() {
-            return Err(
-                format!("Room API request failed with status: {}", response.status()).into(),
-            );
+            return Err(format!("Room API request failed with status: {}", response.status()).into());
         }
 
         let room_info_response: RoomInfoResponse = response.json().await?;
@@ -211,9 +242,7 @@ impl DouYu {
         );
 
         if room_info_response.error != 0 {
-            return Err(
-                format!("Room API returned error code: {}", room_info_response.error).into(),
-            );
+            return Err(format!("Room API returned error code: {}", room_info_response.error).into());
         }
 
         match room_info_response.data {
@@ -222,10 +251,10 @@ impl DouYu {
                     Some("1") => Ok(true),  // Live
                     Some("2") => Ok(false), // Not live
                     Some(_status) => {
-                        Ok(false) // Or handle as an error / unknown state
+                        Ok(false)
                     }
                     None => {
-                        Ok(false) // Or handle as an error
+                        Ok(false)
                     }
                 }
             }

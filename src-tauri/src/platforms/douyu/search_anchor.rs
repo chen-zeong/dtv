@@ -1,14 +1,20 @@
-use isahc::config::{Configurable, RedirectPolicy}; // For HttpClient configuration
-use isahc::{http, prelude::*, HttpClient, Request}; // For HTTP client and request building
+use reqwest::{Client, header::{HeaderMap, HeaderValue}, redirect::Policy};
 use md5::Digest; // For hasher
 use percent_encoding::{percent_encode, NON_ALPHANUMERIC};
 use std::time::{SystemTime, UNIX_EPOCH}; // For timestamp for did // For URL encoding keyword
 
 // Renamed from search_anchor to avoid ambiguity with Tauri command
 pub async fn perform_anchor_search(keyword: &str) -> Result<String, Box<dyn std::error::Error>> {
-    let client = HttpClient::builder()
-        .redirect_policy(RedirectPolicy::Follow)
-        .default_header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36")
+    let mut default_headers = HeaderMap::new();
+    default_headers.insert(
+        "User-Agent",
+        HeaderValue::from_static("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"),
+    );
+
+    let client = Client::builder()
+        .redirect(Policy::limited(10))
+        .no_proxy()
+        .default_headers(default_headers)
         .build()?;
 
     let mut hasher = md5::Md5::new();
@@ -25,15 +31,14 @@ pub async fn perform_anchor_search(keyword: &str) -> Result<String, Box<dyn std:
         percent_encode(keyword.as_bytes(), NON_ALPHANUMERIC)
     );
 
-    let request = Request::builder()
-        .method(http::Method::GET)
-        .uri(url)
+    let text = client
+        .get(url)
         .header("Referer", "https://www.douyu.com/search/")
         .header("Cookie", format!("dy_did={}; acf_did={}", did, did))
-        .body(())?;
-
-    let mut response = client.send(request)?;
-    let text = response.text()?;
+        .send()
+        .await?
+        .text()
+        .await?;
 
     Ok(text)
 }

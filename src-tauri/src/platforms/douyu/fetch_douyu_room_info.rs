@@ -1,4 +1,5 @@
 // Douyu specific API logic will go here
+// NOTE: This module already uses reqwest and is consistent with the unified Douyu HTTP client approach.
 
 use reqwest::header::{HeaderMap, HeaderValue};
 use serde::{Deserialize, Serialize};
