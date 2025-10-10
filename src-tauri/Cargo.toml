@@ -1,6 +1,6 @@
 [package]
 name = "dtv"
-version = "2.0.0"
+version = "2.0.1"
 description = "A Tauri App"
 authors = ["c-zeong"]
 edition = "2021"
@@ -29,6 +29,7 @@ tauri = { version = "2.7.0", features = ["macos-private-api"] }
  tokio = { version = "1.37.0", features = ["full"] }
  tokio-tungstenite = { version = "0.20", features = ["native-tls"] }
  url = "2.4"
+ openssl-sys = { version = "0.9", features = ["vendored"] }
  native-tls = "0.2"
  rand = "0.8"
  futures-util = "0.3"
