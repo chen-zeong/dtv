@@ -117,6 +117,12 @@ import StreamerInfo from '../StreamerInfo/index.vue';
 import DanmuList from '../DanmuList/index.vue';
 import { platform } from '@tauri-apps/plugin-os';
 
+import { invoke } from '@tauri-apps/api/core';
+import { useImageProxy } from '../FollowsList/useProxy';
+
+// Ensure image proxy helpers are available in this component
+const { ensureProxyStarted, proxify } = useImageProxy();
+
 const props = defineProps<{
   roomId: string | null;
   platform: StreamingPlatform;
@@ -523,6 +529,27 @@ async function initializePlayerAndStream(
     if (errorMessage.includes('主播未开播')) {
       streamError.value = errorMessage; // Store the specific "主播未开播" message
       isOfflineError.value = true;       // Set the flag for custom display
+
+      // 未开播时尝试获取并填充基础信息（标题、昵称、头像），以便离线页展示
+      try {
+        if (pPlatform === StreamingPlatform.HUYA) {
+          const result: any = await invoke('get_huya_unified_cmd', { roomId: pRoomId, quality: currentQuality.value });
+          await ensureProxyStarted();
+          playerTitle.value = result?.title ?? props.title;
+          playerAnchorName.value = result?.nick ?? props.anchorName;
+          playerAvatar.value = proxify((result?.avatar ?? props.avatar ?? '') as string);
+        } else if (pPlatform === StreamingPlatform.BILIBILI) {
+          const payload = { args: { room_id_str: pRoomId } };
+          const savedCookie = (typeof localStorage !== 'undefined') ? (localStorage.getItem('bilibili_cookie') || null) : null;
+          const res: any = await invoke('fetch_bilibili_streamer_info', { payload, cookie: savedCookie });
+          await ensureProxyStarted();
+          playerTitle.value = res?.title ?? props.title;
+          playerAnchorName.value = res?.anchor_name ?? props.anchorName;
+          playerAvatar.value = proxify((res?.avatar ?? props.avatar ?? '') as string);
+        }
+      } catch (e) {
+        console.warn('[Player] Failed to fetch basic streamer info for offline page:', e);
+      }
     } else {
       streamError.value = errorMessage;
       isOfflineError.value = false;

@@ -217,15 +217,21 @@ async fn fetch_room_detail(client: &reqwest::Client, room_id: &str) -> Result<Ro
     let v: Value = serde_json::from_str(&text)?;
 
     let status_code = v.get("status").and_then(|x| x.as_i64()).unwrap_or(0);
-    let stream_ok = v
-        .get("data")
-        .and_then(|d| d.get("stream"))
-        .is_some();
-    if status_code != 200 || !stream_ok {
+    if status_code != 200 {
         return Ok(RoomDetail { status: false, lines: vec![], bit_rates: vec![], title: None, nick: None, cover: None, area: None, avatar180: None });
     }
 
-    let data = v.get("data").unwrap();
+    // data 节点可能存在但 stream 不存在（未开播）；此时也应返回基础信息用于前端离线页展示
+    let data = match v.get("data") {
+        Some(d) => d,
+        None => {
+            return Ok(RoomDetail { status: false, lines: vec![], bit_rates: vec![], title: None, nick: None, cover: None, area: None, avatar180: None });
+        }
+    };
+
+    // 根据是否存在 stream 判断直播状态；未开播也继续解析 liveData 的基础信息
+    let stream_ok = data.get("stream").is_some();
+
     let base_list = data
         .get("stream")
         .and_then(|s| s.get("baseSteamInfoList"))
@@ -275,7 +281,7 @@ async fn fetch_room_detail(client: &reqwest::Client, room_id: &str) -> Result<Ro
     let area = data.get("liveData").and_then(|ld| ld.get("gameFullName")).and_then(|x| x.as_str()).map(|s| s.to_string());
     let avatar180 = data.get("liveData").and_then(|ld| ld.get("avatar180")).and_then(|x| x.as_str()).map(|s| s.to_string());
 
-    Ok(RoomDetail { status: true, lines, bit_rates, title, nick, cover, area, avatar180 })
+    Ok(RoomDetail { status: stream_ok, lines, bit_rates, title, nick, cover, area, avatar180 })
 }
 
 fn pick_stream_url(detail: &RoomDetail, quality: &str) -> Option<String> {
@@ -358,9 +364,10 @@ pub async fn get_huya_unified_cmd(room_id: String, quality: Option<String>) -> R
         .await
         .map_err(|e| e.to_string())?;
 
-    if !detail.status {
-        return Err("主播未开播或获取虎牙房间详情失败".to_string());
-    }
+    // 不再在未开播时直接返回错误；统一返回基础信息，便于前端显示离线页中的主播信息
+    // if !detail.status {
+    //     return Err("主播未开播或获取虎牙房间详情失败".to_string());
+    // }
 
     let selected = pick_stream_url(
         &detail,

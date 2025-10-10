@@ -19,14 +19,21 @@ export async function getHuyaStreamConfig(roomId: string, quality: string = '原
         const proxy = await startHuyaProxyFromUrl(streamUrl);
         return proxy;
       } else {
-        throw new Error('虎牙房间流地址为空，无法播放');
+        // 无地址按未开播处理
+        throw new Error('主播未开播或无法获取直播流');
       }
     } else {
-      throw new Error('虎牙房间数据格式错误或为空');
+      // 数据异常或为空，一般意味着未开播或房间详情获取失败
+      throw new Error('主播未开播或获取虎牙房间详情失败');
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('[HuyaPlayerHelper] getHuyaStreamConfig error:', error);
-    throw error;
+    // 若后端明确返回未开播文案，直接透传；否则统一按未开播处理
+    const msg = (error?.message || '').trim();
+    if (msg.includes('未开播')) {
+      throw new Error(msg);
+    }
+    throw new Error('主播未开播或无法获取直播流');
   }
 }
 

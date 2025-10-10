@@ -22,11 +22,25 @@ export async function getBilibiliStreamConfig(
     quality,
     cookie: effectiveCookie || null,
   });
+
+  // 若后端返回错误，统一按“未开播”处理（除非明确包含未开播字样）
   if (result.error_message) {
-    throw new Error(result.error_message);
+    const msg = result.error_message.trim();
+    if (msg.includes('未开播')) {
+      throw new Error(msg);
+    }
+    // 其他错误也按未开播处理，以便显示离线页面
+    throw new Error('主播未开播或无法获取直播流');
   }
+
+  // 根据返回的状态判断是否在线（B 站约定 status === 1 为在线）
+  if (typeof result.status !== 'undefined' && result.status !== 1) {
+    throw new Error('主播未开播');
+  }
+
+  // 无播放地址也按未开播处理
   if (!result.stream_url) {
-    throw new Error('未获取到直播流地址');
+    throw new Error('主播未开播或无法获取直播流');
   }
 
   // 调试输出：真实上游地址与所有可用地址

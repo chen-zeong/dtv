@@ -223,12 +223,9 @@ pub async fn get_bilibili_live_stream_url_with_quality(
                                         if final_url_ts.is_none() && format_name == "ts" {
                                             final_url_ts = Some(composed.clone());
                                         }
-                                        // 仅选择包含 d1--cn 的 FLV 地址
-                                        if format_name == "flv" {
-                                            let is_d1_cn = host.contains("d1--cn") || composed.contains("d1--cn");
-                                            if is_d1_cn && final_url_flv.is_none() {
-                                                final_url_flv = Some(composed.clone());
-                                            }
+                                        if format_name == "flv" && final_url_flv.is_none() {
+                                            // 放宽为选择第一个可用的 FLV 地址
+                                            final_url_flv = Some(composed.clone());
                                         }
                                     }
                                 }
@@ -292,7 +289,7 @@ pub async fn get_bilibili_live_stream_url_with_quality(
         anchor_name: init_json["data"]["uname"].as_str().map(|s| s.to_string()),
         avatar: None,
         stream_url: proxied_url,
-        status: Some(2),
+        status: Some(if final_error_message.is_some() { 2 } else { 1 }),
         error_message: final_error_message,
         upstream_url: Some(real_url),
         available_streams: Some(variants),
