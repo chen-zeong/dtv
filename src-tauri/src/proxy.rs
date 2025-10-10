@@ -287,7 +287,6 @@ pub async fn start_proxy(
 #[tauri::command]
 pub async fn start_static_proxy_server(
     _app_handle: AppHandle,
-    server_handle_state: State<'_, ProxyServerHandle>,
     stream_url_store: State<'_, StreamUrlStore>,
 ) -> Result<String, String> {
     // Use a dedicated port for static image proxy to avoid interfering with FLV stream proxy

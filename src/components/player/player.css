@@ -10,6 +10,17 @@
   position: relative;
 }
 
+/* Web 全屏全局标记下，强制移除页面 padding 与容器圆角 */
+.web-fs-active .player-page {
+  padding: 0 !important;
+}
+
+.web-fs-active .player-container {
+  border-radius: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
 /* 主体布局 */
 .player-layout {
   display: flex;
@@ -48,7 +59,19 @@
   background-color: transparent !important;
   border: none !important;
   box-shadow: none !important;
-  padding: 28px 16px 16px 16px !important;
+  padding: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100vh !important;
+  width: 100vw !important;
+}
+/* Windows/WebView 兼容：不使用 :deep 的全屏选择器 */
+.art-fullscreen .player-container,
+.art-fullscreen-web .player-container {
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
   display: flex !important;
   flex-direction: column !important;
   height: 100vh !important;
@@ -58,16 +81,30 @@
 /* 全屏模式下播放器内容的显示 */
 :deep(.art-fullscreen) .streamer-info,
 :deep(.art-fullscreen-web) .streamer-info {
-  display: block !important;
-  margin-bottom: 36px !important;
-  opacity: 1 !important;
-  visibility: visible !important;
-  z-index: 10000 !important;
+  display: none !important;
+  margin: 0 !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+/* Windows/WebView 兼容：隐藏非视频内容 */
+.art-fullscreen .streamer-info,
+.art-fullscreen-web .streamer-info {
+  display: none !important;
+  margin: 0 !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
 }
 
 /* 全屏模式下视频容器样式 */
 :deep(.art-fullscreen) .video-container,
 :deep(.art-fullscreen-web) .video-container {
+  flex: 1 !important;
+  height: auto !important;
+  min-height: auto !important;
+}
+/* Windows/WebView 兼容：视频容器填充 */
+.art-fullscreen .video-container,
+.art-fullscreen-web .video-container {
   flex: 1 !important;
   height: auto !important;
   min-height: auto !important;
@@ -134,6 +171,17 @@
   visibility: hidden !important;
   opacity: 0 !important;
 }
+/* Windows/WebView 兼容：隐藏弹幕面板 */
+.art-fullscreen ~ .danmu-panel,
+.art-fullscreen-web ~ .danmu-panel,
+.art-video-player.art-fullscreen ~ .danmu-panel,
+.art-video-player.art-fullscreen-web ~ .danmu-panel,
+.art-fullscreen + .danmu-panel,
+.art-fullscreen-web + .danmu-panel {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+}
 
 /* 播放器全屏模式下 */
 :deep(.art-video-player.art-fullscreen),
@@ -148,6 +196,64 @@
   z-index: 9999 !important;
   background-color: #000 !important;
 }
+/* Windows/WebView 兼容：顶层全屏容器固定与充满 */
+.art-video-player.art-fullscreen,
+.art-video-player.art-fullscreen-web,
+.art-fullscreen,
+.art-fullscreen-web {
+  width: 100vw !important;
+  height: 100vh !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  z-index: 9999 !important;
+  background-color: #000 !important;
+}
+
+/* 移除 Artplayer 容器在全屏时的圆角（Windows 关键） */
+:deep(.art-video-player.art-fullscreen),
+:deep(.art-video-player.art-fullscreen-web) {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+/* Windows/WebView 兼容：移除全屏圆角与阴影 */
+.art-video-player.art-fullscreen,
+.art-video-player.art-fullscreen-web {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* 网页/系统全屏时移除页面内边距与圆角边框，仅显示视频内容 */
+.player-page.web-fs,
+.player-page:has(:deep(.art-fullscreen-web)),
+.player-page:has(:deep(.art-fullscreen)) {
+  padding: 0 !important;
+  background: #000 !important;
+}
+
+.player-page.web-fs .player-layout,
+.player-page:has(:deep(.art-fullscreen-web)) .player-layout,
+.player-page:has(:deep(.art-fullscreen)) .player-layout {
+  gap: 0 !important;
+}
+
+.player-page.web-fs .player-container,
+.player-page:has(:deep(.art-fullscreen-web)) .player-container,
+.player-page:has(:deep(.art-fullscreen)) .player-container {
+  border-radius: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  gap: 0 !important;
+  background: transparent !important;
+}
+
+.player-page.web-fs .video-container,
+.player-page:has(:deep(.art-fullscreen-web)) .video-container,
+.player-page:has(:deep(.art-fullscreen)) .video-container {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
 
 /* 全屏模式下的播放器容器样式优化 */
 :deep(.art-video-player.art-fullscreen) .art-video,
@@ -157,6 +263,21 @@
   max-width: 100vw !important;
   max-height: 100vh !important;
   object-fit: contain !important;
+}
+/* Windows/WebView 兼容：视频元素填满容器 */
+.art-video-player.art-fullscreen .art-video,
+.art-video-player.art-fullscreen-web .art-video {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100vw !important;
+  max-height: 100vh !important;
+  object-fit: contain !important;
+}
+
+/* 在 web-fs 环境下确保任何播放器容器没有圆角 */
+.player-page.web-fs .art-video-player {
+  border-radius: 0 !important;
+  box-shadow: none !important;
 }
 
 /* 关闭按钮 */
@@ -478,4 +599,4 @@
 
 :root[data-theme="light"] .streamer-info-offline {
   border-bottom: 1px solid var(--border-color-light, #e0e0e0);
-} 
+}
