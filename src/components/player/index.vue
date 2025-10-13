@@ -173,6 +173,173 @@ const osName = ref<string>('');
 const currentQuality = ref<string>('原画');
 const isQualitySwitching = ref(false);
 
+const ARTPLAYER_STORAGE_ROOT_KEY = 'artplayer_settings';
+const DANMAKU_SETTINGS_STORAGE_KEY = 'danmakuSettings';
+
+type DanmakuMode = 0 | 1 | 2;
+
+const VALID_DANMAKU_MODES: DanmakuMode[] = [0, 1, 2];
+const VALID_DANMAKU_MODES_SET = new Set<DanmakuMode>(VALID_DANMAKU_MODES);
+
+type PercentageString = `${number}%`;
+
+type DanmakuPersistedSettings = {
+  speed?: number;
+  opacity?: number;
+  fontSize?: number | PercentageString;
+  color?: string;
+  margin?: [number | PercentageString, number | PercentageString];
+  mode?: DanmakuMode;
+  modes?: DanmakuMode[];
+  antiOverlap?: boolean;
+  synchronousPlayback?: boolean;
+  visible?: boolean;
+};
+
+let teardownDanmakuPersistence: (() => void) | null = null;
+
+function clampNumber(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function sanitizeDanmakuSettings(raw: unknown): DanmakuPersistedSettings | null {
+  if (!raw || typeof raw !== 'object') {
+    return null;
+  }
+
+  const candidate = raw as Record<string, unknown>;
+  const sanitized: DanmakuPersistedSettings = {};
+
+  if (typeof candidate.speed === 'number' && Number.isFinite(candidate.speed)) {
+    sanitized.speed = clampNumber(candidate.speed, 1, 10);
+  }
+  if (typeof candidate.opacity === 'number' && Number.isFinite(candidate.opacity)) {
+    sanitized.opacity = clampNumber(candidate.opacity, 0, 1);
+  }
+  if (typeof candidate.fontSize === 'number' && Number.isFinite(candidate.fontSize)) {
+    sanitized.fontSize = clampNumber(candidate.fontSize, 12, 120);
+  } else if (typeof candidate.fontSize === 'string') {
+    const trimmed = candidate.fontSize.trim();
+    if (/^-?\d+(\.\d+)?%$/.test(trimmed)) {
+      sanitized.fontSize = trimmed as PercentageString;
+    }
+  }
+  if (typeof candidate.color === 'string' && candidate.color.trim().length > 0) {
+    sanitized.color = candidate.color;
+  }
+  if (Array.isArray(candidate.margin) && candidate.margin.length === 2) {
+    const [top, bottom] = candidate.margin;
+    const isValidMarginValue = (value: unknown) =>
+      (typeof value === 'number' && Number.isFinite(value)) ||
+      (typeof value === 'string' && /^-?\d+(\.\d+)?%$/.test(value.trim()));
+    if (isValidMarginValue(top) && isValidMarginValue(bottom)) {
+      const normalizeMarginValue = (value: unknown): number | PercentageString => {
+        if (typeof value === 'number') {
+          return value;
+        }
+        return (value as string).trim() as PercentageString;
+      };
+      sanitized.margin = [normalizeMarginValue(top), normalizeMarginValue(bottom)];
+    }
+  }
+  if (typeof candidate.mode === 'number' && VALID_DANMAKU_MODES_SET.has(candidate.mode as DanmakuMode)) {
+    sanitized.mode = candidate.mode as DanmakuMode;
+  }
+  if (Array.isArray(candidate.modes)) {
+    const filtered: DanmakuMode[] = [];
+    candidate.modes.forEach((value) => {
+      if (
+        typeof value === 'number' &&
+        VALID_DANMAKU_MODES_SET.has(value as DanmakuMode) &&
+        !filtered.includes(value as DanmakuMode)
+      ) {
+        filtered.push(value as DanmakuMode);
+      }
+    });
+    if (filtered.length) {
+      sanitized.modes = filtered;
+    }
+  }
+  if (typeof candidate.antiOverlap === 'boolean') {
+    sanitized.antiOverlap = candidate.antiOverlap;
+  }
+  if (typeof candidate.synchronousPlayback === 'boolean') {
+    sanitized.synchronousPlayback = candidate.synchronousPlayback;
+  }
+  if (typeof candidate.visible === 'boolean') {
+    sanitized.visible = candidate.visible;
+  }
+
+  return Object.keys(sanitized).length ? sanitized : null;
+}
+
+function loadPersistedDanmakuSettingsFromStorage(): DanmakuPersistedSettings | null {
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return null;
+  }
+
+  try {
+    const raw = window.localStorage.getItem(ARTPLAYER_STORAGE_ROOT_KEY);
+    if (!raw) {
+      return null;
+    }
+    const parsed = JSON.parse(raw);
+    return sanitizeDanmakuSettings(parsed?.[DANMAKU_SETTINGS_STORAGE_KEY]);
+  } catch (error) {
+    console.warn('[Player] Failed to read persisted danmaku settings:', error);
+    return null;
+  }
+}
+
+function setupDanmakuPersistence(artInstance: Artplayer) {
+  teardownDanmakuPersistence?.();
+
+  const plugin = artInstance.plugins?.artplayerPluginDanmuku;
+  if (!plugin) {
+    console.warn('[Player] Danmaku plugin missing, skip persistence setup.');
+    teardownDanmakuPersistence = null;
+    return;
+  }
+
+  const storedViaArt = sanitizeDanmakuSettings(artInstance.storage.get(DANMAKU_SETTINGS_STORAGE_KEY));
+  if (storedViaArt) {
+    try {
+      plugin.config(storedViaArt);
+    } catch (error) {
+      console.warn('[Player] Failed to apply saved danmaku settings via plugin.config:', error);
+    }
+  }
+
+  const listener = (option: unknown) => {
+    const persistable = sanitizeDanmakuSettings(option);
+    if (!persistable) {
+      return;
+    }
+    try {
+      artInstance.storage.set(DANMAKU_SETTINGS_STORAGE_KEY, persistable);
+    } catch (error) {
+      console.warn('[Player] Persisting danmaku settings via Artplayer storage failed, fallback to localStorage.', error);
+      if (typeof window !== 'undefined' && window.localStorage) {
+        try {
+          const raw = window.localStorage.getItem(ARTPLAYER_STORAGE_ROOT_KEY);
+          const payload = raw ? JSON.parse(raw) : {};
+          payload[DANMAKU_SETTINGS_STORAGE_KEY] = persistable;
+          window.localStorage.setItem(ARTPLAYER_STORAGE_ROOT_KEY, JSON.stringify(payload));
+        } catch (fallbackError) {
+          console.warn('[Player] Fallback persisting danmaku settings failed:', fallbackError);
+        }
+      }
+    }
+  };
+
+  const artWithEvents = artInstance as any;
+  artWithEvents.on?.('artplayerPluginDanmuku:config', listener);
+  teardownDanmakuPersistence = () => {
+    artWithEvents.off?.('artplayerPluginDanmuku:config', listener);
+    teardownDanmakuPersistence = null;
+  };
+}
+
 async function initializePlayerAndStream(
   pRoomId: string, 
   pPlatform: StreamingPlatform,
@@ -207,6 +374,8 @@ async function initializePlayerAndStream(
   }
 
   if (art.value) {
+    teardownDanmakuPersistence?.();
+
     // Stop danmaku for the *old* room if IDs are valid
     if (oldRoomIdForCleanup && oldPlatformForCleanup !== undefined && oldPlatformForCleanup !== null) {
         await stopCurrentDanmakuListener(oldPlatformForCleanup, oldRoomIdForCleanup);
@@ -296,6 +465,22 @@ async function initializePlayerAndStream(
       return;
     }
 
+    const persistedDanmakuSettings = loadPersistedDanmakuSettingsFromStorage();
+    const danmakuPluginInitialOptions = {
+        danmuku: [],
+        speed: persistedDanmakuSettings?.speed ?? 7,
+        opacity: persistedDanmakuSettings?.opacity ?? 1,
+        fontSize: persistedDanmakuSettings?.fontSize ?? 20,
+        color: persistedDanmakuSettings?.color ?? '#FFFFFF',
+        mode: persistedDanmakuSettings?.mode ?? 0,
+        modes: persistedDanmakuSettings?.modes ?? [...VALID_DANMAKU_MODES],
+        margin: persistedDanmakuSettings?.margin ?? [10, '2%'],
+        antiOverlap: persistedDanmakuSettings?.antiOverlap ?? true,
+        synchronousPlayback: persistedDanmakuSettings?.synchronousPlayback ?? false,
+        visible: persistedDanmakuSettings?.visible ?? true,
+        emitter: false,
+    };
+
     // 播放器类型将直接使用 streamConfig.streamType，如果未定义则默认为 'flv'
     const artPlayerOptions: any = {
         container: playerContainerRef.value, 
@@ -308,10 +493,7 @@ async function initializePlayerAndStream(
         backdrop: false, playsInline: true, autoPlayback: true, theme: '#FB7299', lang: 'zh-cn',
         moreVideoAttr: { playsInline: true },
         plugins: [
-            artplayerPluginDanmuku({
-            danmuku: [], speed: 7, opacity: 1, fontSize: 20, color: '#FFFFFF',
-            mode: 0, margin: [10, '2%'], antiOverlap: true, synchronousPlayback: false, emitter:false
-            }),
+            artplayerPluginDanmuku(danmakuPluginInitialOptions),
         ],
         controls: [
           {
@@ -484,6 +666,7 @@ async function initializePlayerAndStream(
         },
     };
     art.value = new Artplayer(artPlayerOptions);
+    setupDanmakuPersistence(art.value);
 
     art.value.on('ready', async () => {
       if (pRoomId && pPlatform && art.value) { 
@@ -787,6 +970,8 @@ onUnmounted(async () => {
   if (props.platform === StreamingPlatform.HUYA) {
       await stopHuyaProxy();
   }
+
+  teardownDanmakuPersistence?.();
 
   if (art.value) {
     if (art.value.playing) {
