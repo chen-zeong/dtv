@@ -40,7 +40,8 @@ pub struct StreamVariant {
 
 // For the return type of get_douyin_live_stream_url
 // Matches LiveStreamInfo interface in DouyinLive.vue
-#[derive(Serialize, Clone, Debug)]
+#[derive(Serialize, Clone, Debug)
+]
 pub struct LiveStreamInfo {
     pub title: Option<String>,
     pub anchor_name: Option<String>,
@@ -52,6 +53,8 @@ pub struct LiveStreamInfo {
     pub upstream_url: Option<String>,
     // 新增：所有可用的播放地址列表（调试/导出用）
     pub available_streams: Option<Vec<StreamVariant>>,
+    // 新增：规范化后的房间ID（例如从 web_id 提取出的 room.id_str）
+    pub normalized_room_id: Option<String>,
 }
 
 #[derive(Default, Clone)]

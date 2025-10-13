@@ -128,5 +128,7 @@ export interface LiveStreamInfo {
   upstream_url?: string | null;
   // 新增：所有可用的播放地址列表（调试/导出用）
   available_streams?: StreamVariant[] | null;
-  // Potentially other platform-specific fields if not covered by StreamRoomDetails
+  // 新增：规范化后的房间ID（例如从 web_id 提取出的 room.id_str）
+  normalized_room_id?: string | null;
 }
+// Potentially other platform-specific fields if not covered by StreamRoomDetails

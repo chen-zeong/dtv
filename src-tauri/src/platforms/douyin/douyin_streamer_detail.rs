@@ -63,6 +63,7 @@ pub async fn get_douyin_live_stream_url_with_quality(
             error_message: Some("Room ID cannot be empty.".to_string()),
             upstream_url: None,
             available_streams: None,
+            normalized_room_id: None,
         };
         // 写入桌面文件
         write_douyin_return_to_desktop_simple(&result, &room_id_str, &quality, "N/A");
@@ -104,6 +105,7 @@ pub async fn get_douyin_live_stream_url_with_quality(
                 error_message: Some(format!("Reflow 接口请求失败: {}", e)),
                 upstream_url: None,
                 available_streams: None,
+                normalized_room_id: None,
             };
             return write_and_ok(result);
         }
@@ -120,6 +122,7 @@ pub async fn get_douyin_live_stream_url_with_quality(
             error_message: None,
             upstream_url: None,
             available_streams: None,
+            normalized_room_id: detail.room_id.clone(),
         };
         return write_and_ok(result);
     }
@@ -136,6 +139,7 @@ pub async fn get_douyin_live_stream_url_with_quality(
                 error_message: Some("主播在线，但未找到 stream_url".to_string()),
                 upstream_url: None,
                 available_streams: None,
+                normalized_room_id: detail.room_id.clone(),
             };
             return write_and_ok(result);
         }
@@ -238,6 +242,7 @@ pub async fn get_douyin_live_stream_url_with_quality(
                     error_message: Some(format!("代理启动失败: {}", e)),
                     upstream_url: None,
                     available_streams: None,
+                    normalized_room_id: detail.room_id.clone(),
                 });
             }
         };
@@ -251,6 +256,7 @@ pub async fn get_douyin_live_stream_url_with_quality(
             error_message: None,
             upstream_url: Some(real_url),
             available_streams: None,
+            normalized_room_id: detail.room_id.clone(),
         })
     } else {
         eprintln!("[Douyin Stream Detail] 未能解析到任何可用的播放地址");
@@ -263,6 +269,7 @@ pub async fn get_douyin_live_stream_url_with_quality(
             error_message: Some("未能解析到任何可用的播放地址".to_string()),
             upstream_url: None,
             available_streams: None,
+            normalized_room_id: detail.room_id.clone(),
         })
     }
 }

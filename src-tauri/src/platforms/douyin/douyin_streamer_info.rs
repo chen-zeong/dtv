@@ -23,6 +23,7 @@ pub async fn fetch_douyin_streamer_info(
             error_message: Some("Room ID cannot be empty.".to_string()),
             upstream_url: None,
             available_streams: None,
+            normalized_room_id: None,
         });
     }
 
@@ -35,7 +36,7 @@ pub async fn fetch_douyin_streamer_info(
 
     // 根据长度判断是 webRid 还是 roomId（与 detail 一致）
     if room_id_str.len() <= 16 {
-        // HTML 解析路径
+        // HTML 解析路径：直接从 state 中返回主播信息，不再调用 reflow
         match fetch_room_detail_by_web_rid_html(&http_client, &room_id_str).await {
             Ok(state_json) => {
                 // 提取所需字段
@@ -54,8 +55,10 @@ pub async fn fetch_douyin_streamer_info(
                         error_message: Some("未能从 HTML state 中解析到房间详情".to_string()),
                         upstream_url: None,
                         available_streams: None,
+                        normalized_room_id: None,
                     });
                 }};
+                println!("room: {:?}", room);
                 let status = room.get("status").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
                 let title = room.get("title").and_then(|v| v.as_str()).map(|s| s.to_string());
                 let owner = room.get("owner");
@@ -69,6 +72,8 @@ pub async fn fetch_douyin_streamer_info(
                 } else {
                     anchor.and_then(|a| a.get("avatar_thumb")).and_then(|a| a.get("url_list")).and_then(|ul| ul.get(0)).and_then(|v| v.as_str()).map(|s| s.to_string())
                 };
+                // 规范化后的房间ID：从 HTML state 中提取 room.id_str
+                let normalized_room_id = room.get("id_str").and_then(|v| v.as_str()).map(|s| s.to_string());
 
                 Ok(crate::platforms::common::LiveStreamInfo {
                     title,
@@ -79,6 +84,7 @@ pub async fn fetch_douyin_streamer_info(
                     error_message: None,
                     upstream_url: None,
                     available_streams: None,
+                    normalized_room_id,
                 })
             }
             Err(e) => {
@@ -91,6 +97,7 @@ pub async fn fetch_douyin_streamer_info(
                     error_message: Some(format!("HTML 解析失败: {}", e)),
                     upstream_url: None,
                     available_streams: None,
+                    normalized_room_id: None,
                 });
             }
         }
@@ -110,6 +117,7 @@ pub async fn fetch_douyin_streamer_info(
                             error_message: Some("未能从 reflow info 中解析到房间详情".to_string()),
                             upstream_url: None,
                             available_streams: None,
+                            normalized_room_id: None,
                         });
                     }
                 };
@@ -133,6 +141,7 @@ pub async fn fetch_douyin_streamer_info(
                     error_message: None,
                     upstream_url: None,
                     available_streams: None,
+                    normalized_room_id: Some(room_id_str.clone()),
                 })
             }
             Err(e) => {
@@ -145,6 +154,7 @@ pub async fn fetch_douyin_streamer_info(
                     error_message: Some(format!("Reflow 接口请求失败: {}", e)),
                     upstream_url: None,
                     available_streams: None,
+                    normalized_room_id: None,
                 });
             }
         }

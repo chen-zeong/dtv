@@ -99,6 +99,7 @@ pub async fn fetch_bilibili_streamer_info(
             error_message: Some("房间ID未提供".to_string()),
             upstream_url: None,
             available_streams: None,
+            normalized_room_id: None,
         });
     }
 
@@ -150,6 +151,7 @@ pub async fn fetch_bilibili_streamer_info(
             error_message: Some(format!("Room info status: {} body: {}", status, text)),
             upstream_url: None,
             available_streams: None,
+            normalized_room_id: None,
         });
     }
     let j: Value = serde_json::from_str(&text).map_err(|e| format!("Room info JSON parse failed: {} | body: {}", e, text))?;
@@ -172,5 +174,6 @@ pub async fn fetch_bilibili_streamer_info(
         error_message: None,
         upstream_url: None,
         available_streams: None,
+        normalized_room_id: None,
     })
 }

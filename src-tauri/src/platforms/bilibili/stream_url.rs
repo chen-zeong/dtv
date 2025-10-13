@@ -26,6 +26,7 @@ pub async fn get_bilibili_live_stream_url_with_quality(
             error_message: Some("房间ID未提供".to_string()),
             upstream_url: None,
             available_streams: None,
+            normalized_room_id: None,
         });
     }
 
@@ -189,6 +190,7 @@ pub async fn get_bilibili_live_stream_url_with_quality(
             error_message: None,
             upstream_url: None,
             available_streams: None,
+            normalized_room_id: None,
         });
     }
 
@@ -244,9 +246,10 @@ pub async fn get_bilibili_live_stream_url_with_quality(
             avatar: None,
             stream_url: None,
             status: Some(2),
-            error_message: Some("未从播放信息中获取到M3U8或FLV地址".to_string()),
+            error_message: Some(format!("未从播放信息中获取到M3U8或FLV地址")),
             upstream_url: None,
             available_streams: Some(variants),
+            normalized_room_id: None,
         });
     }
 
@@ -261,6 +264,7 @@ pub async fn get_bilibili_live_stream_url_with_quality(
             error_message: Some("未找到可用的 FLV 地址（拒绝使用 HLS）".to_string()),
             upstream_url: None,
             available_streams: Some(variants),
+            normalized_room_id: None,
         });
     }
 
@@ -293,5 +297,6 @@ pub async fn get_bilibili_live_stream_url_with_quality(
         error_message: final_error_message,
         upstream_url: Some(real_url),
         available_streams: Some(variants),
+        normalized_room_id: None,
     })
 }

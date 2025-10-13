@@ -100,6 +100,7 @@ interface DouyinApiStreamInfo {
   avatar?: string | null;
   status?: number | null;
   error_message?: string | null;
+  normalized_room_id?: string | null;
 }
 
 interface HuyaAnchorItem {
@@ -244,9 +245,10 @@ const performDouyinIdSearch = async (userInputRoomId: string) => {
         searchError.value = '没有搜索到主播。';
       } else if (douyinInfo.anchor_name) {
         const isLive = douyinInfo.status === 2;
+        const normalizedId = (douyinInfo as any).normalized_room_id ?? userInputRoomId;
         searchResults.value = [{
           platform: Platform.DOUYIN,
-          roomId: userInputRoomId,
+          roomId: normalizedId,
           userName: douyinInfo.anchor_name || '未知抖音主播',
           roomTitle: douyinInfo.title || null,
           avatar: douyinInfo.avatar || null,
