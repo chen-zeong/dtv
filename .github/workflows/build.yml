@@ -27,9 +27,7 @@ jobs:
           - platform: 'ubuntu-22.04'
             args: ''
             arch: 'x64'
-          - platform: 'windows-latest'
-            args: ''
-            arch: 'x64'
+
           - platform: 'macos-13'
             args: ''
             arch: 'x64'
