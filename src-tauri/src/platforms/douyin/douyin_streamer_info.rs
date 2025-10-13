@@ -58,7 +58,6 @@ pub async fn fetch_douyin_streamer_info(
                         normalized_room_id: None,
                     });
                 }};
-                println!("room: {:?}", room);
                 let status = room.get("status").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
                 let title = room.get("title").and_then(|v| v.as_str()).map(|s| s.to_string());
                 let owner = room.get("owner");
