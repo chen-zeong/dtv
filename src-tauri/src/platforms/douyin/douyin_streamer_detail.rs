@@ -6,11 +6,6 @@ use crate::StreamUrlStore;
 use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, ACCEPT_LANGUAGE, COOKIE, REFERER, USER_AGENT};
 use serde_json::Value;
 use tauri::{command, AppHandle, State};
-use std::fs;
-use once_cell::sync::Lazy;
-use std::sync::Mutex;
-
-static COLLECTED_DY_COOKIE: Lazy<Mutex<Option<String>>> = Lazy::new(|| Mutex::new(None));
 
 #[derive(Debug, Clone)
 ]
@@ -66,7 +61,7 @@ pub async fn get_douyin_live_stream_url_with_quality(
             normalized_room_id: None,
         };
         // 写入桌面文件
-        write_douyin_return_to_desktop_simple(&result, &room_id_str, &quality, "N/A");
+        // 已移除：写入桌面文件调用 write_douyin_return_to_desktop_simple(&result, &room_id_str, &quality, "N/A");
         return Ok(result);
     }
 
@@ -87,7 +82,7 @@ pub async fn get_douyin_live_stream_url_with_quality(
 
      // 封装统一写入并返回的闭包
      let write_and_ok = |res: CommonLiveStreamInfo| {
-         write_douyin_return_to_desktop(&http_client, &room_id_str, &quality, parse_path, &res);
+         // 已移除：写入桌面文件调用 write_douyin_return_to_desktop(&http_client, &room_id_str, &quality, parse_path, &res);
          Ok(res)
      };
 
@@ -371,71 +366,4 @@ impl DouyinSitePyDefaults {
     fn ua() -> &'static str {
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36 Edg/125.0.0.0"
     }
-}
-
-// 写桌面文件：完整版本（包含 client headers 与HTML/reflow路径信息）
-fn write_douyin_return_to_desktop(client: &HttpClient, room_id_str: &str, quality: &str, parse_path: &str, result: &CommonLiveStreamInfo) {
-    let mut content = String::new();
-    content.push_str("[Request]\n");
-    content.push_str(&format!("room_id_str: {}\nquality: {}\nparse_path: {}\n", room_id_str, quality, parse_path));
-
-    content.push_str("\n[Client Headers]\n");
-    content.push_str(&client.get_debug_headers());
-
-    // Cookies
-    content.push_str("\n[Cookies]\n");
-    let dy_cookie_opt = COLLECTED_DY_COOKIE.lock().unwrap().clone();
-    if let Some(c) = dy_cookie_opt {
-        content.push_str(&format!("dy_cookie(HTML重试Cookie): {}\n", c));
-    } else {
-        content.push_str("dy_cookie: <none>\n");
-    }
-
-    // 特定路径的请求信息
-    if parse_path == "HTML(webRid)" {
-        content.push_str("\n[HTML Request]\n");
-        content.push_str(&format!("UA: {}\nReferer: {}\nRoom URL: https://live.douyin.com/{}\n", DouyinSitePyDefaults::ua(), DouyinSitePyDefaults::REFERER, room_id_str));
-        if let Some(c) = COLLECTED_DY_COOKIE.lock().unwrap().clone() {
-            content.push_str(&format!("Cookie: {}\n", c));
-        }
-    } else {
-        // 构造 reflow 请求参数
-        let params = vec![
-            ("type_id", "0"),
-            ("live_id", "1"),
-            ("room_id", room_id_str),
-            ("sec_user_id", ""),
-            ("version_code", "99.99.99"),
-            ("app_id", "6383"),
-        ];
-        let mut query = String::new();
-        for (i, (k, v)) in params.iter().enumerate() {
-            if i > 0 { query.push('&'); }
-            query.push_str(&format!("{}={}", k, v));
-        }
-        content.push_str("\n[Reflow Request]\n");
-        content.push_str(&format!("URL: https://webcast.amemv.com/webcast/room/reflow/info/?{}\n", query));
-        content.push_str(&format!("Headers: UA={} Referer={} Accept=application/json, text/plain, */* Accept-Language=zh-CN,zh;q=0.9\n", DouyinSitePyDefaults::ua(), DouyinSitePyDefaults::REFERER));
-    }
-
-    content.push_str("\n[Return]\n");
-    match serde_json::to_string_pretty(result) {
-        Ok(s) => content.push_str(&s),
-        Err(_) => content.push_str("<failed to serialize return>"),
-    }
-
-    let _ = fs::write("/Users/czeong/Desktop/douyin_live_return.txt", content);
-}
-
-// 简化版写桌面文件：用于早期N/A路径
-fn write_douyin_return_to_desktop_simple(result: &CommonLiveStreamInfo, room_id_str: &str, quality: &str, parse_path: &str) {
-    let mut content = String::new();
-    content.push_str("[Request]\n");
-    content.push_str(&format!("room_id_str: {}\nquality: {}\nparse_path: {}\n", room_id_str, quality, parse_path));
-    content.push_str("\n[Return]\n");
-    match serde_json::to_string_pretty(result) {
-        Ok(s) => content.push_str(&s),
-        Err(_) => content.push_str("<failed to serialize return>"),
-    }
-    let _ = fs::write("/Users/czeong/Desktop/douyin_live_return.txt", content);
 }
