@@ -46,6 +46,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf protobuf-compiler pkg-config perl build-essential
 
+      - name: Disable Homebrew auto update (macOS Intel)
+        if: matrix.platform == 'macos-13'
+        run: echo "HOMEBREW_NO_AUTO_UPDATE=1" >> $GITHUB_ENV
+
       - name: Install dependencies (macOS)
         if: startsWith(matrix.platform, 'macos-')
         run: |
