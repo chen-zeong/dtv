@@ -1,4 +1,6 @@
-use reqwest::header::{HeaderMap, HeaderValue, USER_AGENT, REFERER, ORIGIN, ACCEPT, ACCEPT_LANGUAGE};
+use reqwest::header::{
+    HeaderMap, HeaderValue, ACCEPT, ACCEPT_LANGUAGE, ORIGIN, REFERER, USER_AGENT,
+};
 use serde::Serialize;
 
 #[derive(Debug, Serialize)]
@@ -11,12 +13,21 @@ pub struct HuyaAnchorItem {
 }
 
 #[tauri::command]
-pub async fn search_huya_anchors(keyword: String, page: Option<usize>) -> Result<Vec<HuyaAnchorItem>, String> {
-    let client = reqwest::Client::builder().no_proxy().build().map_err(|e| e.to_string())?;
+pub async fn search_huya_anchors(
+    keyword: String,
+    page: Option<usize>,
+) -> Result<Vec<HuyaAnchorItem>, String> {
+    let client = reqwest::Client::builder()
+        .no_proxy()
+        .build()
+        .map_err(|e| e.to_string())?;
     let url = "https://search.cdn.huya.com/";
     let mut headers = HeaderMap::new();
     headers.insert(USER_AGENT, HeaderValue::from_static("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36"));
-    headers.insert(REFERER, HeaderValue::from_static("https://www.huya.com/search/"));
+    headers.insert(
+        REFERER,
+        HeaderValue::from_static("https://www.huya.com/search/"),
+    );
     headers.insert(ORIGIN, HeaderValue::from_static("https://www.huya.com"));
     headers.insert(ACCEPT, HeaderValue::from_static("*/*"));
     headers.insert(ACCEPT_LANGUAGE, HeaderValue::from_static("zh-CN,zh;q=0.9"));
@@ -54,11 +65,30 @@ pub async fn search_huya_anchors(keyword: String, page: Option<usize>) -> Result
     {
         for item in list {
             let anchor = HuyaAnchorItem {
-                room_id: item.get("room_id").and_then(|v| v.as_i64()).unwrap_or(0).to_string(),
-                avatar: item.get("game_avatarUrl180").and_then(|v| v.as_str()).unwrap_or("").to_string(),
-                user_name: item.get("game_nick").and_then(|v| v.as_str()).unwrap_or("").to_string(),
-                live_status: item.get("gameLiveOn").and_then(|v| v.as_bool()).unwrap_or(false),
-                title: item.get("live_intro").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                room_id: item
+                    .get("room_id")
+                    .and_then(|v| v.as_i64())
+                    .unwrap_or(0)
+                    .to_string(),
+                avatar: item
+                    .get("game_avatarUrl180")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string(),
+                user_name: item
+                    .get("game_nick")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string(),
+                live_status: item
+                    .get("gameLiveOn")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false),
+                title: item
+                    .get("live_intro")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string(),
             };
             items.push(anchor);
         }

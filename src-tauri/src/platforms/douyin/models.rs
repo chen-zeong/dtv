@@ -26,10 +26,8 @@ pub struct RoomDataEntry {
     pub stream_url_container: Option<StreamUrlContainer>,
 }
 
-#[allow(dead_code)
-]
-#[derive(Debug, Deserialize, Clone)
-]
+#[allow(dead_code)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct LiveCoreSdkData {
     #[serde(rename = "pull_data")]
     pub pull_data: Option<PullDataContainer>,
@@ -112,8 +110,8 @@ pub struct StreamQualityDetail {
 #[allow(dead_code)] // Allow dead code for fields used by serde
 pub struct StreamLinks {
     pub flv: Option<String>,
-                             // pub cdn_multi_arc: Option<Value>,
-                             // pub sdk_params: Option<String>,
+    // pub cdn_multi_arc: Option<Value>,
+    // pub sdk_params: Option<String>,
 }
 
 // Enum for stream resolutions, if needed for consistent key access

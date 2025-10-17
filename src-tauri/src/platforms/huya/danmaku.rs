@@ -1,10 +1,10 @@
+use futures_util::{SinkExt, StreamExt};
+use log::info;
+use tars_stream::prelude::*;
 use tauri::Emitter;
 use tokio::sync::mpsc as tokio_mpsc;
 use tokio::time::{sleep, Duration};
-use futures_util::{SinkExt, StreamExt};
-use tokio_tungstenite::{connect_async, tungstenite::{Message as WsMessage}};
-use log::info;
-use tars_stream::prelude::*;
+use tokio_tungstenite::{connect_async, tungstenite::Message as WsMessage};
 
 const WS_URL: &str = "wss://cdnws.api.huya.com";
 // 恢复 HEARTBEAT 常量（被误删），供心跳发送使用
@@ -16,8 +16,14 @@ const HEARTBEAT_BASE64: &str = "ABQdAAwsNgBM"; // same as Python
 // Minimal JCE/TARS codec for required Huya structures
 
 async fn fetch_huya_ids(room_id: &str) -> Result<(i64, i64), String> {
-    let url = format!("https://mp.huya.com/cache.php?m=Live&do=profileRoom&roomid={}&showSecret=1", room_id);
-    let client = reqwest::Client::builder().no_proxy().build().map_err(|e| e.to_string())?;
+    let url = format!(
+        "https://mp.huya.com/cache.php?m=Live&do=profileRoom&roomid={}&showSecret=1",
+        room_id
+    );
+    let client = reqwest::Client::builder()
+        .no_proxy()
+        .build()
+        .map_err(|e| e.to_string())?;
     let resp = client
         .get(url)
         .header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36")
@@ -48,7 +54,10 @@ async fn fetch_huya_ids(room_id: &str) -> Result<(i64, i64), String> {
         .unwrap_or_default();
 
     let top_sid = if let Some(first) = base_list.get(0) {
-        first.get("lChannelId").and_then(|x| x.as_i64()).unwrap_or(0)
+        first
+            .get("lChannelId")
+            .and_then(|x| x.as_i64())
+            .unwrap_or(0)
     } else {
         0
     };
@@ -57,7 +66,10 @@ async fn fetch_huya_ids(room_id: &str) -> Result<(i64, i64), String> {
         return Err("未找到频道ID，房间可能未开播".to_string());
     }
 
-    println!("[Huya Danmaku] fetch_huya_ids: room_id={} yyid={} topSid={}", room_id, ayyuid, top_sid);
+    println!(
+        "[Huya Danmaku] fetch_huya_ids: room_id={} yyid={} topSid={}",
+        room_id, ayyuid, top_sid
+    );
     Ok((ayyuid, top_sid))
 }
 
@@ -70,7 +82,10 @@ pub struct HuyaJoinParams {
 #[tauri::command]
 pub async fn fetch_huya_join_params(room_id: String) -> Result<HuyaJoinParams, String> {
     match fetch_huya_ids(&room_id).await {
-        Ok((ayyuid, top_sid)) => Ok(HuyaJoinParams { yyid: ayyuid, top_sid }),
+        Ok((ayyuid, top_sid)) => Ok(HuyaJoinParams {
+            yyid: ayyuid,
+            top_sid,
+        }),
         Err(e) => Err(e),
     }
 }
@@ -82,8 +97,14 @@ pub async fn start_huya_danmaku_listener(
     state: tauri::State<'_, crate::platforms::common::HuyaDanmakuState>,
 ) -> Result<(), String> {
     let room_id_or_url = payload.args.room_id_str.clone();
-    println!("[Huya Danmaku] start listener room_id_or_url={}", room_id_or_url);
-    info!("[Huya Danmaku] start listener room_id_or_url={}", room_id_or_url);
+    println!(
+        "[Huya Danmaku] start listener room_id_or_url={}",
+        room_id_or_url
+    );
+    info!(
+        "[Huya Danmaku] start listener room_id_or_url={}",
+        room_id_or_url
+    );
 
     // 停止已有监听
     let previous_tx = {
@@ -107,8 +128,14 @@ pub async fn start_huya_danmaku_listener(
     let room_id_clone = room_id_or_url.clone();
 
     tokio::spawn(async move {
-        println!("[Huya Danmaku] spawned worker for room_id={}", room_id_clone);
-        info!("[Huya Danmaku] spawned worker for room_id={}", room_id_clone);
+        println!(
+            "[Huya Danmaku] spawned worker for room_id={}",
+            room_id_clone
+        );
+        info!(
+            "[Huya Danmaku] spawned worker for room_id={}",
+            room_id_clone
+        );
         // 1) 获取 ws 与注册数据（与根目录 huya.rs 同步）
         let (ws_url, reg_data) = match get_ws_info_tars(&room_id_clone).await {
             Ok(v) => v,
@@ -127,8 +154,16 @@ pub async fn start_huya_danmaku_listener(
             }
         };
 
-        println!("[Huya Danmaku] ws_url={} reg_len={}", ws_url, reg_data.len());
-        info!("[Huya Danmaku] ws_url={} reg_len={}", ws_url, reg_data.len());
+        println!(
+            "[Huya Danmaku] ws_url={} reg_len={}",
+            ws_url,
+            reg_data.len()
+        );
+        info!(
+            "[Huya Danmaku] ws_url={} reg_len={}",
+            ws_url,
+            reg_data.len()
+        );
 
         // 2) 连接 WebSocket
         println!("[Huya Danmaku] connecting to {}", ws_url);
@@ -179,17 +214,24 @@ pub async fn start_huya_danmaku_listener(
 
         let recv_task = async {
             while let Some(m) = ws_read.next().await {
-                let m = match m { Ok(x) => x, Err(e) => return Err(anyhow::anyhow!(e)) };
+                let m = match m {
+                    Ok(x) => x,
+                    Err(e) => return Err(anyhow::anyhow!(e)),
+                };
                 match m {
                     WsMessage::Binary(bin) => {
                         let (top_cmd, nested_cmd) = peek_cmds(&bin);
                         println!(
                             "[Huya Danmaku] WS msg: len={} top_cmd={:?} nested_cmd={:?}",
-                            bin.len(), top_cmd, nested_cmd
+                            bin.len(),
+                            top_cmd,
+                            nested_cmd
                         );
                         info!(
                             "[Huya Danmaku] WS msg: len={} top_cmd={:?} nested_cmd={:?}",
-                            bin.len(), top_cmd, nested_cmd
+                            bin.len(),
+                            top_cmd,
+                            nested_cmd
                         );
                         match decode_msg_tars(&bin)? {
                             Some((nick, text)) => {
@@ -208,8 +250,14 @@ pub async fn start_huya_danmaku_listener(
                             }
                             None => {
                                 if top_cmd == Some(7) {
-                                    println!("[Huya Danmaku] non-chat or empty msg, nested={:?}", nested_cmd);
-                                    info!("[Huya Danmaku] non-chat or empty msg, nested={:?}", nested_cmd);
+                                    println!(
+                                        "[Huya Danmaku] non-chat or empty msg, nested={:?}",
+                                        nested_cmd
+                                    );
+                                    info!(
+                                        "[Huya Danmaku] non-chat or empty msg, nested={:?}",
+                                        nested_cmd
+                                    );
                                 }
                             }
                         }
@@ -244,14 +292,17 @@ pub async fn stop_huya_danmaku_listener(
     room_id: String,
     state: tauri::State<'_, crate::platforms::common::HuyaDanmakuState>,
 ) -> Result<(), String> {
-    println!("[Huya Danmaku] stop_huya_danmaku_listener called for room_id={}", room_id);
-    
+    println!(
+        "[Huya Danmaku] stop_huya_danmaku_listener called for room_id={}",
+        room_id
+    );
+
     // 取出当前监听的停止信号发送器
     let tx = {
         let mut lock = state.inner().0.lock().unwrap();
         lock.take()
     };
-    
+
     if let Some(tx) = tx {
         if let Err(_) = tx.send(()).await {
             println!("[Huya Danmaku] 停止信号发送失败，监听器可能已经退出");
@@ -261,12 +312,9 @@ pub async fn stop_huya_danmaku_listener(
     } else {
         println!("[Huya Danmaku] 没有找到活跃的监听器需要停止");
     }
-    
+
     Ok(())
 }
-
-
-
 
 // 采用 tars_stream 的实现（参考 all_in_one.rs），保留 Tauri 命令，对旧 jce 逻辑停用
 
@@ -287,7 +335,12 @@ impl StructFromTars for HuyaUser {
         let imid = decoder.read_int64(1, false, -1)?;
         let name = decoder.read_string(2, false, "".to_string())?;
         let gender = decoder.read_int32(3, false, -1)?;
-        Ok(HuyaUser { _uid: uid, _imid: imid, name, _gender: gender })
+        Ok(HuyaUser {
+            _uid: uid,
+            _imid: imid,
+            name,
+            _gender: gender,
+        })
     }
 }
 
@@ -318,22 +371,30 @@ fn find_uid_in_json(v: &serde_json::Value) -> Option<String> {
                 let key = k.to_lowercase();
                 if key == "ayyuid" || key == "yyuid" || key == "lp" || key == "uid" {
                     match val {
-                        serde_json::Value::String(s) => if !s.is_empty() { return Some(s.clone()); },
+                        serde_json::Value::String(s) => {
+                            if !s.is_empty() {
+                                return Some(s.clone());
+                            }
+                        }
                         serde_json::Value::Number(n) => return Some(n.to_string()),
                         _ => {}
                     }
                 }
-                if let Some(found) = find_uid_in_json(val) { return Some(found); }
+                if let Some(found) = find_uid_in_json(val) {
+                    return Some(found);
+                }
             }
             None
         }
         serde_json::Value::Array(arr) => {
             for item in arr {
-                if let Some(found) = find_uid_in_json(item) { return Some(found); }
+                if let Some(found) = find_uid_in_json(item) {
+                    return Some(found);
+                }
             }
             None
         }
-        _ => None
+        _ => None,
     }
 }
 
@@ -345,40 +406,63 @@ async fn get_ws_info_tars(room_id_or_url: &str) -> Result<(String, Vec<u8>), Str
     let url = if room_id_or_url.starts_with("http") {
         reqwest::Url::parse(room_id_or_url).map_err(|e| e.to_string())?
     } else {
-        reqwest::Url::parse(&format!("https://www.huya.com/{}", room_id_or_url)).map_err(|e| e.to_string())?
+        reqwest::Url::parse(&format!("https://www.huya.com/{}", room_id_or_url))
+            .map_err(|e| e.to_string())?
     };
-    let rid = url.path_segments().and_then(|s| s.last()).ok_or_else(|| "房间ID解析失败".to_string())?;
+    let rid = url
+        .path_segments()
+        .and_then(|s| s.last())
+        .ok_or_else(|| "房间ID解析失败".to_string())?;
     println!("[Huya Danmaku] get_ws_info_tars rid={}", rid);
     info!("[Huya Danmaku] get_ws_info_tars rid={}", rid);
 
-    let client = reqwest::Client::builder().no_proxy().build().map_err(|e| e.to_string())?;
+    let client = reqwest::Client::builder()
+        .no_proxy()
+        .build()
+        .map_err(|e| e.to_string())?;
     let resp_text = client
         .get(format!("https://www.huya.com/{}", rid))
         .header("User-Agent", gen_ua())
         .header("Referer", "https://www.huya.com/")
-        .send().await.map_err(|e| e.to_string())?
-        .text().await.map_err(|e| e.to_string())?;
+        .send()
+        .await
+        .map_err(|e| e.to_string())?
+        .text()
+        .await
+        .map_err(|e| e.to_string())?;
     println!("[Huya Danmaku] fetched room page len={}", resp_text.len());
     info!("[Huya Danmaku] fetched room page len={}", resp_text.len());
 
     // 先尝试 TT_PROFILE_INFO 提取 lp
     let mut ayyuid = {
-        let re_prof = regex::Regex::new(r#"var\s+TT_PROFILE_INFO\s*=\s*(\{[\s\S]*?\});"#).map_err(|e| e.to_string())?;
+        let re_prof = regex::Regex::new(r#"var\s+TT_PROFILE_INFO\s*=\s*(\{[\s\S]*?\});"#)
+            .map_err(|e| e.to_string())?;
         if let Some(cap) = re_prof.captures(&resp_text) {
             if let Ok(j) = serde_json::from_str::<serde_json::Value>(&cap[1]) {
-                j.pointer("/lp").map(|v| v.to_string().replace('"', "")).unwrap_or_default()
-            } else { String::new() }
-        } else { String::new() }
+                j.pointer("/lp")
+                    .map(|v| v.to_string().replace('"', ""))
+                    .unwrap_or_default()
+            } else {
+                String::new()
+            }
+        } else {
+            String::new()
+        }
     };
     if ayyuid.is_empty() {
         // 直接匹配 lp
-        let re_lp = regex::Regex::new(r#"\\\"lp\\\"\s*:\s*\\\"?(\d+)\\\"?"#).map_err(|e| e.to_string())?;
-        if let Some(cap) = re_lp.captures(&resp_text) { ayyuid = cap.get(1).unwrap().as_str().to_string(); }
+        let re_lp =
+            regex::Regex::new(r#"\\\"lp\\\"\s*:\s*\\\"?(\d+)\\\"?"#).map_err(|e| e.to_string())?;
+        if let Some(cap) = re_lp.captures(&resp_text) {
+            ayyuid = cap.get(1).unwrap().as_str().to_string();
+        }
     }
     if ayyuid.is_empty() {
         // 匹配 ayyuid / yyuid
-        let re_ayyuid = regex::Regex::new(r#"\\\"ayyuid\\\"\s*:\s*\\\"?(\d+)\\\"?"#).map_err(|e| e.to_string())?;
-        let re_yyuid = regex::Regex::new(r#"\\\"yyuid\\\"\s*:\s*\\\"?(\d+)\\\"?"#).map_err(|e| e.to_string())?;
+        let re_ayyuid = regex::Regex::new(r#"\\\"ayyuid\\\"\s*:\s*\\\"?(\d+)\\\"?"#)
+            .map_err(|e| e.to_string())?;
+        let re_yyuid = regex::Regex::new(r#"\\\"yyuid\\\"\s*:\s*\\\"?(\d+)\\\"?"#)
+            .map_err(|e| e.to_string())?;
         if let Some(cap) = re_ayyuid.captures(&resp_text) {
             ayyuid = cap.get(1).unwrap().as_str().to_string();
         } else if let Some(cap) = re_yyuid.captures(&resp_text) {
@@ -387,13 +471,28 @@ async fn get_ws_info_tars(room_id_or_url: &str) -> Result<(String, Vec<u8>), Str
     }
     if ayyuid.is_empty() {
         // 回退：调用 mp.huya.com
-        let url_api = format!("https://mp.huya.com/cache.php?m=Live&do=profileRoom&roomid={}", rid);
-        let text = client.get(&url_api).header("User-Agent", gen_ua()).send().await.map_err(|e| e.to_string())?.text().await.map_err(|e| e.to_string())?;
+        let url_api = format!(
+            "https://mp.huya.com/cache.php?m=Live&do=profileRoom&roomid={}",
+            rid
+        );
+        let text = client
+            .get(&url_api)
+            .header("User-Agent", gen_ua())
+            .send()
+            .await
+            .map_err(|e| e.to_string())?
+            .text()
+            .await
+            .map_err(|e| e.to_string())?;
         if let Ok(j) = serde_json::from_str::<serde_json::Value>(&text) {
-            if let Some(found) = find_uid_in_json(&j) { ayyuid = found; }
+            if let Some(found) = find_uid_in_json(&j) {
+                ayyuid = found;
+            }
         }
     }
-    if ayyuid.is_empty() { ayyuid = rid.to_string(); }
+    if ayyuid.is_empty() {
+        ayyuid = rid.to_string();
+    }
     println!("[Huya Danmaku] final ayyuid={}", ayyuid);
     info!("[Huya Danmaku] final ayyuid={}", ayyuid);
 
@@ -405,11 +504,14 @@ async fn get_ws_info_tars(room_id_or_url: &str) -> Result<(String, Vec<u8>), Str
 
     let mut oos = TarsEncoder::new();
     oos.write_list(0, &topics).map_err(|e| e.to_string())?;
-    oos.write_string(1, &"".to_owned()).map_err(|e| e.to_string())?;
+    oos.write_string(1, &"".to_owned())
+        .map_err(|e| e.to_string())?;
 
     let mut wscmd = TarsEncoder::new();
     wscmd.write_int32(0, 16).map_err(|e| e.to_string())?;
-    wscmd.write_bytes(1, &oos.to_bytes()).map_err(|e| e.to_string())?;
+    wscmd
+        .write_bytes(1, &oos.to_bytes())
+        .map_err(|e| e.to_string())?;
     let b = wscmd.to_bytes();
     println!("[Huya Danmaku] reg payload built, len={}", b.len());
     info!("[Huya Danmaku] reg payload built, len={}", b.len());
@@ -436,20 +538,43 @@ fn decode_msg_tars(data: &[u8]) -> anyhow::Result<Option<(String, String)>> {
 
     if nested == 1400 {
         let user = payload
-            .read_struct(0, false, HuyaUser { _uid: -1, _imid: -1, name: "".to_owned(), _gender: 1 })
-            .unwrap_or(HuyaUser { _uid: -1, _imid: -1, name: "".to_owned(), _gender: 1 });
-        let text = payload.read_string(3, false, "".to_owned()).unwrap_or_default();
+            .read_struct(
+                0,
+                false,
+                HuyaUser {
+                    _uid: -1,
+                    _imid: -1,
+                    name: "".to_owned(),
+                    _gender: 1,
+                },
+            )
+            .unwrap_or(HuyaUser {
+                _uid: -1,
+                _imid: -1,
+                name: "".to_owned(),
+                _gender: 1,
+            });
+        let text = payload
+            .read_string(3, false, "".to_owned())
+            .unwrap_or_default();
         let fmt = payload
             .read_struct(6, false, HuyaDanmakuFmt { color: 16777215 })
             .unwrap_or(HuyaDanmakuFmt { color: 16777215 });
         if !text.is_empty() {
-            let nick = if !user.name.is_empty() { user.name } else { "匿名".to_string() };
-            let _color_hex = format!(
-                "{:06x}",
-                if fmt.color <= 0 { 16777215 } else { fmt.color }
+            let nick = if !user.name.is_empty() {
+                user.name
+            } else {
+                "匿名".to_string()
+            };
+            let _color_hex = format!("{:06x}", if fmt.color <= 0 { 16777215 } else { fmt.color });
+            println!(
+                "[Huya Danmaku] decoded nested=1400 nick={} text={}",
+                nick, text
             );
-            println!("[Huya Danmaku] decoded nested=1400 nick={} text={}", nick, text);
-            info!("[Huya Danmaku] decoded nested=1400 nick={} text={}", nick, text);
+            info!(
+                "[Huya Danmaku] decoded nested=1400 nick={} text={}",
+                nick, text
+            );
             ret = Some((nick, text));
         } else {
             println!("[Huya Danmaku] empty text in nested=1400");

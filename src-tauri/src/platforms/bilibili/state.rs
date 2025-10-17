@@ -6,11 +6,16 @@ pub struct BilibiliState {
 }
 
 #[tauri::command]
-pub async fn generate_bilibili_w_webid(state: tauri::State<'_, BilibiliState>) -> Result<String, String> {
+pub async fn generate_bilibili_w_webid(
+    state: tauri::State<'_, BilibiliState>,
+) -> Result<String, String> {
     let ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36";
     let url = "https://live.bilibili.com/lol";
     println!("[Bilibili] Generating w_webid: GET {}", url);
-    println!("[Bilibili] Headers: User-Agent={}, Referer={} ", ua, "https://www.bilibili.com/");
+    println!(
+        "[Bilibili] Headers: User-Agent={}, Referer={} ",
+        ua, "https://www.bilibili.com/"
+    );
 
     let client = reqwest::Client::builder()
         .user_agent(ua)
@@ -25,12 +30,15 @@ pub async fn generate_bilibili_w_webid(state: tauri::State<'_, BilibiliState>) -
         .await
         .map_err(|e| format!("Request failed: {}", e))?;
 
-    let text = resp.text().await.map_err(|e| format!("Read text failed: {}", e))?;
+    let text = resp
+        .text()
+        .await
+        .map_err(|e| format!("Read text failed: {}", e))?;
 
     // 优先在 window._render_data_ 块中查找 access_id
     let mut access_id: Option<String> = None;
-    let needle1 = "\"access_id\":\"";      // "access_id":"
-    let needle2 = "\"access_id\": \"";     // "access_id": " (带空格)
+    let needle1 = "\"access_id\":\""; // "access_id":"
+    let needle2 = "\"access_id\": \""; // "access_id": " (带空格)
 
     if let Some(block_start) = text.find("window._render_data_") {
         let block = &text[block_start..];

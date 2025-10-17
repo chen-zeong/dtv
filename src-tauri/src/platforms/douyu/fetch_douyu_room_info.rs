@@ -18,7 +18,10 @@ pub struct DouyuFollowInfo {
 
 #[tauri::command]
 pub async fn fetch_douyu_room_info(room_id: String) -> Result<DouyuFollowInfo, String> {
-    let client = reqwest::Client::builder().no_proxy().build().map_err(|e| e.to_string())?;
+    let client = reqwest::Client::builder()
+        .no_proxy()
+        .build()
+        .map_err(|e| e.to_string())?;
 
     let mut headers = HeaderMap::new();
     headers.insert(

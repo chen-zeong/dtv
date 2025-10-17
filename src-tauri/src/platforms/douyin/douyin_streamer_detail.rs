@@ -1,14 +1,15 @@
 use crate::platforms::common::http_client::HttpClient;
-use crate::platforms::common::LiveStreamInfo as CommonLiveStreamInfo;
 use crate::platforms::common::GetStreamUrlPayload;
+use crate::platforms::common::LiveStreamInfo as CommonLiveStreamInfo;
 use crate::proxy::{start_proxy, ProxyServerHandle};
 use crate::StreamUrlStore;
-use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, ACCEPT_LANGUAGE, COOKIE, REFERER, USER_AGENT};
+use reqwest::header::{
+    HeaderMap, HeaderValue, ACCEPT, ACCEPT_LANGUAGE, COOKIE, REFERER, USER_AGENT,
+};
 use serde_json::Value;
 use tauri::{command, AppHandle, State};
 
-#[derive(Debug, Clone)
-]
+#[derive(Debug, Clone)]
 #[allow(dead_code)]
 struct DetailInfo {
     web_rid: Option<String>,
@@ -47,7 +48,10 @@ pub async fn get_douyin_live_stream_url_with_quality(
 ) -> Result<CommonLiveStreamInfo, String> {
     let room_id_str = payload.args.room_id_str;
 
-    println!("[Douyin Stream Detail] 请求获取直播流: room_id_str='{}', 画质='{}'", room_id_str, quality);
+    println!(
+        "[Douyin Stream Detail] 请求获取直播流: room_id_str='{}', 画质='{}'",
+        room_id_str, quality
+    );
     if room_id_str.is_empty() {
         let result = CommonLiveStreamInfo {
             title: None,
@@ -76,15 +80,14 @@ pub async fn get_douyin_live_stream_url_with_quality(
     let parse_path = "reflow(room_id)";
     println!(
         "[Douyin Stream Detail] 解析路径选择: {} -> {}",
-        room_id_str,
-        parse_path
+        room_id_str, parse_path
     );
 
-     // 封装统一写入并返回的闭包
-     let write_and_ok = |res: CommonLiveStreamInfo| {
-         // 已移除：写入桌面文件调用 write_douyin_return_to_desktop(&http_client, &room_id_str, &quality, parse_path, &res);
-         Ok(res)
-     };
+    // 封装统一写入并返回的闭包
+    let write_and_ok = |res: CommonLiveStreamInfo| {
+        // 已移除：写入桌面文件调用 write_douyin_return_to_desktop(&http_client, &room_id_str, &quality, parse_path, &res);
+        Ok(res)
+    };
 
     // 统一使用 room_id 的 reflow info 接口
     let detail = match fetch_room_detail_by_room_id(&http_client, &room_id_str).await {
@@ -149,17 +152,31 @@ pub async fn get_douyin_live_stream_url_with_quality(
     );
     let mut upstream_url: Option<String> = None;
     if upstream_url.is_none() {
-        if let Some(flv_map) = stream_url_val.get("flv_pull_url").and_then(|v| v.as_object()) {
-            let desired_name = match quality.as_str() { "原画" => "origin", "高清" => "hd", "标清" => "sd", _ => "origin" };
+        if let Some(flv_map) = stream_url_val
+            .get("flv_pull_url")
+            .and_then(|v| v.as_object())
+        {
+            let desired_name = match quality.as_str() {
+                "原画" => "origin",
+                "高清" => "hd",
+                "标清" => "sd",
+                _ => "origin",
+            };
             let mut chosen: Option<String> = None;
             let mut chosen_key: Option<String> = None;
-            println!("[Douyin Stream Detail] 回退解析 flv_pull_url，目标画质='{}'", desired_name);
+            println!(
+                "[Douyin Stream Detail] 回退解析 flv_pull_url，目标画质='{}'",
+                desired_name
+            );
             for (k, v) in flv_map.iter() {
                 if let Some(url) = v.as_str() {
                     let key_lower = k.to_ascii_lowercase();
-                    if (desired_name == "origin" && (key_lower.contains("origin") || key_lower.contains("full_hd"))) ||
-                       (desired_name == "hd" && key_lower.contains("hd")) ||
-                       (desired_name == "sd" && (key_lower.contains("sd") || key_lower.contains("ld"))) {
+                    if (desired_name == "origin"
+                        && (key_lower.contains("origin") || key_lower.contains("full_hd")))
+                        || (desired_name == "hd" && key_lower.contains("hd"))
+                        || (desired_name == "sd"
+                            && (key_lower.contains("sd") || key_lower.contains("ld")))
+                    {
                         chosen = Some(url.to_string());
                         chosen_key = Some(k.clone());
                         break;
@@ -173,7 +190,11 @@ pub async fn get_douyin_live_stream_url_with_quality(
                 }
             }
             if let Some(c) = chosen {
-                println!("[Douyin Stream Detail] 从 flv_pull_url 选取 key='{}' -> {}", chosen_key.unwrap_or("<unknown>".to_string()), c);
+                println!(
+                    "[Douyin Stream Detail] 从 flv_pull_url 选取 key='{}' -> {}",
+                    chosen_key.unwrap_or("<unknown>".to_string()),
+                    c
+                );
                 upstream_url = Some(c);
             } else {
                 eprintln!("[Douyin Stream Detail] 未能从 flv_pull_url 选取到地址");
@@ -181,17 +202,31 @@ pub async fn get_douyin_live_stream_url_with_quality(
         }
 
         if upstream_url.is_none() {
-            if let Some(hls_map) = stream_url_val.get("hls_pull_url_map").and_then(|v| v.as_object()) {
-                let desired_name = match quality.as_str() { "原画" => "origin", "高清" => "hd", "标清" => "sd", _ => "origin" };
+            if let Some(hls_map) = stream_url_val
+                .get("hls_pull_url_map")
+                .and_then(|v| v.as_object())
+            {
+                let desired_name = match quality.as_str() {
+                    "原画" => "origin",
+                    "高清" => "hd",
+                    "标清" => "sd",
+                    _ => "origin",
+                };
                 let mut chosen: Option<String> = None;
                 let mut chosen_key: Option<String> = None;
-                println!("[Douyin Stream Detail] 回退解析 hls_pull_url_map，目标画质='{}'", desired_name);
+                println!(
+                    "[Douyin Stream Detail] 回退解析 hls_pull_url_map，目标画质='{}'",
+                    desired_name
+                );
                 for (k, v) in hls_map.iter() {
                     if let Some(url) = v.as_str() {
                         let key_lower = k.to_ascii_lowercase();
-                        if (desired_name == "origin" && (key_lower.contains("origin") || key_lower.contains("full_hd"))) ||
-                           (desired_name == "hd" && key_lower.contains("hd")) ||
-                           (desired_name == "sd" && (key_lower.contains("sd") || key_lower.contains("ld"))) {
+                        if (desired_name == "origin"
+                            && (key_lower.contains("origin") || key_lower.contains("full_hd")))
+                            || (desired_name == "hd" && key_lower.contains("hd"))
+                            || (desired_name == "sd"
+                                && (key_lower.contains("sd") || key_lower.contains("ld")))
+                        {
                             chosen = Some(url.to_string());
                             chosen_key = Some(k.clone());
                             break;
@@ -205,7 +240,11 @@ pub async fn get_douyin_live_stream_url_with_quality(
                     }
                 }
                 if let Some(c) = chosen {
-                    println!("[Douyin Stream Detail] 从 hls_pull_url_map 选取 key='{}' -> {}", chosen_key.unwrap_or("<unknown>".to_string()), c);
+                    println!(
+                        "[Douyin Stream Detail] 从 hls_pull_url_map 选取 key='{}' -> {}",
+                        chosen_key.unwrap_or("<unknown>".to_string()),
+                        c
+                    );
                     upstream_url = Some(c);
                 } else {
                     eprintln!("[Douyin Stream Detail] 未能从 hls_pull_url_map 选取到地址");
@@ -221,11 +260,15 @@ pub async fn get_douyin_live_stream_url_with_quality(
             *guard = real_url.clone();
         }
         println!("[Douyin Stream Detail] 已写入 StreamUrlStore，准备启动本地代理");
-        let proxied_url = match start_proxy(app_handle, proxy_server_handle, stream_url_store).await {
+        let proxied_url = match start_proxy(app_handle, proxy_server_handle, stream_url_store).await
+        {
             Ok(proxy) => {
-                println!("[Douyin Stream Detail] 代理启动成功，返回代理地址: {}", proxy);
+                println!(
+                    "[Douyin Stream Detail] 代理启动成功，返回代理地址: {}",
+                    proxy
+                );
                 proxy
-            },
+            }
             Err(e) => {
                 eprintln!("[Douyin Stream Detail] 代理启动失败: {}，将返回真实地址", e);
                 return Ok(CommonLiveStreamInfo {
@@ -271,7 +314,10 @@ pub async fn get_douyin_live_stream_url_with_quality(
 
 async fn ensure_ttwid(http_client: &mut HttpClient) -> Result<(), String> {
     let live_url = "https://live.douyin.com/";
-    println!("[Douyin Stream Detail] ensure_ttwid: 请求 {} 以获取 ttwid", live_url);
+    println!(
+        "[Douyin Stream Detail] ensure_ttwid: 请求 {} 以获取 ttwid",
+        live_url
+    );
     let response = http_client
         .get_with_cookies(live_url)
         .await
@@ -293,7 +339,10 @@ async fn ensure_ttwid(http_client: &mut HttpClient) -> Result<(), String> {
     Ok(())
 }
 
-async fn fetch_room_detail_by_room_id(http_client: &HttpClient, room_id: &str) -> Result<Value, String> {
+async fn fetch_room_detail_by_room_id(
+    http_client: &HttpClient,
+    room_id: &str,
+) -> Result<Value, String> {
     let url = "https://webcast.amemv.com/webcast/room/reflow/info/";
     // 构建查询参数
     let params = vec![
@@ -306,16 +355,27 @@ async fn fetch_room_detail_by_room_id(http_client: &HttpClient, room_id: &str) -
     ];
     let mut query = String::new();
     for (i, (k, v)) in params.iter().enumerate() {
-        if i > 0 { query.push('&'); }
+        if i > 0 {
+            query.push('&');
+        }
         query.push_str(&format!("{}={}", k, v));
     }
     let full_url = format!("{}?{}", url, query);
 
     // 参考 Python 的 UA/Referer，作为额外 headers 传入
     let mut headers = HeaderMap::new();
-    headers.insert(REFERER, HeaderValue::from_static(DouyinSitePyDefaults::REFERER));
-    headers.insert(USER_AGENT, HeaderValue::from_static(DouyinSitePyDefaults::ua()));
-    headers.insert(ACCEPT, HeaderValue::from_static("application/json, text/plain, */*"));
+    headers.insert(
+        REFERER,
+        HeaderValue::from_static(DouyinSitePyDefaults::REFERER),
+    );
+    headers.insert(
+        USER_AGENT,
+        HeaderValue::from_static(DouyinSitePyDefaults::ua()),
+    );
+    headers.insert(
+        ACCEPT,
+        HeaderValue::from_static("application/json, text/plain, */*"),
+    );
     headers.insert(ACCEPT_LANGUAGE, HeaderValue::from_static("zh-CN,zh;q=0.9"));
 
     http_client
@@ -328,12 +388,34 @@ fn extract_detail_from_reflow(json: &Value) -> Option<DetailInfo> {
     let room = json.get("data")?.get("room")?;
     let owner = room.get("owner").cloned().unwrap_or(Value::Null);
     let status = room.get("status")?.as_i64()? as i32;
-    let web_rid = owner.get("web_rid").and_then(|v| v.as_str()).map(|s| s.to_string());
-    let room_id = room.get("id_str").and_then(|v| v.as_str()).map(|s| s.to_string());
-    let title = room.get("title").and_then(|v| v.as_str()).map(|s| s.to_string());
-    let _cover = room.get("cover").and_then(|c| c.get("url_list")).and_then(|ul| ul.get(0)).and_then(|v| v.as_str()).map(|s| s.to_string());
-    let owner_nickname = owner.get("nickname").and_then(|v| v.as_str()).map(|s| s.to_string());
-    let avatar = owner.get("avatar_thumb").and_then(|a| a.get("url_list")).and_then(|ul| ul.get(0)).and_then(|v| v.as_str()).map(|s| s.to_string());
+    let web_rid = owner
+        .get("web_rid")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
+    let room_id = room
+        .get("id_str")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
+    let title = room
+        .get("title")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
+    let _cover = room
+        .get("cover")
+        .and_then(|c| c.get("url_list"))
+        .and_then(|ul| ul.get(0))
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
+    let owner_nickname = owner
+        .get("nickname")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
+    let avatar = owner
+        .get("avatar_thumb")
+        .and_then(|a| a.get("url_list"))
+        .and_then(|ul| ul.get(0))
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
     let stream_url = room.get("stream_url").cloned();
 
     println!(

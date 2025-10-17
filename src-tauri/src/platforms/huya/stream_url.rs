@@ -3,13 +3,14 @@ use std::error::Error;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use base64::{engine::general_purpose, Engine as _};
-use regex::Regex;
-use reqwest::header::{HeaderMap, HeaderValue, USER_AGENT, ORIGIN, REFERER, ACCEPT};
-use serde_json::Value;
 use md5::{Digest, Md5};
-use chrono::{Utc, FixedOffset};
+use rand::Rng;
+use regex::Regex;
+use reqwest::header::{
+    HeaderMap, HeaderValue, ACCEPT, ACCEPT_LANGUAGE, COOKIE, ORIGIN, REFERER, USER_AGENT,
+};
 use serde::Serialize;
-
+use serde_json::Value;
 
 #[derive(Clone, Debug, Serialize)]
 #[allow(non_snake_case)]
@@ -46,13 +47,6 @@ fn current_millis() -> i64 {
     now.as_millis() as i64
 }
 
-fn asia_shanghai_sv() -> String {
-    // Asia/Shanghai yyyyMMddHH using chrono
-    let tz = FixedOffset::east_opt(8 * 3600).unwrap();
-    let dt = Utc::now().with_timezone(&tz);
-    dt.format("%Y%m%d%H").to_string()
-}
-
 fn parse_query(qs: &str) -> HashMap<String, String> {
     let mut map = HashMap::new();
     for (k, v) in url::form_urlencoded::parse(qs.as_bytes()) {
@@ -68,94 +62,84 @@ fn url_decode(s: &str) -> String {
         .unwrap_or_else(|| s.to_string())
 }
 
-fn parse_uid_from_cookie_or_stream(cookie: Option<&str>, stream_name: &str) -> i64 {
-    if let Some(ck) = cookie {
-        if ck.contains("yyuid=") {
-            let re = Regex::new(r"yyuid=(\\d+)").unwrap();
-            if let Some(caps) = re.captures(ck) {
-                if let Some(m) = caps.get(1) {
-                    if let Ok(uid) = m.as_str().parse::<i64>() {
-                        if uid > 0 { return uid; }
-                    }
-                }
-            }
-        }
-    }
-    let parts: Vec<&str> = stream_name.split('-').collect();
-    if let Some(first) = parts.first() {
-        if let Ok(uid) = first.parse::<i64>() { if uid > 0 { return uid; } }
-    }
-    // Fallback large uid
-    1400000000000i64 + (current_millis() % 100000000000i64)
-}
+fn generate_web_anti_code(stream_name: &str, anti_code: &str) -> Result<String, String> {
+    let sanitized = anti_code.replace("&amp;", "&");
+    let trimmed = sanitized.trim_start_matches(|c| c == '?' || c == '&');
+    let params = parse_query(trimmed);
 
-fn process_anticode(anticode: &str, stream_name: &str, cookie: Option<&str>) -> String {
-    let q = parse_query(anticode);
-    let uid = parse_uid_from_cookie_or_stream(cookie, stream_name);
+    let fm_value = params
+        .get("fm")
+        .cloned()
+        .ok_or_else(|| "missing fm in anti code".to_string())?;
+    let ctype = params
+        .get("ctype")
+        .cloned()
+        .ok_or_else(|| "missing ctype in anti code".to_string())?;
+    let fs = params
+        .get("fs")
+        .cloned()
+        .ok_or_else(|| "missing fs in anti code".to_string())?;
 
-    let ctype = q.get("ctype").cloned().unwrap_or_else(|| "huya_live".to_string());
-    let t = q.get("t").cloned().unwrap_or_else(|| "100".to_string());
-    let ws_time = q.get("wsTime").cloned().unwrap_or_default();
+    let fm_decoded = url_decode(&fm_value);
+    let fm_bytes = general_purpose::STANDARD
+        .decode(fm_decoded.as_bytes())
+        .map_err(|_| "failed to decode fm base64".to_string())?;
+    let fm_plain =
+        String::from_utf8(fm_bytes).map_err(|_| "failed to decode fm utf-8".to_string())?;
+    let ws_prefix = fm_plain
+        .split('_')
+        .next()
+        .filter(|s| !s.is_empty())
+        .ok_or_else(|| "failed to derive wsSecret prefix".to_string())?;
 
-    let convert_uid: i64 = (((uid as u32) << 8) as u64 | ((uid as u32) >> 24) as u64) as i64 & 0xFFFFFFFF;
-    let seqid = (current_millis() + uid).to_string();
+    let params_t = 100_i64;
+    let sdk_version = 2403051612_i64;
+    let t13 = current_millis();
+    let sdk_sid = t13;
 
-    // fm param base64 decode after url decode
-    let fm_raw = q.get("fm").map(|s| url_decode(s)).unwrap_or_default();
-    let fm_decoded = if fm_raw.is_empty() { String::new() } else {
-        match general_purpose::STANDARD.decode(fm_raw.as_bytes()) {
-            Ok(bytes) => String::from_utf8(bytes).unwrap_or_default(),
-            Err(_) => String::new(),
-        }
-    };
-    let ws_prefix = fm_decoded.split('_').next().unwrap_or("").to_string();
+    let mut rng = rand::thread_rng();
+    let uid = rng.gen_range(1_400_000_000_000_i64..=1_400_009_999_999_i64);
+    let seq_id = uid + sdk_sid;
 
-    let ws_hash = md5_hex(&format!("{}|{}|{}", seqid, ctype, t));
-    let ws_secret = md5_hex(&format!("{}_{}_{}_{}_{}", ws_prefix, convert_uid, stream_name, ws_hash, ws_time));
+    let ws_time = format!("{:x}", (t13 + 110_624) / 1000);
 
-    // Asia/Shanghai yyyyMMddHH
-    let sv = asia_shanghai_sv();
+    let uuid_seed = (t13 % 10_000_000_000_i64) * 1_000 + rng.gen_range(0_i64..1_000_i64);
+    let init_uuid = uuid_seed % 4_294_967_295_i64;
 
-    let fs = q.get("fs").cloned().unwrap_or_default();
+    let ws_secret_hash = md5_hex(&format!("{}|{}|{}", seq_id, ctype, params_t));
+    let ws_secret_plain = format!(
+        "{}_{}_{}_{}_{}",
+        ws_prefix, uid, stream_name, ws_secret_hash, ws_time
+    );
+    let ws_secret_md5 = md5_hex(&ws_secret_plain);
 
-    // uuid
-    let ct_base = if !ws_time.is_empty() {
-        i64::from_str_radix(&ws_time, 16).unwrap_or(current_millis() / 1000)
-    } else {
-        current_millis() / 1000
-    };
-    let ct = ((ct_base as f64 + 0.12345) * 1000.0) as i64;
-    let uuid = (((ct % 10_000_000_000) as f64 + 0.6789) * 1_000.0) as i64 & 0xFFFF_FFFF;
-
-    let mut params: Vec<(String, String)> = vec![
-        ("wsSecret".into(), ws_secret),
-        ("wsTime".into(), ws_time),
-        ("seqid".into(), seqid),
-        ("ctype".into(), ctype.clone()),
-        ("ver".into(), "1".into()),
+    let parts = vec![
+        ("wsSecret", ws_secret_md5),
+        ("wsTime", ws_time),
+        ("seqid", seq_id.to_string()),
+        ("ctype", ctype),
+        ("ver", "1".to_string()),
+        ("fs", fs),
+        ("uuid", init_uuid.to_string()),
+        ("u", uid.to_string()),
+        ("t", params_t.to_string()),
+        ("sv", sdk_version.to_string()),
+        ("sdk_sid", sdk_sid.to_string()),
+        ("codec", "264".to_string()),
     ];
-    if !fs.is_empty() { params.push(("fs".into(), fs)); }
-    params.extend([
-        ("t".into(), t),
-        ("u".into(), convert_uid.to_string()),
-        ("uuid".into(), uuid.to_string()),
-        ("sdk_sid".into(), current_millis().to_string()),
-        ("codec".into(), "264".into()),
-        ("sv".into(), sv),
-        ("dMod".into(), "mseh-0".into()),
-        ("sdkPcdn".into(), "1_1".into()),
-        ("a_block".into(), "0".into()),
-    ]);
 
-    params
+    Ok(parts
         .into_iter()
-        .map(|(k, v)| format!("{}={}", k, v))
+        .map(|(k, v)| format!("{k}={v}"))
         .collect::<Vec<String>>()
-        .join("&")
+        .join("&"))
 }
 
 #[allow(dead_code)]
-async fn check_live_status(client: &reqwest::Client, room_id: &str) -> Result<bool, Box<dyn Error>> {
+async fn check_live_status(
+    client: &reqwest::Client,
+    room_id: &str,
+) -> Result<bool, Box<dyn Error>> {
     let url = format!("https://m.huya.com/{}", room_id);
     let mut headers = HeaderMap::new();
     headers.insert(USER_AGENT, HeaderValue::from_static("Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36"));
@@ -179,33 +163,32 @@ async fn check_live_status(client: &reqwest::Client, room_id: &str) -> Result<bo
 }
 
 #[derive(Clone, Debug)]
-struct LineInfo {
-    line: String,
-    line_type: String, // "flv" or "hls"
-    flv_anticode: String,
-    hls_anticode: String,
-    stream_name: String,
-    cdn_type: String, // e.g., "TX"
-}
-
-#[derive(Clone, Debug)]
 struct RoomDetail {
     status: bool,
-    lines: Vec<LineInfo>,
-    bit_rates: Vec<(String, i32)>, // (name, bitRate)
     title: Option<String>,
     nick: Option<String>,
-    #[allow(dead_code)]
-    cover: Option<String>,
-    #[allow(dead_code)]
-    area: Option<String>,
     avatar180: Option<String>,
 }
 
+#[derive(Clone, Debug)]
+struct WebStreamCandidate {
+    base_flv: String,
+}
 
+#[derive(Clone, Debug)]
+struct HuyaWebStreamData {
+    is_live: bool,
+    candidates: Vec<WebStreamCandidate>,
+}
 
-async fn fetch_room_detail(client: &reqwest::Client, room_id: &str) -> Result<RoomDetail, Box<dyn Error>> {
-    let url = format!("https://mp.huya.com/cache.php?m=Live&do=profileRoom&roomid={}&showSecret=1", room_id);
+async fn fetch_room_detail(
+    client: &reqwest::Client,
+    room_id: &str,
+) -> Result<RoomDetail, Box<dyn Error>> {
+    let url = format!(
+        "https://mp.huya.com/cache.php?m=Live&do=profileRoom&roomid={}&showSecret=1",
+        room_id
+    );
     let mut headers = HeaderMap::new();
     headers.insert(ACCEPT, HeaderValue::from_static("*/*"));
     headers.insert(ORIGIN, HeaderValue::from_static("https://www.huya.com"));
@@ -218,142 +201,229 @@ async fn fetch_room_detail(client: &reqwest::Client, room_id: &str) -> Result<Ro
 
     let status_code = v.get("status").and_then(|x| x.as_i64()).unwrap_or(0);
     if status_code != 200 {
-        return Ok(RoomDetail { status: false, lines: vec![], bit_rates: vec![], title: None, nick: None, cover: None, area: None, avatar180: None });
+        return Ok(RoomDetail {
+            status: false,
+            title: None,
+            nick: None,
+            avatar180: None,
+        });
     }
 
-    // data 节点可能存在但 stream 不存在（未开播）；此时也应返回基础信息用于前端离线页展示
-    let data = match v.get("data") {
-        Some(d) => d,
-        None => {
-            return Ok(RoomDetail { status: false, lines: vec![], bit_rates: vec![], title: None, nick: None, cover: None, area: None, avatar180: None });
+    let Some(data) = v.get("data") else {
+        return Ok(RoomDetail {
+            status: false,
+            title: None,
+            nick: None,
+            avatar180: None,
+        });
+    };
+
+    let stream_ok = data.get("stream").is_some();
+
+    let title = data
+        .get("liveData")
+        .and_then(|ld| ld.get("introduction"))
+        .and_then(|x| x.as_str())
+        .map(|s| s.to_string());
+    let nick = data
+        .get("liveData")
+        .and_then(|ld| ld.get("nick"))
+        .and_then(|x| x.as_str())
+        .map(|s| s.to_string());
+    let avatar180 = data
+        .get("liveData")
+        .and_then(|ld| ld.get("avatar180"))
+        .and_then(|x| x.as_str())
+        .map(|s| s.to_string());
+
+    Ok(RoomDetail {
+        status: stream_ok,
+        title,
+        nick,
+        avatar180,
+    })
+}
+
+async fn fetch_web_stream_data(
+    client: &reqwest::Client,
+    room_id: &str,
+) -> Result<HuyaWebStreamData, Box<dyn Error>> {
+    let url = format!("https://www.huya.com/{}", room_id);
+    let mut headers = HeaderMap::new();
+    headers.insert(
+        USER_AGENT,
+        HeaderValue::from_static(
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0",
+        ),
+    );
+    headers.insert(
+        ACCEPT,
+        HeaderValue::from_static(
+            "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        ),
+    );
+    headers.insert(
+        ACCEPT_LANGUAGE,
+        HeaderValue::from_static("zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2"),
+    );
+    headers.insert(
+        COOKIE,
+        HeaderValue::from_static("huya_ua=webh5&0.1.0&websocket; game_did=zXyXVqV1NF4ZeNWg7QaOFbpIEWqcsrxkoVy; alphaValue=0.80; guid=0a7df378828609654d01a205a305fb52; __yamid_tt1=0.8936157401010706; __yamid_new=CA715E8BC9400001E5A313E028F618DE; udb_guiddata=4657813d32ce43d381ea8ff8d416a3c2; udb_deviceid=w_756598227007868928; sdid=0UnHUgv0_qmfD4KAKlwzhqQB32nywGZJYLZl_9RLv0Lbi5CGYYNiBGLrvNZVszz4FEo_unffNsxk9BdvXKO_PkvC5cOwCJ13goOiNYGClLirWVkn9LtfFJw_Qo4kgKr8OZHDqNnuwg612sGyflFn1draukOt03gk2m3pwGbiKsB143MJhMxcI458jIjiX0MYq; Hm_lvt_51700b6c722f5bb4cf39906a596ea41f=1708583696; SoundValue=0.50; sdidtest=0UnHUgv0_qmfD4KAKlwzhqQB32nywGZJYLZl_9RLv0Lbi5CGYYNiBGLrvNZVszz4FEo_unffNsxk9BdvXKO_PkvC5cOwCJ13goOiNYGClLirWVkn9LtfFJw_Qo4kgKr8OZHDqNnuwg612sGyflFn1draukOt03gk2m3pwGbiKsB143MJhMxcI458jIjiX0MYq; sdidshorttest=test; __yasmid=0.8936157401010706; _yasids=__rootsid%3DCAA3838C53600001F4EE863017406250; huyawap_rep_cnt=4; udb_passdata=3; huya_web_rep_cnt=89; huya_flash_rep_cnt=20; Hm_lpvt_51700b6c722f5bb4cf39906a596ea41f=1709548534; _rep_cnt=3; PHPSESSID=r0klm0vccf08q1das65bnd8co1; huya_hd_rep_cnt=8"),
+    );
+
+    let resp = client.get(&url).headers(headers).send().await?;
+    let html = resp.text().await?;
+
+    let re = Regex::new(r#"(?s)stream:\s*(\{"data".*?),"iWebDefaultBitRate""#)?;
+    let Some(caps) = re.captures(&html) else {
+        return Ok(HuyaWebStreamData {
+            is_live: false,
+            candidates: Vec::new(),
+        });
+    };
+    let json_fragment = caps.get(1).map(|m| m.as_str()).unwrap_or("");
+    let json_str = format!("{}{}", json_fragment, "}");
+    let value: Value = serde_json::from_str(&json_str)?;
+
+    let data_list = match value.get("data").and_then(|v| v.as_array()) {
+        Some(list) if !list.is_empty() => list,
+        _ => {
+            return Ok(HuyaWebStreamData {
+                is_live: false,
+                candidates: Vec::new(),
+            })
+        }
+    };
+    let stream_info_list = match data_list[0]
+        .get("gameStreamInfoList")
+        .and_then(|v| v.as_array())
+    {
+        Some(list) if !list.is_empty() => list.clone(),
+        _ => {
+            return Ok(HuyaWebStreamData {
+                is_live: false,
+                candidates: Vec::new(),
+            })
         }
     };
 
-    // 根据是否存在 stream 判断直播状态；未开播也继续解析 liveData 的基础信息
-    let stream_ok = data.get("stream").is_some();
+    let mut stream_items = stream_info_list;
+    stream_items.sort_by_key(|item| {
+        let cdn = item
+            .get("sCdnType")
+            .and_then(|v| v.as_str())
+            .unwrap_or_default();
+        cdn_priority(cdn)
+    });
 
-    let base_list = data
-        .get("stream")
-        .and_then(|s| s.get("baseSteamInfoList"))
-        .and_then(|b| b.as_array())
-        .unwrap_or(&vec![])
-        .clone();
+    let mut candidates: Vec<WebStreamCandidate> = Vec::new();
+    for item in stream_items {
+        let flv_url = item
+            .get("sFlvUrl")
+            .and_then(|v| v.as_str())
+            .unwrap_or_default();
+        let stream_name = item
+            .get("sStreamName")
+            .and_then(|v| v.as_str())
+            .unwrap_or_default();
+        let flv_suffix = item
+            .get("sFlvUrlSuffix")
+            .and_then(|v| v.as_str())
+            .unwrap_or_default();
+        let anti_code = item
+            .get("sFlvAntiCode")
+            .and_then(|v| v.as_str())
+            .unwrap_or_default();
 
-    let mut lines: Vec<LineInfo> = Vec::new();
-    for it in base_list {
-        let s_flv = it.get("sFlvUrl").and_then(|x| x.as_str());
-        let s_hls = it.get("sHlsUrl").and_then(|x| x.as_str());
-        let flv_ac = it.get("sFlvAntiCode").and_then(|x| x.as_str()).unwrap_or("");
-        let hls_ac = it.get("sHlsAntiCode").and_then(|x| x.as_str()).unwrap_or("");
-        let stream_name = it.get("sStreamName").and_then(|x| x.as_str()).unwrap_or("");
-        let cdn_type = it.get("sCdnType").and_then(|x| x.as_str()).unwrap_or("");
-        if let Some(u) = s_flv {
-            lines.push(LineInfo { line: u.to_string(), line_type: "flv".into(), flv_anticode: flv_ac.to_string(), hls_anticode: hls_ac.to_string(), stream_name: stream_name.to_string(), cdn_type: cdn_type.to_string() });
+        if flv_url.is_empty()
+            || stream_name.is_empty()
+            || flv_suffix.is_empty()
+            || anti_code.is_empty()
+        {
+            continue;
         }
-        if let Some(u) = s_hls {
-            lines.push(LineInfo { line: u.to_string(), line_type: "hls".into(), flv_anticode: flv_ac.to_string(), hls_anticode: hls_ac.to_string(), stream_name: stream_name.to_string(), cdn_type: cdn_type.to_string() });
-        }
+
+        let anti_params = match generate_web_anti_code(stream_name, anti_code) {
+            Ok(v) => v,
+            Err(err) => return Err(format!("failed to generate Huya anti code: {err}").into()),
+        };
+
+        let base_flv = format!("{}/{}.{}?{}", flv_url, stream_name, flv_suffix, anti_params);
+        candidates.push(WebStreamCandidate { base_flv });
     }
 
-    // bitRates
-    let mut bit_rates: Vec<(String, i32)> = Vec::new();
-    let br_str = data.get("liveData").and_then(|ld| ld.get("bitRateInfo")).and_then(|x| x.as_str());
-    let mut brs_json: Vec<Value> = Vec::new();
-    if let Some(bs) = br_str {
-        if let Ok(arr) = serde_json::from_str::<Vec<Value>>(bs) { brs_json = arr; }
-    }
-    if brs_json.is_empty() {
-        if let Some(arr) = data.get("stream").and_then(|s| s.get("flv")).and_then(|f| f.get("rateArray")).and_then(|x| x.as_array()) {
-            brs_json = arr.clone();
-        }
-    }
-    for b in brs_json {
-        let nm = b.get("sDisplayName").and_then(|x| x.as_str()).unwrap_or_else(|| b.get("name").and_then(|x| x.as_str()).unwrap_or("原画"));
-        let r = b.get("iBitRate").and_then(|x| x.as_i64()).unwrap_or_else(|| b.get("bitRate").and_then(|x| x.as_i64()).unwrap_or(0)) as i32;
-        if !bit_rates.iter().any(|(n, _)| n == nm) {
-            bit_rates.push((nm.to_string(), r));
-        }
-    }
-
-    let title = data.get("liveData").and_then(|ld| ld.get("introduction")).and_then(|x| x.as_str()).map(|s| s.to_string());
-    let nick = data.get("liveData").and_then(|ld| ld.get("nick")).and_then(|x| x.as_str()).map(|s| s.to_string());
-    let cover = data.get("liveData").and_then(|ld| ld.get("screenshot")).and_then(|x| x.as_str()).map(|s| s.to_string());
-    let area = data.get("liveData").and_then(|ld| ld.get("gameFullName")).and_then(|x| x.as_str()).map(|s| s.to_string());
-    let avatar180 = data.get("liveData").and_then(|ld| ld.get("avatar180")).and_then(|x| x.as_str()).map(|s| s.to_string());
-
-    Ok(RoomDetail { status: stream_ok, lines, bit_rates, title, nick, cover, area, avatar180 })
+    Ok(HuyaWebStreamData {
+        is_live: !candidates.is_empty(),
+        candidates,
+    })
 }
 
-fn pick_stream_url(detail: &RoomDetail, quality: &str) -> Option<String> {
-    // Map quality name to bit rate
-    // 1) Exact name match
-    let mut target_rate: Option<i32> = detail
-        .bit_rates
-        .iter()
-        .find(|(name, _)| name == quality)
-        .map(|(_, rate)| *rate);
+fn cdn_priority(cdn: &str) -> usize {
+    if cdn.eq_ignore_ascii_case("tx") {
+        0
+    } else if cdn.eq_ignore_ascii_case("al") {
+        1
+    } else if cdn.eq_ignore_ascii_case("hs") {
+        2
+    } else {
+        3
+    }
+}
 
-    // 2) Special mapping by quality keyword
-    if target_rate.is_none() {
-        let mut positive_rates: Vec<i32> = detail
-            .bit_rates
-            .iter()
-            .map(|(_, r)| *r)
-            .filter(|r| *r > 0)
-            .collect();
-        positive_rates.sort();
-        match quality {
-            "原画" => {
-                target_rate = Some(0);
-            }
-            "标清" => {
-                if let Some(min) = positive_rates.first() { target_rate = Some(*min); }
-            }
-            "高清" => {
-                if let Some(max) = positive_rates.last() { target_rate = Some(*max); }
-            }
-            _ => {
-                // fallback: pick first positive if available
-                if let Some(first) = positive_rates.first() { target_rate = Some(*first); } else { target_rate = Some(0); }
-            }
+fn resolve_ratio(quality: Option<&str>) -> Option<i32> {
+    if let Some(q) = quality {
+        let trimmed = q.trim();
+        let lower = trimmed.to_ascii_lowercase();
+        if trimmed.contains("标清") || lower == "sd" || lower == "ld" || lower == "2000" {
+            return Some(2000);
         }
+        if trimmed.contains("高清") || lower == "hd" || lower == "4000" {
+            return Some(4000);
+        }
+        if trimmed.contains("原画") || lower == "source" || lower == "uhd" {
+            return None;
+        }
+        return Some(4000);
     }
-
-    // Prefer FLV, TX CDN
-    let mut candidates: Vec<&LineInfo> = detail
-        .lines
-        .iter()
-        .filter(|l| l.line_type == "flv" && !l.flv_anticode.is_empty())
-        .collect();
-    // Sort with TX first
-    candidates.sort_by_key(|l| { let t = l.cdn_type.to_uppercase(); if t == "TX" { 0 } else { 1 } });
-
-    for l in candidates {
-        let qs = process_anticode(&l.flv_anticode, &l.stream_name, None);
-        let mut url = format!("{}/{}.flv?{}", l.line, l.stream_name, qs);
-        if let Some(rate) = target_rate { if rate > 0 { url.push_str(&format!("&ratio={}", rate)); } }
-        return Some(url);
-    }
-
-    // Fallback HLS
-    let mut hls_candidates: Vec<&LineInfo> = detail
-        .lines
-        .iter()
-        .filter(|l| l.line_type == "hls" && !l.hls_anticode.is_empty())
-        .collect();
-    hls_candidates.sort_by_key(|l| { let t = l.cdn_type.to_uppercase(); if t == "TX" { 0 } else { 1 } });
-    for l in hls_candidates {
-        let qs = process_anticode(&l.hls_anticode, &l.stream_name, None);
-        let mut url = format!("{}/{}.m3u8?{}", l.line, l.stream_name, qs);
-        if let Some(rate) = target_rate { if rate > 0 { url.push_str(&format!("&ratio={}", rate)); } }
-        return Some(url);
-    }
-
     None
 }
 
+fn pick_stream_url(candidates: &[WebStreamCandidate], ratio: Option<i32>) -> Option<String> {
+    candidates.first().map(|candidate| match ratio {
+        Some(r) => format!("{}&ratio={}", candidate.base_flv, r),
+        None => candidate.base_flv.clone(),
+    })
+}
+
+fn build_flv_tx_urls(candidates: &[WebStreamCandidate]) -> Vec<HuyaUnifiedStreamEntry> {
+    let Some(base) = candidates.first() else {
+        return Vec::new();
+    };
+
+    vec![
+        HuyaUnifiedStreamEntry {
+            quality: "原画".to_string(),
+            bitRate: 0,
+            url: base.base_flv.clone(),
+        },
+        HuyaUnifiedStreamEntry {
+            quality: "高清".to_string(),
+            bitRate: 4000,
+            url: format!("{}&ratio={}", base.base_flv, 4000),
+        },
+        HuyaUnifiedStreamEntry {
+            quality: "标清".to_string(),
+            bitRate: 2000,
+            url: format!("{}&ratio={}", base.base_flv, 2000),
+        },
+    ]
+}
+
 #[tauri::command]
-pub async fn get_huya_unified_cmd(room_id: String, quality: Option<String>) -> Result<HuyaUnifiedResponse, String> {
+pub async fn get_huya_unified_cmd(
+    room_id: String,
+    quality: Option<String>,
+) -> Result<HuyaUnifiedResponse, String> {
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(10))
         .no_proxy()
@@ -364,17 +434,20 @@ pub async fn get_huya_unified_cmd(room_id: String, quality: Option<String>) -> R
         .await
         .map_err(|e| e.to_string())?;
 
-    // 不再在未开播时直接返回错误；统一返回基础信息，便于前端显示离线页中的主播信息
-    // if !detail.status {
-    //     return Err("主播未开播或获取虎牙房间详情失败".to_string());
-    // }
+    let web_stream = fetch_web_stream_data(&client, &room_id)
+        .await
+        .map_err(|e| e.to_string())?;
 
-    let selected = pick_stream_url(
-        &detail,
-        quality.as_deref().unwrap_or("原画"),
+    let ratio = resolve_ratio(quality.as_deref());
+    let selected = pick_stream_url(&web_stream.candidates, ratio);
+    let tx_entries = build_flv_tx_urls(&web_stream.candidates);
+    let is_live = detail.status || web_stream.is_live;
+    println!(
+        "[Huya] requested quality: {:?}, resolved ratio: {:?}, selected url present: {}",
+        quality,
+        ratio,
+        selected.is_some()
     );
-
-    let tx_entries = build_flv_tx_urls(&detail);
 
     Ok(HuyaUnifiedResponse {
         title: detail.title.clone(),
@@ -382,39 +455,10 @@ pub async fn get_huya_unified_cmd(room_id: String, quality: Option<String>) -> R
         avatar: detail.avatar180.clone(),
         introduction: None,
         profileRoom: None,
-        is_live: detail.status,
+        is_live,
         flv_tx_urls: tx_entries,
         selected_url: selected,
     })
-}
-
-fn build_flv_tx_urls(detail: &RoomDetail) -> Vec<HuyaUnifiedStreamEntry> {
-    // 选取一个可用的 FLV 基础地址，优先 TX CDN
-    let mut flv_candidates: Vec<&LineInfo> = detail
-        .lines
-        .iter()
-        .filter(|l| l.line_type == "flv" && !l.flv_anticode.is_empty())
-        .collect();
-    flv_candidates.sort_by_key(|l| { let t = l.cdn_type.to_uppercase(); if t == "TX" { 0 } else { 1 } });
-
-    let base: Option<(String /*base_url*/, String /*stream_name*/)> = flv_candidates
-        .into_iter()
-        .next()
-        .map(|l| {
-            let qs = process_anticode(&l.flv_anticode, &l.stream_name, None);
-            let base_url = format!("{}/{}.flv?{}", l.line, l.stream_name, qs);
-            (base_url, l.stream_name.clone())
-        });
-
-    let mut entries: Vec<HuyaUnifiedStreamEntry> = Vec::new();
-    if let Some((base_url, _stream_name)) = base {
-        for (quality, r) in &detail.bit_rates {
-            let url_with_ratio = if *r > 0 { format!("{}&ratio={}", base_url, r) } else { base_url.clone() };
-            entries.push(HuyaUnifiedStreamEntry { quality: quality.clone(), bitRate: *r, url: url_with_ratio });
-        }
-    }
-
-    entries
 }
 #[allow(dead_code)]
 const HEARTBEAT_BASE64: &str = "ABQdAAwsNgBM"; // same as Python

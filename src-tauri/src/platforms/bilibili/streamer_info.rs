@@ -1,17 +1,16 @@
-use reqwest::header::{HeaderMap, HeaderValue, REFERER, USER_AGENT, COOKIE};
-use serde_json::Value;
-use tauri::command;
-use std::collections::HashMap;
-use std::time::{SystemTime, UNIX_EPOCH};
 use md5;
 use md5::{Digest, Md5};
+use reqwest::header::{HeaderMap, HeaderValue, COOKIE, REFERER, USER_AGENT};
+use serde_json::Value;
+use std::collections::HashMap;
+use std::time::{SystemTime, UNIX_EPOCH};
+use tauri::command;
 
 // WBI mixin key mapping table (same as Python implementation)
 const MIXIN_KEY_ENC_TAB: [usize; 64] = [
-    46, 47, 18, 2, 53, 8, 23, 32, 15, 50, 10, 31, 58, 3, 45, 35,
-    27, 43, 5, 49, 33, 9, 42, 19, 29, 28, 14, 39, 12, 38, 41, 13,
-    37, 48, 7, 16, 24, 55, 40, 61, 26, 17, 0, 1, 60, 51, 30, 4,
-    22, 25, 54, 21, 56, 59, 6, 63, 57, 62, 11, 36, 20, 34, 44, 52,
+    46, 47, 18, 2, 53, 8, 23, 32, 15, 50, 10, 31, 58, 3, 45, 35, 27, 43, 5, 49, 33, 9, 42, 19, 29,
+    28, 14, 39, 12, 38, 41, 13, 37, 48, 7, 16, 24, 55, 40, 61, 26, 17, 0, 1, 60, 51, 30, 4, 22, 25,
+    54, 21, 56, 59, 6, 63, 57, 62, 11, 36, 20, 34, 44, 52,
 ];
 
 fn get_mixin_key(origin: &str) -> String {
@@ -31,20 +30,28 @@ async fn get_wbi_keys(client: &reqwest::Client) -> Result<(String, String), Stri
         .send()
         .await
         .map_err(|e| format!("Failed to get WBI keys: {}", e))?;
-    let text = resp.text().await.map_err(|e| format!("Failed to read WBI keys text: {}", e))?;
-    let json: Value = serde_json::from_str(&text).map_err(|e| format!("Failed to parse WBI keys JSON: {} | {}", e, text))?;
+    let text = resp
+        .text()
+        .await
+        .map_err(|e| format!("Failed to read WBI keys text: {}", e))?;
+    let json: Value = serde_json::from_str(&text)
+        .map_err(|e| format!("Failed to parse WBI keys JSON: {} | {}", e, text))?;
     let wbi_img = json["data"]["wbi_img"].clone();
     let img_url = wbi_img["img_url"].as_str().unwrap_or("");
     let sub_url = wbi_img["sub_url"].as_str().unwrap_or("");
 
     let img_key = if let Some(pos) = img_url.rfind('/') {
-        let fname = &img_url[pos+1..];
+        let fname = &img_url[pos + 1..];
         fname.split('.').next().unwrap_or("").to_string()
-    } else { String::new() };
+    } else {
+        String::new()
+    };
     let sub_key = if let Some(pos) = sub_url.rfind('/') {
-        let fname = &sub_url[pos+1..];
+        let fname = &sub_url[pos + 1..];
         fname.split('.').next().unwrap_or("").to_string()
-    } else { String::new() };
+    } else {
+        String::new()
+    };
 
     if img_key.is_empty() || sub_key.is_empty() {
         return Err("WBI keys not found".to_string());
@@ -60,7 +67,10 @@ fn sanitize_value(value: &str) -> String {
 
 fn build_wbi_sign(room_id: &str, img_key: &str, sub_key: &str) -> (String, String) {
     let mixin_key = get_mixin_key(&format!("{}{}", img_key, sub_key));
-    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs();
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
     let wts = now.to_string();
 
     // Build parameter map with room_id and wts
@@ -108,10 +118,16 @@ pub async fn fetch_bilibili_streamer_info(
     // Build headers (include optional cookie)
     let mut headers = HeaderMap::new();
     headers.insert(USER_AGENT, HeaderValue::from_str(ua).unwrap());
-    headers.insert(REFERER, HeaderValue::from_static("https://live.bilibili.com/"));
+    headers.insert(
+        REFERER,
+        HeaderValue::from_static("https://live.bilibili.com/"),
+    );
     if let Some(c) = cookie.as_ref() {
         if !c.is_empty() {
-            headers.insert(COOKIE, HeaderValue::from_str(c).unwrap_or(HeaderValue::from_static("")));
+            headers.insert(
+                COOKIE,
+                HeaderValue::from_str(c).unwrap_or(HeaderValue::from_static("")),
+            );
         }
     }
 
@@ -127,11 +143,7 @@ pub async fn fetch_bilibili_streamer_info(
 
     // Call getInfoByRoom API with signed params
     let base = "https://api.live.bilibili.com/xlive/web-room/v1/index/getInfoByRoom";
-    let params = vec![
-        ("room_id", room_id.clone()),
-        ("wts", wts),
-        ("w_rid", w_rid),
-    ];
+    let params = vec![("room_id", room_id.clone()), ("wts", wts), ("w_rid", w_rid)];
 
     let resp = client
         .get(base)
@@ -140,7 +152,10 @@ pub async fn fetch_bilibili_streamer_info(
         .await
         .map_err(|e| format!("Room info request failed: {}", e))?;
     let status = resp.status();
-    let text = resp.text().await.map_err(|e| format!("Read text failed: {}", e))?;
+    let text = resp
+        .text()
+        .await
+        .map_err(|e| format!("Read text failed: {}", e))?;
     if !status.is_success() {
         return Ok(crate::platforms::common::LiveStreamInfo {
             title: None,
@@ -154,7 +169,8 @@ pub async fn fetch_bilibili_streamer_info(
             normalized_room_id: None,
         });
     }
-    let j: Value = serde_json::from_str(&text).map_err(|e| format!("Room info JSON parse failed: {} | body: {}", e, text))?;
+    let j: Value = serde_json::from_str(&text)
+        .map_err(|e| format!("Room info JSON parse failed: {} | body: {}", e, text))?;
     let data = j["data"].clone();
 
     let base_info = data["anchor_info"]["base_info"].clone();

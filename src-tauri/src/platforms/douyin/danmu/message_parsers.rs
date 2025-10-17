@@ -1,6 +1,6 @@
 use super::gen::{ChatMessage, LikeMessage, MemberMessage, RoomStatsMessage}; // Updated to directly use types from gen
-use prost::Message as ProstMessage; // For .decode()
-use crate::platforms::common::DanmakuFrontendPayload; // Use shared payload type
+use crate::platforms::common::DanmakuFrontendPayload;
+use prost::Message as ProstMessage; // For .decode() // Use shared payload type
 
 // Parser for ChatMessage
 pub fn parse_chat_message(

@@ -24,16 +24,36 @@ pub struct HuyaLiveListFrontendResponse {
 #[derive(Debug, Deserialize)]
 #[allow(dead_code)]
 struct HuyaApiResponse {
-    #[serde(rename = "vList")] 
+    #[serde(rename = "vList")]
     v_list: Option<Vec<serde_json::Value>>, // Items are dynamic; we'll map selectively
 }
 
 fn map_huya_item_to_frontend(item: &serde_json::Value) -> Option<HuyaStreamerFrontend> {
-    let s_nick = item.get("sNick").and_then(|v| v.as_str()).unwrap_or("").to_string();
-    let s_intro = item.get("sIntroduction").and_then(|v| v.as_str()).unwrap_or("").to_string();
-    let s_screenshot = item.get("sScreenshot").and_then(|v| v.as_str()).unwrap_or("").to_string();
-    let l_profile_room = item.get("lProfileRoom").and_then(|v| v.as_i64()).unwrap_or(0).to_string();
-    let s_avatar_180 = item.get("sAvatar180").and_then(|v| v.as_str()).unwrap_or("").to_string();
+    let s_nick = item
+        .get("sNick")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+    let s_intro = item
+        .get("sIntroduction")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+    let s_screenshot = item
+        .get("sScreenshot")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+    let l_profile_room = item
+        .get("lProfileRoom")
+        .and_then(|v| v.as_i64())
+        .unwrap_or(0)
+        .to_string();
+    let s_avatar_180 = item
+        .get("sAvatar180")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
     let l_user_count = item.get("lUserCount").and_then(|v| v.as_i64()).unwrap_or(0);
 
     // Viewer count string: format simple number with suffix if large
@@ -55,17 +75,27 @@ fn map_huya_item_to_frontend(item: &serde_json::Value) -> Option<HuyaStreamerFro
 }
 
 #[command]
-pub async fn fetch_huya_live_list(i_gid: String, i_page_no: u32, i_page_size: u32) -> HuyaLiveListFrontendResponse {
+pub async fn fetch_huya_live_list(
+    i_gid: String,
+    i_page_no: u32,
+    i_page_size: u32,
+) -> HuyaLiveListFrontendResponse {
     let url = format!(
         "https://live.huya.com/liveHttpUI/getLiveList?iGid={}&iPageNo={}&iPageSize={}",
-        urlencoding::encode(&i_gid), i_page_no, i_page_size
+        urlencoding::encode(&i_gid),
+        i_page_no,
+        i_page_size
     );
 
     let client = match HttpClient::new_direct_connection() {
         Ok(c) => c,
         Err(e) => {
             eprintln!("[Huya Backend] Failed to init HTTP client: {}", e);
-            return HuyaLiveListFrontendResponse { error: 500, msg: Some(e), data: None };
+            return HuyaLiveListFrontendResponse {
+                error: 500,
+                msg: Some(e),
+                data: None,
+            };
         }
     };
 
@@ -74,7 +104,11 @@ pub async fn fetch_huya_live_list(i_gid: String, i_page_no: u32, i_page_size: u3
         Ok(v) => v,
         Err(e) => {
             eprintln!("[Huya Backend] Request failed: {}", e);
-            return HuyaLiveListFrontendResponse { error: 500, msg: Some(e), data: None };
+            return HuyaLiveListFrontendResponse {
+                error: 500,
+                msg: Some(e),
+                data: None,
+            };
         }
     };
 
@@ -83,19 +117,29 @@ pub async fn fetch_huya_live_list(i_gid: String, i_page_no: u32, i_page_size: u3
         .get("vList")
         .and_then(|v| v.as_array())
         .cloned()
-        .or_else(|| resp_value
-            .get("data")
-            .and_then(|d| d.get("vList"))
-            .and_then(|v| v.as_array())
-            .cloned());
+        .or_else(|| {
+            resp_value
+                .get("data")
+                .and_then(|d| d.get("vList"))
+                .and_then(|v| v.as_array())
+                .cloned()
+        });
 
     if let Some(arr) = v_list_opt {
         let mapped: Vec<HuyaStreamerFrontend> = arr
             .iter()
             .filter_map(|item| map_huya_item_to_frontend(item))
             .collect();
-        HuyaLiveListFrontendResponse { error: 0, msg: Some("Success".to_string()), data: Some(mapped) }
+        HuyaLiveListFrontendResponse {
+            error: 0,
+            msg: Some("Success".to_string()),
+            data: Some(mapped),
+        }
     } else {
-        HuyaLiveListFrontendResponse { error: -1, msg: Some("No vList in response".to_string()), data: None }
+        HuyaLiveListFrontendResponse {
+            error: -1,
+            msg: Some("No vList in response".to_string()),
+            data: None,
+        }
     }
 }

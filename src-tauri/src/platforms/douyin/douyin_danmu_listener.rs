@@ -1,7 +1,6 @@
 use tauri::Emitter;
 use tokio::sync::mpsc as tokio_mpsc;
 
-
 #[tauri::command]
 pub async fn start_douyin_danmu_listener(
     payload: crate::platforms::common::GetStreamUrlPayload,
@@ -87,7 +86,7 @@ pub async fn start_douyin_danmu_listener(
                     }
                     Ok::<(), Box<dyn std::error::Error + Send + Sync>>(())
                 }.await;
-    
+
                 match attempt_result {
                     Ok(_) => break Ok(()),
                     Err(e) => {
@@ -95,7 +94,10 @@ pub async fn start_douyin_danmu_listener(
                             eprintln!("[Douyin Danmaku] Listener connect/fetch failed after {} attempts: {}", attempt, e);
                             break Err(e);
                         } else {
-                            eprintln!("[Douyin Danmaku WARN] Attempt {} failed: {}. Retrying...", attempt, e);
+                            eprintln!(
+                                "[Douyin Danmaku WARN] Attempt {} failed: {}. Retrying...",
+                                attempt, e
+                            );
                             attempt += 1;
                             continue;
                         }
@@ -109,14 +111,13 @@ pub async fn start_douyin_danmu_listener(
                 "[Douyin Danmaku] Listener task for room {} critically failed: {}",
                 room_id_str_clone, e
             );
-            let error_payload =
-                crate::platforms::common::DanmakuFrontendPayload {
-                    room_id: room_id_str_clone.clone(),
-                    user: "系统消息".to_string(),
-                    content: format!("弹幕连接发生错误: {}", e),
-                    user_level: 0,
-                    fans_club_level: 0,
-                };
+            let error_payload = crate::platforms::common::DanmakuFrontendPayload {
+                room_id: room_id_str_clone.clone(),
+                user: "系统消息".to_string(),
+                content: format!("弹幕连接发生错误: {}", e),
+                user_level: 0,
+                fans_club_level: 0,
+            };
             if let Err(emit_err) = app_handle.emit("danmaku-message", error_payload) {
                 eprintln!(
                     "[Douyin Danmaku] Failed to emit error event to frontend: {}",

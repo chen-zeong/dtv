@@ -1,9 +1,9 @@
-pub mod state;
+pub mod danmaku;
 pub mod live_list;
+pub mod state;
 pub mod stream_url;
 pub mod streamer_info;
-pub mod danmaku;
 // 新增模块声明
+pub mod auth;
 pub mod models;
 pub mod websocket;
-pub mod auth;

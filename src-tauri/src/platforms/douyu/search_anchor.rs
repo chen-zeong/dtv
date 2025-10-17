@@ -1,6 +1,10 @@
-use reqwest::{Client, header::{HeaderMap, HeaderValue}, redirect::Policy};
 use md5::Digest; // For hasher
 use percent_encoding::{percent_encode, NON_ALPHANUMERIC};
+use reqwest::{
+    header::{HeaderMap, HeaderValue},
+    redirect::Policy,
+    Client,
+};
 use std::time::{SystemTime, UNIX_EPOCH}; // For timestamp for did // For URL encoding keyword
 
 // Renamed from search_anchor to avoid ambiguity with Tauri command

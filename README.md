@@ -84,6 +84,6 @@ pnpm tauri build --target aarch64-apple-darwin
 
 - 斗鱼直播流获取参考了 [@wbt5/real-url](https://github.com/wbt5/real-url)  
 - 抖音弹幕参考了[@saermart/DouyinLiveWebFetcher](https://github.com/saermart/DouyinLiveWebFetcher)
-- 虎牙参考了https://github.com/liuchuancong/pure_live
+- 虎牙参考了https://github.com/liuchuancong/pure_live https://github.com/ihmily/DouyinLiveRecorder
 - b站弹幕参考了https://github.com/xfgryujk/blivedm
 

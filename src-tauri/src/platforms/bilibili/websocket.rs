@@ -1,12 +1,12 @@
 // src/websocket.rs
 use native_tls::TlsStream;
 use serde_json::Value;
+use std::collections::VecDeque;
 use std::net::TcpStream;
+use std::sync::OnceLock;
+use std::time::{Duration, Instant};
 use tungstenite::{client, Message, WebSocket};
 use url::Url;
-use std::time::{Duration, Instant};
-use std::sync::OnceLock;
-use std::collections::VecDeque;
 
 use super::auth::{init_server_no_cookie, init_server_with_cookie};
 use super::models::{BiliMessage, DanmuServer, MsgHead};
@@ -154,7 +154,10 @@ impl BiliLiveClient {
             body[2] = resv[18];
             body[3] = resv[19];
             let _popularity = i32::from_be_bytes(body);
-            ws_debug!("[websocket] popularity message op=3; popularity={}", _popularity);
+            ws_debug!(
+                "[websocket] popularity message op=3; popularity={}",
+                _popularity
+            );
         } else {
             ws_debug!("[websocket] unknown op={}, ignoring", head_1.operation);
         }
@@ -264,11 +267,19 @@ pub fn gen_damu_list(list: &serde_json::Value) -> Vec<DanmuServer> {
             res.push(DanmuServer::default());
         } else {
             for s in server_list {
-                let host = s["host"].as_str().unwrap_or("broadcastlv.chat.bilibili.com");
+                let host = s["host"]
+                    .as_str()
+                    .unwrap_or("broadcastlv.chat.bilibili.com");
                 let port = s["port"].as_i64().unwrap_or(2243) as i32;
                 let wss_port = s["wss_port"].as_i64().unwrap_or(443) as i32;
                 let ws_port = s["ws_port"].as_i64().unwrap_or(2244) as i32;
-                ws_debug!("[websocket] server {}:{} (wss_port={}, ws_port={})", host, port, wss_port, ws_port);
+                ws_debug!(
+                    "[websocket] server {}:{} (wss_port={}, ws_port={})",
+                    host,
+                    port,
+                    wss_port,
+                    ws_port
+                );
                 res.push(DanmuServer {
                     host: host.to_string(),
                     port,
@@ -286,7 +297,11 @@ pub fn gen_damu_list(list: &serde_json::Value) -> Vec<DanmuServer> {
 
 fn find_server(vd: Vec<DanmuServer>) -> (String, String, String) {
     let (host, wss_port) = (vd.get(0).unwrap().host.clone(), vd.get(0).unwrap().wss_port);
-    ws_debug!("[websocket] choose server host={} wss_port={}", host, wss_port);
+    ws_debug!(
+        "[websocket] choose server host={} wss_port={}",
+        host,
+        wss_port
+    );
     (
         host.clone(),
         format!("{}:{}", host.clone(), wss_port),
@@ -384,13 +399,21 @@ pub fn handle(json: Value) -> Option<BiliMessage> {
     let category = json["cmd"].as_str().unwrap_or("");
     match category {
         "DANMU_MSG" => Some(BiliMessage::Danmu {
-            user: json["info"][2][1].as_str().unwrap_or("<unknown>").to_string(),
+            user: json["info"][2][1]
+                .as_str()
+                .unwrap_or("<unknown>")
+                .to_string(),
             text: json["info"][1].as_str().unwrap_or("").to_string(),
         }),
         "SEND_GIFT" => Some(BiliMessage::Gift {
-            user: json["info"][2][1].as_str().unwrap_or("<unknown>").to_string(),
+            user: json["info"][2][1]
+                .as_str()
+                .unwrap_or("<unknown>")
+                .to_string(),
             gift: json["info"][1].as_str().unwrap_or("").to_string(),
         }),
-        _ => Some(BiliMessage::Unsupported { cmd: category.to_string() }),
+        _ => Some(BiliMessage::Unsupported {
+            cmd: category.to_string(),
+        }),
     }
 }

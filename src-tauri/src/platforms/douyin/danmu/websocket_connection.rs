@@ -66,7 +66,10 @@ pub async fn connect_and_manage_websocket(
     headers.insert("accept-language", "zh-CN,zh;q=0.9,en;q=0.8".parse()?);
     headers.insert("cache-control", "no-cache".parse()?);
     headers.insert("pragma", "no-cache".parse()?);
-    headers.insert("sec-websocket-extensions", "permessage-deflate; client_max_window_bits".parse()?);
+    headers.insert(
+        "sec-websocket-extensions",
+        "permessage-deflate; client_max_window_bits".parse()?,
+    );
     headers.insert("sec-websocket-version", "13".parse()?);
     headers.insert("user-agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36".parse()?);
     headers.insert("Cookie", ws_cookie_header.parse()?);

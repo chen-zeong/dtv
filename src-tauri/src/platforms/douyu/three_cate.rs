@@ -1,6 +1,6 @@
-use serde::Deserialize;
 use crate::platforms::common::types_rust::{CommonPlatformCategoryRust, SupportedPlatformRust};
 use log::{error, info};
+use serde::Deserialize;
 
 #[derive(Deserialize, Debug, Clone)]
 struct DouyuThreeCateItemRaw {

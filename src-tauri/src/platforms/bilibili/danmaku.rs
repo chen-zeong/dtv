@@ -1,10 +1,10 @@
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use tauri::Emitter;
 use tokio::sync::mpsc as tokio_mpsc;
-use std::sync::{Arc};
-use std::sync::atomic::{AtomicBool, Ordering};
 
-use crate::platforms::bilibili::websocket::BiliLiveClient;
 use crate::platforms::bilibili::models::BiliMessage;
+use crate::platforms::bilibili::websocket::BiliLiveClient;
 
 #[tauri::command]
 pub async fn start_bilibili_danmaku_listener(

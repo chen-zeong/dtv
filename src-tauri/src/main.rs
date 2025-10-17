@@ -13,14 +13,14 @@ use platforms::douyin::danmu::signature::generate_douyin_ms_token;
 use platforms::douyin::fetch_douyin_partition_rooms;
 use platforms::douyin::fetch_douyin_room_info;
 use platforms::douyin::fetch_douyin_streamer_info;
-use platforms::douyin::{get_douyin_live_stream_url, get_douyin_live_stream_url_with_quality};
 use platforms::douyin::start_douyin_danmu_listener;
+use platforms::douyin::{get_douyin_live_stream_url, get_douyin_live_stream_url_with_quality};
 use platforms::douyu::fetch_categories;
 use platforms::douyu::fetch_douyu_room_info;
 use platforms::douyu::fetch_three_cate;
 use platforms::douyu::{fetch_live_list, fetch_live_list_for_cate3};
-use platforms::huya::{fetch_huya_live_list, start_huya_danmaku_listener};
 use platforms::huya::stop_huya_danmaku_listener;
+use platforms::huya::{fetch_huya_live_list, start_huya_danmaku_listener};
 // use platforms::huya::get_huya_stream_url_with_quality; // removed in favor of unified cmd
 
 #[derive(Default, Clone)]
@@ -31,7 +31,6 @@ pub struct StreamUrlStore {
 // State for managing Douyu danmaku listener handles (stop signals)
 #[derive(Default, Clone)]
 pub struct DouyuDanmakuHandles(Arc<Mutex<HashMap<String, oneshot::Sender<()>>>>);
-
 
 #[tauri::command]
 async fn get_stream_url_cmd(room_id: String) -> Result<String, String> {
@@ -49,7 +48,10 @@ async fn get_stream_url_cmd(room_id: String) -> Result<String, String> {
 }
 
 #[tauri::command]
-async fn get_stream_url_with_quality_cmd(room_id: String, quality: String) -> Result<String, String> {
+async fn get_stream_url_with_quality_cmd(
+    room_id: String,
+    quality: String,
+) -> Result<String, String> {
     platforms::douyu::get_stream_url_with_quality(&room_id, &quality)
         .await
         .map_err(|e| {
@@ -143,7 +145,6 @@ async fn search_anchor(keyword: String) -> Result<String, String> {
 
 // Main function corrected
 fn main() {
-
     // Create a new HTTP client instance to be managed by Tauri
     let client = reqwest::Client::builder()
         .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")

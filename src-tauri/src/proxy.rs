@@ -2,13 +2,13 @@ use actix_web::{dev::ServerHandle, web, App, HttpRequest, HttpResponse, HttpServ
 use futures_util::TryStreamExt;
 use reqwest::Client;
 // awc removed for now due to API differences; using reqwest streaming
-use std::time::Duration;
-use std::net::TcpStream;
-use std::io::ErrorKind;
-use std::sync::Mutex as StdMutex;
-use tauri::{AppHandle, State};
 use crate::StreamUrlStore;
 use serde::Deserialize;
+use std::io::ErrorKind;
+use std::net::TcpStream;
+use std::sync::Mutex as StdMutex;
+use std::time::Duration;
+use tauri::{AppHandle, State};
 
 // Define a struct to hold the server handle in a Tauri managed state
 #[derive(Default)]
@@ -69,13 +69,11 @@ async fn image_proxy_handler(
             // 为避免 Windows 下 chunked 传输的 Early-EOF，改为一次性读取 bytes 并返回
             if upstream_response.status().is_success() {
                 match upstream_response.bytes().await {
-                    Ok(bytes) => {
-                        HttpResponse::Ok()
-                            .content_type(content_type)
-                            .insert_header(("Content-Length", bytes.len().to_string()))
-                            .insert_header(("Cache-Control", "no-store"))
-                            .body(bytes)
-                    }
+                    Ok(bytes) => HttpResponse::Ok()
+                        .content_type(content_type)
+                        .insert_header(("Content-Length", bytes.len().to_string()))
+                        .insert_header(("Cache-Control", "no-store"))
+                        .body(bytes),
                     Err(e) => {
                         eprintln!("[Rust/proxy.rs image] Failed to read bytes: {}", e);
                         HttpResponse::InternalServerError()
@@ -84,17 +82,17 @@ async fn image_proxy_handler(
                 }
             } else {
                 let status_from_reqwest = upstream_response.status();
-                let error_text = upstream_response.text().await.unwrap_or_else(|e| {
-                    format!("Failed to read error body from upstream: {}", e)
-                });
+                let error_text = upstream_response
+                    .text()
+                    .await
+                    .unwrap_or_else(|e| format!("Failed to read error body from upstream: {}", e));
                 eprintln!(
                     "[Rust/proxy.rs image] Upstream request to {} failed with status: {}. Body: {}",
                     url, status_from_reqwest, error_text
                 );
-                let actix_status_code = actix_web::http::StatusCode::from_u16(
-                    status_from_reqwest.as_u16(),
-                )
-                .unwrap_or(actix_web::http::StatusCode::INTERNAL_SERVER_ERROR);
+                let actix_status_code =
+                    actix_web::http::StatusCode::from_u16(status_from_reqwest.as_u16())
+                        .unwrap_or(actix_web::http::StatusCode::INTERNAL_SERVER_ERROR);
 
                 HttpResponse::build(actix_status_code).body(format!(
                     "Error fetching IMAGE from upstream (reqwest): {}. Status: {}. Details: {}",
@@ -107,10 +105,8 @@ async fn image_proxy_handler(
                 "[Rust/proxy.rs image] Failed to send request to upstream {}: {}",
                 url, e
             );
-            HttpResponse::InternalServerError().body(format!(
-                "Error connecting to upstream IMAGE {}: {}",
-                url, e
-            ))
+            HttpResponse::InternalServerError()
+                .body(format!("Error connecting to upstream IMAGE {}: {}", url, e))
         }
     }
 }
@@ -126,7 +122,10 @@ async fn flv_proxy_handler(
         return HttpResponse::NotFound().body("Stream URL is not set or empty.");
     }
 
-    println!("[Rust/proxy.rs handler] Incoming FLV proxy request -> {}", url);
+    println!(
+        "[Rust/proxy.rs handler] Incoming FLV proxy request -> {}",
+        url
+    );
 
     let mut req = client
         .get(&url)
@@ -182,10 +181,9 @@ async fn flv_proxy_handler(
                     url, status_from_reqwest, error_text
                 );
                 // Convert reqwest::StatusCode to actix_web::http::StatusCode
-                let actix_status_code = actix_web::http::StatusCode::from_u16(
-                    status_from_reqwest.as_u16(),
-                )
-                .unwrap_or(actix_web::http::StatusCode::INTERNAL_SERVER_ERROR);
+                let actix_status_code =
+                    actix_web::http::StatusCode::from_u16(status_from_reqwest.as_u16())
+                        .unwrap_or(actix_web::http::StatusCode::INTERNAL_SERVER_ERROR);
 
                 HttpResponse::build(actix_status_code).body(format!(
                     "Error fetching FLV stream from upstream (reqwest): {}. Status: {}. Details: {}",

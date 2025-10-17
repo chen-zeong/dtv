@@ -1,10 +1,10 @@
 // src/auth.rs
+use md5::{Digest, Md5};
 use reqwest::header::HeaderMap;
 #[allow(unused_imports)]
 use reqwest::StatusCode;
 use serde::Deserialize;
 use std::time::{SystemTime, UNIX_EPOCH};
-use md5::{Digest, Md5};
 
 // WBI signing constants and functions (extracted)
 const MIXIN_KEY_ENC_TAB: [usize; 64] = [
@@ -93,10 +93,7 @@ fn get_wbi_keys(headers: HeaderMap) -> Result<(String, String), reqwest::Error> 
     let mut request_headers = headers;
     request_headers.insert("user-agent", USER_AGENT.parse().unwrap());
 
-    let response = client
-        .get(UID_INIT_URL)
-        .headers(request_headers)
-        .send()?;
+    let response = client.get(UID_INIT_URL).headers(request_headers).send()?;
 
     let res_wbi: ResWbi = response.json()?;
     Ok((

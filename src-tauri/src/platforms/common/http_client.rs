@@ -126,16 +126,22 @@ impl HttpClient {
     }
 
     pub async fn post_form(&self, url: &str, form_data: &str) -> Result<Response, String> {
-        let response = self.send_request(
-            self.inner
-                .post(url)
-                .header("Content-Type", "application/x-www-form-urlencoded")
-                .body(form_data.to_string())
-        ).await?;
+        let response = self
+            .send_request(
+                self.inner
+                    .post(url)
+                    .header("Content-Type", "application/x-www-form-urlencoded")
+                    .body(form_data.to_string()),
+            )
+            .await?;
         Ok(response)
     }
 
-    pub async fn post_form_json<T: serde::de::DeserializeOwned>(&self, url: &str, form_data: &str) -> Result<T, String> {
+    pub async fn post_form_json<T: serde::de::DeserializeOwned>(
+        &self,
+        url: &str,
+        form_data: &str,
+    ) -> Result<T, String> {
         let response = self.post_form(url, form_data).await?;
         let status = response.status();
         if !status.is_success() {
@@ -155,13 +161,17 @@ impl HttpClient {
         Ok(json_response)
     }
 
-    pub async fn get_json_with_headers<T: serde::de::DeserializeOwned>(&self, url: &str, headers: Option<ReqwestHeaderMap>) -> Result<T, String> {
+    pub async fn get_json_with_headers<T: serde::de::DeserializeOwned>(
+        &self,
+        url: &str,
+        headers: Option<ReqwestHeaderMap>,
+    ) -> Result<T, String> {
         let mut request_builder = self.inner.get(url);
-        
+
         if let Some(additional_headers) = headers {
             request_builder = request_builder.headers(additional_headers);
         }
-        
+
         let response = self.send_request(request_builder).await?;
         let status = response.status();
         if !status.is_success() {
@@ -186,13 +196,17 @@ impl HttpClient {
         self.send_request(request_builder).await
     }
 
-    pub async fn get_text_with_headers(&self, url: &str, headers: Option<ReqwestHeaderMap>) -> Result<String, String> {
+    pub async fn get_text_with_headers(
+        &self,
+        url: &str,
+        headers: Option<ReqwestHeaderMap>,
+    ) -> Result<String, String> {
         let mut request_builder = self.inner.get(url).headers(self.headers.clone());
-        
+
         if let Some(additional_headers) = headers {
             request_builder = request_builder.headers(additional_headers);
         }
-        
+
         let response = self.send_request(request_builder).await?;
         let status = response.status();
         if !status.is_success() {

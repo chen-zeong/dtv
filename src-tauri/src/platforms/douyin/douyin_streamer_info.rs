@@ -1,10 +1,10 @@
 use crate::platforms::common::http_client::HttpClient;
-use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, ACCEPT_LANGUAGE, COOKIE, REFERER, USER_AGENT};
-use serde_json::Value;
 use regex::Regex;
+use reqwest::header::{
+    HeaderMap, HeaderValue, ACCEPT, ACCEPT_LANGUAGE, COOKIE, REFERER, USER_AGENT,
+};
+use serde_json::Value;
 use tauri::command;
-
-
 
 #[command]
 pub async fn fetch_douyin_streamer_info(
@@ -45,34 +45,59 @@ pub async fn fetch_douyin_streamer_info(
                     Some(ri) => (ri.get("room"), ri.get("anchor")),
                     None => (None, None),
                 };
-                let room = match room { Some(r) => r, None => {
-                    return Ok(crate::platforms::common::LiveStreamInfo {
-                        title: None,
-                        anchor_name: None,
-                        avatar: None,
-                        stream_url: None,
-                        status: None,
-                        error_message: Some("未能从 HTML state 中解析到房间详情".to_string()),
-                        upstream_url: None,
-                        available_streams: None,
-                        normalized_room_id: None,
-                    });
-                }};
+                let room = match room {
+                    Some(r) => r,
+                    None => {
+                        return Ok(crate::platforms::common::LiveStreamInfo {
+                            title: None,
+                            anchor_name: None,
+                            avatar: None,
+                            stream_url: None,
+                            status: None,
+                            error_message: Some("未能从 HTML state 中解析到房间详情".to_string()),
+                            upstream_url: None,
+                            available_streams: None,
+                            normalized_room_id: None,
+                        });
+                    }
+                };
                 let status = room.get("status").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
-                let title = room.get("title").and_then(|v| v.as_str()).map(|s| s.to_string());
+                let title = room
+                    .get("title")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string());
                 let owner = room.get("owner");
                 let anchor_name = if status == 2 {
-                    owner.and_then(|o| o.get("nickname")).and_then(|v| v.as_str()).map(|s| s.to_string())
+                    owner
+                        .and_then(|o| o.get("nickname"))
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string())
                 } else {
-                    anchor.and_then(|a| a.get("nickname")).and_then(|v| v.as_str()).map(|s| s.to_string())
+                    anchor
+                        .and_then(|a| a.get("nickname"))
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string())
                 };
                 let avatar = if status == 2 {
-                    owner.and_then(|o| o.get("avatar_thumb")).and_then(|a| a.get("url_list")).and_then(|ul| ul.get(0)).and_then(|v| v.as_str()).map(|s| s.to_string())
+                    owner
+                        .and_then(|o| o.get("avatar_thumb"))
+                        .and_then(|a| a.get("url_list"))
+                        .and_then(|ul| ul.get(0))
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string())
                 } else {
-                    anchor.and_then(|a| a.get("avatar_thumb")).and_then(|a| a.get("url_list")).and_then(|ul| ul.get(0)).and_then(|v| v.as_str()).map(|s| s.to_string())
+                    anchor
+                        .and_then(|a| a.get("avatar_thumb"))
+                        .and_then(|a| a.get("url_list"))
+                        .and_then(|ul| ul.get(0))
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string())
                 };
                 // 规范化后的房间ID：从 HTML state 中提取 room.id_str
-                let normalized_room_id = room.get("id_str").and_then(|v| v.as_str()).map(|s| s.to_string());
+                let normalized_room_id = room
+                    .get("id_str")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string());
 
                 Ok(crate::platforms::common::LiveStreamInfo {
                     title,
@@ -122,8 +147,14 @@ pub async fn fetch_douyin_streamer_info(
                 };
                 let owner = room.get("owner").cloned().unwrap_or(Value::Null);
                 let status = room.get("status").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
-                let title = room.get("title").and_then(|v| v.as_str()).map(|s| s.to_string());
-                let anchor_name = owner.get("nickname").and_then(|v| v.as_str()).map(|s| s.to_string());
+                let title = room
+                    .get("title")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string());
+                let anchor_name = owner
+                    .get("nickname")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string());
                 let avatar = owner
                     .get("avatar_thumb")
                     .and_then(|a| a.get("url_list"))
@@ -182,7 +213,10 @@ async fn ensure_ttwid(http_client: &mut HttpClient) -> Result<(), String> {
 }
 
 // 与 douyin_streamer_detail.rs 中 fetch_room_detail_by_room_id 相同的请求结构（headers/cookies）
-async fn fetch_room_detail_by_room_id(http_client: &HttpClient, room_id: &str) -> Result<Value, String> {
+async fn fetch_room_detail_by_room_id(
+    http_client: &HttpClient,
+    room_id: &str,
+) -> Result<Value, String> {
     let url = "https://webcast.amemv.com/webcast/room/reflow/info/";
     let params = vec![
         ("type_id", "0"),
@@ -194,15 +228,26 @@ async fn fetch_room_detail_by_room_id(http_client: &HttpClient, room_id: &str) -
     ];
     let mut query = String::new();
     for (i, (k, v)) in params.iter().enumerate() {
-        if i > 0 { query.push('&'); }
+        if i > 0 {
+            query.push('&');
+        }
         query.push_str(&format!("{}={}", k, v));
     }
     let full_url = format!("{}?{}", url, query);
 
     let mut headers = HeaderMap::new();
-    headers.insert(REFERER, HeaderValue::from_static(DouyinSitePyDefaults::REFERER));
-    headers.insert(USER_AGENT, HeaderValue::from_static(DouyinSitePyDefaults::ua()));
-    headers.insert(ACCEPT, HeaderValue::from_static("application/json, text/plain, */*"));
+    headers.insert(
+        REFERER,
+        HeaderValue::from_static(DouyinSitePyDefaults::REFERER),
+    );
+    headers.insert(
+        USER_AGENT,
+        HeaderValue::from_static(DouyinSitePyDefaults::ua()),
+    );
+    headers.insert(
+        ACCEPT,
+        HeaderValue::from_static("application/json, text/plain, */*"),
+    );
     headers.insert(ACCEPT_LANGUAGE, HeaderValue::from_static("zh-CN,zh;q=0.9"));
 
     http_client
@@ -212,11 +257,20 @@ async fn fetch_room_detail_by_room_id(http_client: &HttpClient, room_id: &str) -
 }
 
 // 与 douyin_streamer_detail.rs 中 fetch_room_detail_by_web_rid_html 相同的请求结构（headers）
-async fn fetch_room_detail_by_web_rid_html(http_client: &HttpClient, web_rid: &str) -> Result<Value, String> {
+async fn fetch_room_detail_by_web_rid_html(
+    http_client: &HttpClient,
+    web_rid: &str,
+) -> Result<Value, String> {
     let room_url = format!("https://live.douyin.com/{}", web_rid);
     let mut headers = HeaderMap::new();
-    headers.insert(USER_AGENT, HeaderValue::from_str(DouyinSitePyDefaults::ua()).unwrap());
-    headers.insert(REFERER, HeaderValue::from_static(DouyinSitePyDefaults::REFERER));
+    headers.insert(
+        USER_AGENT,
+        HeaderValue::from_str(DouyinSitePyDefaults::ua()).unwrap(),
+    );
+    headers.insert(
+        REFERER,
+        HeaderValue::from_static(DouyinSitePyDefaults::REFERER),
+    );
 
     let text = http_client
         .get_text_with_headers(&room_url, Some(headers))
@@ -229,8 +283,12 @@ async fn fetch_room_detail_by_web_rid_html(http_client: &HttpClient, web_rid: &s
         .find(&text)
         .ok_or_else(|| "未能在 HTML 中解析到 Douyin state 数据".to_string())?;
     let raw = m.as_str().trim();
-    let s = raw.replace("\\\"", "\"").replace("\\\\", "\\").replace("]\\n", "");
-    let data: Value = serde_json::from_str(&s).map_err(|e| format!("解析 state JSON 失败: {}", e))?;
+    let s = raw
+        .replace("\\\"", "\"")
+        .replace("\\\\", "\\")
+        .replace("]\\n", "");
+    let data: Value =
+        serde_json::from_str(&s).map_err(|e| format!("解析 state JSON 失败: {}", e))?;
     Ok(data["state"].clone())
 }
 

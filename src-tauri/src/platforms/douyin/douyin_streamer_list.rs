@@ -106,61 +106,64 @@ pub async fn fetch_douyin_partition_rooms(
         count, offset, partition, partition_type, ms_token
     );
 
-
-    match local_client.get_json_with_headers::<DouyinPartitionApiResponse>(&url, Some(headers)).await {
+    match local_client
+        .get_json_with_headers::<DouyinPartitionApiResponse>(&url, Some(headers))
+        .await
+    {
         Ok(api_response) => {
             if api_response.status_code == 0 {
-                            let mut frontend_rooms = Vec::new();
-                            let received_rooms_count = api_response.data.data.len(); // Number of rooms actually received from this API call
+                let mut frontend_rooms = Vec::new();
+                let received_rooms_count = api_response.data.data.len(); // Number of rooms actually received from this API call
 
-                            for room_data in api_response.data.data {
-                                let room_details = room_data.room;
+                for room_data in api_response.data.data {
+                    let room_details = room_data.room;
 
-                                let avatar_url = room_details
-                                    .owner
-                                    .avatar_thumb
-                                    .as_ref()
-                                    .and_then(|thumb| thumb.url_list.get(0))
-                                    .cloned()
-                                    .unwrap_or_default();
+                    let avatar_url = room_details
+                        .owner
+                        .avatar_thumb
+                        .as_ref()
+                        .and_then(|thumb| thumb.url_list.get(0))
+                        .cloned()
+                        .unwrap_or_default();
 
-                                let user_count_display =
-                                    room_details.stats.user_count_str.clone().unwrap_or_else(
-                                        || room_details.stats.total_user_str.clone(),
-                                    );
+                    let user_count_display = room_details
+                        .stats
+                        .user_count_str
+                        .clone()
+                        .unwrap_or_else(|| room_details.stats.total_user_str.clone());
 
-                                frontend_rooms.push(LiveRoomFrontend {
-                                    room_id: room_details.room_id.clone(),
-                                    title: room_details.title,
-                                    cover_url: room_details
-                                        .cover
-                                        .url_list
-                                        .get(0)
-                                        .cloned()
-                                        .unwrap_or_default(),
-                                    owner_nickname: room_details.owner.nickname,
-                                    user_count_str: user_count_display,
-                                    avatar_url,
-                                });
-                            }
+                    frontend_rooms.push(LiveRoomFrontend {
+                        room_id: room_details.room_id.clone(),
+                        title: room_details.title,
+                        cover_url: room_details
+                            .cover
+                            .url_list
+                            .get(0)
+                            .cloned()
+                            .unwrap_or_default(),
+                        owner_nickname: room_details.owner.nickname,
+                        user_count_str: user_count_display,
+                        avatar_url,
+                    });
+                }
 
-                            // New has_more logic: true if we received exactly 'count' items
-                            let has_more = received_rooms_count == (count as usize);
+                // New has_more logic: true if we received exactly 'count' items
+                let has_more = received_rooms_count == (count as usize);
 
-                            // New next_offset logic: current offset + number of items requested for a page
-                            let next_offset_for_frontend = offset + count;
+                // New next_offset logic: current offset + number of items requested for a page
+                let next_offset_for_frontend = offset + count;
 
-                            Ok(DouyinLiveListResponse {
-                                rooms: frontend_rooms,
-                                has_more,
-                                next_offset: next_offset_for_frontend,
-                            })
-                        } else {
-                            Err(format!(
-                                "Douyin API returned non-zero status code: {}",
-                                api_response.status_code
-                            ))
-                        }
+                Ok(DouyinLiveListResponse {
+                    rooms: frontend_rooms,
+                    has_more,
+                    next_offset: next_offset_for_frontend,
+                })
+            } else {
+                Err(format!(
+                    "Douyin API returned non-zero status code: {}",
+                    api_response.status_code
+                ))
+            }
         }
         Err(e) => Err(format!("Network error fetching Douyin room list: {}", e)),
     }

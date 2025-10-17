@@ -32,16 +32,15 @@ pub struct GetStreamUrlPayload {
 #[derive(Serialize, Clone, Debug)]
 pub struct StreamVariant {
     pub url: String,
-    pub format: Option<String>,    // e.g. flv, ts, mp4
-    pub desc: Option<String>,      // e.g. 原画/高清
-    pub qn: Option<i32>,           // B 站的清晰度编号
-    pub protocol: Option<String>,  // e.g. http, https, ws/hls
+    pub format: Option<String>,   // e.g. flv, ts, mp4
+    pub desc: Option<String>,     // e.g. 原画/高清
+    pub qn: Option<i32>,          // B 站的清晰度编号
+    pub protocol: Option<String>, // e.g. http, https, ws/hls
 }
 
 // For the return type of get_douyin_live_stream_url
 // Matches LiveStreamInfo interface in DouyinLive.vue
-#[derive(Serialize, Clone, Debug)
-]
+#[derive(Serialize, Clone, Debug)]
 pub struct LiveStreamInfo {
     pub title: Option<String>,
     pub anchor_name: Option<String>,
@@ -60,7 +59,7 @@ pub struct LiveStreamInfo {
 #[derive(Default, Clone)]
 #[allow(dead_code)]
 pub struct StreamUrlStore {
-    pub url: std::sync::Arc<std::sync::Mutex<String>>, 
+    pub url: std::sync::Arc<std::sync::Mutex<String>>,
 }
 
 // Moved from main.rs
