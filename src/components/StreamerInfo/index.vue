@@ -11,17 +11,31 @@
           <div class="streamer-meta-row">
             <span class="streamer-name">{{ computedNickname }}</span>
             <span :class="['status-tag', statusClass]">{{ getStatusText }}</span>
-            <!-- Cookie status button for Bilibili -->
+            <!-- Bilibili login button -->
             <span v-if="props.platform === Platform.BILIBILI" class="cookie-status">
-              <button class="cookie-status-btn" @click="openCookieModal">
-                <span v-if="isCookieConfigured" class="cookie-configured">
+              <button
+                class="cookie-status-btn"
+                @click="handleBilibiliLogin"
+                :disabled="isLoggingIn"
+                :title="hasRequiredBilibiliCookie ? '点击重新登录' : '登录以同步 Cookie'"
+              >
+                <span v-if="isLoggingIn" class="cookie-pending">登录中...</span>
+                <span v-else-if="hasRequiredBilibiliCookie" class="cookie-configured">
                   <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
-                  已设置 Cookie
+                  已登录
                 </span>
                 <span v-else class="cookie-unset">
-                  未设置 Cookie
+                  登录
                 </span>
               </button>
+              <button
+                v-if="hasRequiredBilibiliCookie && !isLoggingIn"
+                class="cookie-clear-btn"
+                @click="handleBilibiliLogout"
+              >
+                退出
+              </button>
+              <span v-if="loginError" class="cookie-error">{{ loginError }}</span>
             </span>
             <span v-if="computedViewerCount > 0" class="viewers-tag">
               <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5M12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5s5 2.24 5-5s-2.24 5-5 5m0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3s3-1.34 3-3s-1.34-3-3-3"/></svg>
@@ -45,20 +59,6 @@
               <span class="follow-text">{{ isFollowing ? '取关' : '关注' }}</span>
             </button>
           </div>
-        </div>
-      </div>
-
-      <!-- Cookie modal -->
-      <div v-if="isCookieModalOpen" class="cookie-modal-backdrop" @click.self="closeCookieModal">
-        <div class="cookie-modal">
-          <h4>B站 Cookie 设置</h4>
-          <textarea v-model="cookieInput" placeholder="在此粘贴你的 B站 Cookie（仅本地存储，不会上传），设置 Cookie 后可获取最高画质，并能接收更多、更完整的弹幕"></textarea>
-          <div class="cookie-modal-actions">
-            <button class="primary" @click="saveCookie">保存</button>
-            <button class="danger" @click="clearCookie">清除</button>
-            <button @click="closeCookieModal">取消</button>
-          </div>
-          
         </div>
       </div>
     </div>
@@ -149,6 +149,13 @@
     font-weight: 500;
   }
 
+  /* Cookie / login status */
+  .cookie-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
   /* Cookie status button */
   .cookie-status-btn {
     font-size: 0.75rem;
@@ -172,6 +179,28 @@
   .cookie-status-btn:active { transform: scale(0.98); }
   .cookie-configured { color: var(--success-color); display: inline-flex; align-items: center; gap: 4px; }
   .cookie-unset { color: var(--secondary-text); }
+  .cookie-pending { color: var(--secondary-text); }
+
+  .cookie-clear-btn {
+    font-size: 0.75rem;
+    padding: 4px 8px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--secondary-text);
+    cursor: pointer;
+    transition: color 0.2s ease, transform 0.1s ease;
+  }
+  .cookie-clear-btn:hover {
+    color: var(--primary-text);
+    transform: translateY(-1px);
+  }
+  .cookie-clear-btn:active { transform: scale(0.97); }
+
+  .cookie-error {
+    font-size: 0.72rem;
+    color: var(--error-color, #f87171);
+  }
   
   .streamer-actions {
     display: flex;
@@ -344,71 +373,6 @@
     opacity: 0.9;
   }
 
-  /* Cookie modal styles */
-  .cookie-modal-backdrop {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.45);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-  }
-  .cookie-modal {
-    width: 520px;
-    max-width: 90vw;
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    box-shadow: var(--card-shadow);
-    border-radius: 12px;
-    padding: 16px;
-    color: var(--primary-text);
-  }
-  .cookie-modal h4 { margin: 0 0 10px 0; font-size: 16px; }
-  .cookie-modal textarea {
-    width: 100%;
-    min-height: 140px;
-    border-radius: 8px;
-    border: 1px solid var(--input-border);
-    background: var(--input-bg);
-    color: var(--input-text);
-    padding: 10px;
-    box-sizing: border-box;
-    outline: none;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
-  }
-  .cookie-modal textarea:focus {
-    border-color: var(--border-color-light);
-    box-shadow: 0 0 0 3px rgba(251, 114, 153, 0.25);
-  }
-  /* Thin Scrollbar (no white rim, theme-adaptive) */
-  .cookie-modal textarea::-webkit-scrollbar { width: 6px; height: 6px; }
-  .cookie-modal textarea::-webkit-scrollbar-track { background: var(--input-bg); border-radius: 3px; }
-  .cookie-modal textarea::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb-bg, #4b5563); border-radius: 3px; }
-  :root[data-theme="light"] .cookie-modal textarea::-webkit-scrollbar-track { background: var(--input-bg); }
-  :root[data-theme="light"] .cookie-modal textarea::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb-bg-light, #adb5bd); }
-  .cookie-modal-actions {
-    display: flex;
-    gap: 10px;
-    margin-top: 10px;
-  }
-  .cookie-modal-actions button {
-    padding: 6px 12px;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    background: rgba(255, 255, 255, 0.06);
-    color: var(--primary-text);
-    transition: background-color 0.2s ease, transform 0.1s ease;
-  }
-  .cookie-modal-actions button:hover { background: var(--hover-bg); transform: translateY(-1px); }
-  .cookie-modal-actions button:active { transform: scale(0.98); }
-  .cookie-modal-actions button.primary { background: var(--button-bg); color: var(--button-text); }
-  .cookie-modal-actions button.primary:hover { background: var(--button-hover-bg); }
-  .cookie-modal-actions button.danger { background: rgba(255, 255, 255, 0.06); color: var(--primary-text); }
-  .cookie-modal-actions button.danger:hover { background: var(--hover-bg); }
-  .cookie-tip { margin-top: 8px; font-size: 12px; color: var(--secondary-text); }
-  
   @keyframes idPulse {
     0% { text-shadow: 0 0 2px rgba(251, 114, 153, 0); }
     50% { text-shadow: 0 0 6px rgba(251, 114, 153, 0.7); }
@@ -498,6 +462,14 @@
   import { fetchDouyuStreamerDetails } from '../../platforms/douyu/streamerInfoParser'
   import { getDouyinStreamerDetails } from '../../platforms/douyin/streamerInfoParser'
   import { invoke } from '@tauri-apps/api/core'
+  import type { UnlistenFn } from '@tauri-apps/api/event'
+  import {
+    ensureBilibiliLoginWindow,
+    extractRequiredFlags,
+    getBilibiliCookies,
+    hasRequiredCookies,
+    sleep,
+  } from '../../platforms/bilibili/cookieHelper'
 
   // Helper: normalize avatar URL (strip wrappers/backticks, fix protocol)
   const normalizeAvatarUrl = (input: string | null | undefined): string => {
@@ -601,39 +573,97 @@
     return url
   }
 
-  // Cookie status UI state
-  const isCookieModalOpen = ref(false)
-  const cookieInput = ref<string>('')
-  const isCookieConfigured = computed(() => !!cookieInput.value && cookieInput.value.trim().length > 0)
+  // Bilibili login state
+  const bilibiliCookie = ref<string>('')
+  const hasRequiredBilibiliCookie = ref(false)
+  const isLoggingIn = ref(false)
+  const loginError = ref<string | null>(null)
 
-  const openCookieModal = () => { isCookieModalOpen.value = true }
-  const closeCookieModal = () => { isCookieModalOpen.value = false }
-  const saveCookie = async () => {
-    try {
-      if (typeof localStorage !== 'undefined') {
-        localStorage.setItem('bilibili_cookie', cookieInput.value.trim())
-      }
-      isCookieModalOpen.value = false
-      // Refresh details to reflect new cookie usage
-      if (props.platform === Platform.BILIBILI) {
-        await fetchRoomDetails()
-      }
-    } catch (e) {
-      console.error('[StreamerInfo] saveCookie error:', e)
+  const updateBilibiliCookieState = (raw: string | null | undefined) => {
+    const value = (raw ?? '').trim()
+    bilibiliCookie.value = value
+    const { hasSessdata, hasBiliJct } = extractRequiredFlags(value)
+    hasRequiredBilibiliCookie.value = hasSessdata && hasBiliJct
+  }
+
+  const persistBilibiliCookie = (raw: string | null | undefined) => {
+    if (typeof localStorage === 'undefined') return
+    const value = (raw ?? '').trim()
+    if (value) {
+      localStorage.setItem('bilibili_cookie', value)
+    } else {
+      localStorage.removeItem('bilibili_cookie')
+    }
+    updateBilibiliCookieState(value)
+  }
+
+  const loadBilibiliCookieFromStorage = () => {
+    if (typeof localStorage === 'undefined') return
+    const saved = localStorage.getItem('bilibili_cookie')
+    updateBilibiliCookieState(saved)
+  }
+
+  const handleBilibiliLogout = async () => {
+    loginError.value = null
+    persistBilibiliCookie(null)
+    if (props.platform === Platform.BILIBILI) {
+      await fetchRoomDetails()
     }
   }
-  const clearCookie = async () => {
+
+  const handleBilibiliLogin = async () => {
+    if (isLoggingIn.value) return
+    loginError.value = null
+    isLoggingIn.value = true
+
+    let unlisten: UnlistenFn | null = null
+
     try {
-      if (typeof localStorage !== 'undefined') {
-        localStorage.removeItem('bilibili_cookie')
+      const loginWindow = await ensureBilibiliLoginWindow()
+      let windowClosed = false
+
+      unlisten = await loginWindow.listen('tauri://close-requested', () => {
+        windowClosed = true
+      })
+
+      const timeoutMs = 120_000
+      const intervalMs = 1_500
+      const deadline = Date.now() + timeoutMs
+
+      while (!windowClosed && Date.now() < deadline) {
+        const result = await getBilibiliCookies([loginWindow.label])
+        if (hasRequiredCookies(result)) {
+          persistBilibiliCookie(result.cookie)
+          try {
+            await loginWindow.close()
+          } catch (closeErr) {
+            console.warn('[StreamerInfo] Failed to close bilibili login window:', closeErr)
+          }
+          if (props.platform === Platform.BILIBILI) {
+            await fetchRoomDetails()
+          }
+          return
+        }
+        await sleep(intervalMs)
       }
-      cookieInput.value = ''
-      isCookieModalOpen.value = false
-      if (props.platform === Platform.BILIBILI) {
-        await fetchRoomDetails()
+
+      if (windowClosed) {
+        throw new Error('登录窗口已关闭，未完成登录')
       }
-    } catch (e) {
-      console.error('[StreamerInfo] clearCookie error:', e)
+
+      throw new Error('登录超时，请重试')
+    } catch (e: any) {
+      loginError.value = e?.message || '登录失败，请重试'
+      console.error('[StreamerInfo] handleBilibiliLogin error:', e)
+    } finally {
+      if (unlisten) {
+        try {
+          unlisten()
+        } catch (_) {
+          /* no-op */
+        }
+      }
+      isLoggingIn.value = false
     }
   }
   
@@ -789,10 +819,7 @@
   };
   
   onMounted(() => {
-    // Load saved cookie for status display
-    if (typeof localStorage !== 'undefined') {
-      cookieInput.value = localStorage.getItem('bilibili_cookie') || ''
-    }
+    loadBilibiliCookieFromStorage()
     fetchRoomDetails()
     nextTick(() => {
       updateHighlightVars();

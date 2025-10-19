@@ -22,6 +22,7 @@ import MainPlayer from '../components/player/index.vue';
 import { useFollowStore } from '../store/followStore';
 import type { FollowedStreamer } from '../platforms/common/types';
 import { Platform } from '../platforms/common/types';
+import { ensureBilibiliCookieBootstrap } from '../platforms/bilibili/cookieHelper';
 
 const props = defineProps<{ roomId: string }>();
 const emit = defineEmits(['fullscreen-change']);
@@ -31,9 +32,24 @@ const followStore = useFollowStore();
 const playerKey = ref(0);
 const cookieInput = ref<string>('');
 
-onMounted(() => {
-  const saved = localStorage.getItem('bilibili_cookie');
-  if (saved) cookieInput.value = saved;
+onMounted(async () => {
+  if (typeof localStorage === 'undefined') {
+    return;
+  }
+
+  let stored = (localStorage.getItem('bilibili_cookie') || '').trim();
+  if (stored) {
+    cookieInput.value = stored;
+  }
+
+  const result = await ensureBilibiliCookieBootstrap();
+  if (!stored && result?.cookie) {
+    stored = result.cookie.trim();
+    if (stored) {
+      localStorage.setItem('bilibili_cookie', stored);
+      cookieInput.value = stored;
+    }
+  }
 });
 
 const isFollowed = computed(() => {
@@ -77,40 +93,5 @@ const handlePlayerReload = () => {
   height: 100%;
   background-color: #0e0e10;
   color: white;
-}
-.cookie-panel {
-  padding: 10px;
-}
-.cookie-panel details {
-  background: #1f1f23;
-  border-radius: 8px;
-  padding: 8px;
-}
-.cookie-panel textarea {
-  width: 100%;
-  min-height: 80px;
-  margin-top: 8px;
-  border-radius: 6px;
-  border: 1px solid #333;
-  background: #0e0e10;
-  color: #ddd;
-}
-.cookie-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 8px;
-}
-.cookie-actions button {
-  padding: 6px 12px;
-  border: none;
-  border-radius: 6px;
-  background: #9147ff;
-  color: white;
-  cursor: pointer;
-}
-.cookie-tip {
-  color: #aaa;
-  font-size: 12px;
-  margin-top: 6px;
 }
 </style>

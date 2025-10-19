@@ -62,6 +62,7 @@ tauri = { version = "2.7.0", features = ["macos-private-api"] }
  tauri-plugin-os = "2.3.0"
  tungstenite = { version = "0.21", features = ["native-tls"] }
  brotlic = "0.8"
+ cookie = "0.18"
 
  [profile.release]
  panic = "abort"
