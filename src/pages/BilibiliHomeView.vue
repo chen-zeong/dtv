@@ -16,6 +16,10 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({
+  name: 'BilibiliHomeView'
+})
+
 import { ref } from 'vue'
 import CommonCategory from '../components/CommonCategory/index.vue'
 import CommonStreamerList from '../components/CommonStreamerList/index.vue'

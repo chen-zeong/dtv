@@ -16,6 +16,10 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({
+  name: 'HuyaHomeView'
+})
+
 import { ref } from 'vue'
 import CommonCategory from '../components/CommonCategory/index.vue'
 import { huyaCategoriesData } from '../platforms/huya/huyaCategoriesData'

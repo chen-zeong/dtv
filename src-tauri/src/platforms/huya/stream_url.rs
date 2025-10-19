@@ -352,6 +352,8 @@ async fn fetch_web_stream_data(
         candidates.push(WebStreamCandidate { base_flv });
     }
 
+    let candidates = prioritize_candidates(candidates);
+
     Ok(HuyaWebStreamData {
         is_live: !candidates.is_empty(),
         candidates,
@@ -368,6 +370,49 @@ fn cdn_priority(cdn: &str) -> usize {
     } else {
         3
     }
+}
+
+fn is_flv_url(url: &str) -> bool {
+    url.to_ascii_lowercase().contains(".flv")
+}
+
+fn prioritize_candidates(candidates: Vec<WebStreamCandidate>) -> Vec<WebStreamCandidate> {
+    if candidates.is_empty() {
+        return candidates;
+    }
+
+    let mut huya_domain: Vec<WebStreamCandidate> = Vec::new();
+    let mut other_flv: Vec<WebStreamCandidate> = Vec::new();
+    let mut remaining: Vec<WebStreamCandidate> = Vec::new();
+
+    for candidate in candidates {
+        let lower = candidate.base_flv.to_ascii_lowercase();
+        let has_huya = lower.contains("huya.com");
+        let flv = lower.contains(".flv");
+
+        if has_huya && flv {
+            huya_domain.push(candidate);
+        } else if flv {
+            other_flv.push(candidate);
+        } else {
+            remaining.push(candidate);
+        }
+    }
+
+    if !huya_domain.is_empty() {
+        let mut result = huya_domain;
+        result.extend(other_flv);
+        result.extend(remaining);
+        return result;
+    }
+
+    if !other_flv.is_empty() {
+        let mut result = other_flv;
+        result.extend(remaining);
+        return result;
+    }
+
+    remaining
 }
 
 fn resolve_ratio(quality: Option<&str>) -> Option<i32> {
@@ -389,10 +434,16 @@ fn resolve_ratio(quality: Option<&str>) -> Option<i32> {
 }
 
 fn pick_stream_url(candidates: &[WebStreamCandidate], ratio: Option<i32>) -> Option<String> {
-    candidates.first().map(|candidate| match ratio {
-        Some(r) => format!("{}&ratio={}", candidate.base_flv, r),
-        None => candidate.base_flv.clone(),
-    })
+    let candidate = candidates.first()?;
+    if let Some(r) = ratio {
+        if is_flv_url(&candidate.base_flv) {
+            Some(format!("{}&ratio={}", candidate.base_flv, r))
+        } else {
+            Some(candidate.base_flv.clone())
+        }
+    } else {
+        Some(candidate.base_flv.clone())
+    }
 }
 
 fn build_flv_tx_urls(candidates: &[WebStreamCandidate]) -> Vec<HuyaUnifiedStreamEntry> {
@@ -400,23 +451,27 @@ fn build_flv_tx_urls(candidates: &[WebStreamCandidate]) -> Vec<HuyaUnifiedStream
         return Vec::new();
     };
 
-    vec![
-        HuyaUnifiedStreamEntry {
-            quality: "原画".to_string(),
-            bitRate: 0,
-            url: base.base_flv.clone(),
-        },
-        HuyaUnifiedStreamEntry {
+    let mut entries = Vec::new();
+    entries.push(HuyaUnifiedStreamEntry {
+        quality: "原画".to_string(),
+        bitRate: 0,
+        url: base.base_flv.clone(),
+    });
+
+    if is_flv_url(&base.base_flv) {
+        entries.push(HuyaUnifiedStreamEntry {
             quality: "高清".to_string(),
             bitRate: 4000,
             url: format!("{}&ratio={}", base.base_flv, 4000),
-        },
-        HuyaUnifiedStreamEntry {
+        });
+        entries.push(HuyaUnifiedStreamEntry {
             quality: "标清".to_string(),
             bitRate: 2000,
             url: format!("{}&ratio={}", base.base_flv, 2000),
-        },
-    ]
+        });
+    }
+
+    entries
 }
 
 #[tauri::command]
