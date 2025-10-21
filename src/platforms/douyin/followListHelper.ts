@@ -16,7 +16,6 @@ export async function refreshDouyinFollowedStreamer(
       const isLive = data.status === 2;
       const liveStatus: LiveStatus = isLive ? 'LIVE' : 'OFFLINE';
       const nextId = data.web_rid || streamer.id;
-      const currentRoomId = data.normalized_room_id || streamer.currentRoomId;
 
       if (data.web_rid && data.web_rid !== streamer.id) {
         console.info(`[DouyinFollowHelper] Migrating stored ID ${streamer.id} -> ${data.web_rid}`);
@@ -29,7 +28,6 @@ export async function refreshDouyinFollowedStreamer(
         nickname: data.anchor_name || streamer.nickname,
         roomTitle: data.title || streamer.roomTitle,
         avatarUrl: data.avatar || streamer.avatarUrl,
-        currentRoomId: currentRoomId || streamer.currentRoomId,
       };
     } else {
       if (data && data.error_message) {

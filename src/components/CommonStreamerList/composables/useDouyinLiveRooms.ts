@@ -28,8 +28,7 @@ export function useDouyinLiveRooms(
   };
 
   const mapRawRoomToCommonStreamer = (rawRoom: any): CommonStreamer => {
-    const webId = rawRoom.web_rid?.toString?.() || rawRoom.room_id?.toString?.() || '';
-    const actualRoomId = rawRoom.room_id?.toString?.() || '';
+    const webId = rawRoom.web_rid?.toString?.() || '';
     return {
       room_id: webId || `N/A_RID_${Math.random()}`,
       title: rawRoom.title || '未知标题',
@@ -39,7 +38,6 @@ export function useDouyinLiveRooms(
       viewer_count_str: rawRoom.user_count_str || '0 人',
       platform: 'douyin',
       web_id: webId,
-      actual_room_id: actualRoomId || undefined,
     };
   };
 

@@ -100,7 +100,7 @@ interface DouyinApiStreamInfo {
   avatar?: string | null;
   status?: number | null;
   error_message?: string | null;
-  normalized_room_id?: string | null;
+  web_rid?: string | null;
 }
 
 interface HuyaAnchorItem {
@@ -115,7 +115,6 @@ interface SearchResultItem {
   platform: Platform;
   roomId: string;
   webId?: string | null;
-  normalizedRoomId?: string | null;
   userName: string;
   roomTitle?: string | null;
   avatar: string | null;
@@ -247,13 +246,11 @@ const performDouyinIdSearch = async (userInputRoomId: string) => {
           searchError.value = '没有搜索到主播。';
         } else if (douyinInfo.anchor_name) {
           const isLive = douyinInfo.status === 2;
-          const normalizedId = (douyinInfo as any).normalized_room_id ?? null;
           const webId = (douyinInfo as any).web_rid ?? userInputRoomId;
           searchResults.value = [{
             platform: Platform.DOUYIN,
-            roomId: normalizedId || webId,
+            roomId: webId,
             webId,
-            normalizedRoomId: normalizedId,
             userName: douyinInfo.anchor_name || '未知抖音主播',
             roomTitle: douyinInfo.title || null,
             avatar: douyinInfo.avatar || null,
@@ -400,7 +397,7 @@ const selectAnchor = (anchor: SearchResultItem) => {
     platform: anchor.platform,
     nickname: anchor.userName,
     avatarUrl: anchor.avatar,
-    currentRoomId: anchor.normalizedRoomId || undefined,
+    currentRoomId: undefined,
   });
   searchQuery.value = '';
   searchResults.value = [];

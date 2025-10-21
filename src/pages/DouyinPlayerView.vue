@@ -2,7 +2,7 @@
   <div class="player-view">
     <MainPlayer
       :key="playerKey"
-      :room-id="normalizedRoomId || props.roomId"
+      :room-id="props.roomId"
       :platform="Platform.DOUYIN"
       :is-followed="isFollowed"
       @follow="handleFollow"
@@ -15,9 +15,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { invoke } from '@tauri-apps/api/core';
 import MainPlayer from '../components/player/index.vue';
 import { useFollowStore } from '../store/followStore';
 import type { FollowedStreamer } from '../platforms/common/types';
@@ -32,66 +31,6 @@ const emit = defineEmits(['fullscreen-change']);
 const router = useRouter();
 const followStore = useFollowStore();
 const playerKey = ref(0);
-
-// 统一规范化为 room_id（如果传入的是短ID）
-const normalizedRoomId = ref<string | null>(null);
-
-type DouyinFollowListRoomInfo = {
-  web_rid: string;
-  room_id_str: string;
-  nickname: string;
-  room_name: string;
-  avatar_url: string;
-  status: number;
-};
-
-async function normalizeRoomId() {
-  const inputId = props.roomId;
-  if (!inputId) {
-    normalizedRoomId.value = null;
-    return;
-  }
-  try {
-    // 后端会根据长度自动处理 webRid 或 room_id
-    const info = await invoke<DouyinFollowListRoomInfo>('fetch_douyin_room_info', { live_id: inputId });
-    if (info && info.room_id_str) {
-      normalizedRoomId.value = info.room_id_str;
-      console.log('[DouyinPlayerView] normalizedRoomId ->', normalizedRoomId.value);
-
-      if (info.web_rid && info.web_rid !== props.roomId) {
-        if (followStore.isFollowed(Platform.DOUYIN, props.roomId)) {
-          followStore.replaceStreamerId(Platform.DOUYIN, props.roomId, info.web_rid);
-        }
-        console.log('[DouyinPlayerView] Route parameter differs from resolved web_rid, redirecting to canonical web_id:', info.web_rid);
-        router.replace({ name: 'douyinPlayer', params: { roomId: info.web_rid } });
-      }
-
-      const storeId = info.web_rid || props.roomId;
-      if (followStore.isFollowed(Platform.DOUYIN, storeId)) {
-        followStore.updateStreamerDetails({
-          platform: Platform.DOUYIN,
-          id: storeId,
-          currentRoomId: info.room_id_str,
-          nickname: info.nickname || `主播${props.roomId}`,
-          roomTitle: info.room_name || undefined,
-          avatarUrl: info.avatar_url || undefined,
-        });
-      }
-    } else {
-      normalizedRoomId.value = inputId; // 回退
-      console.warn('[DouyinPlayerView] fetch_douyin_room_info 返回为空，使用原始ID作为 room_id:', inputId);
-    }
-  } catch (e) {
-    normalizedRoomId.value = inputId; // 回退
-    console.warn('[DouyinPlayerView] 规范化 room_id 失败，使用原始ID:', inputId, e);
-  }
-}
-
-// 初始化与监听路由参数变化
-normalizeRoomId();
-watch(() => props.roomId, () => {
-  normalizeRoomId();
-});
 
 const isFollowed = computed(() => {
   return followStore.isFollowed(Platform.DOUYIN, props.roomId);
@@ -114,7 +53,6 @@ const handleFollow = () => {
     ...streamerToFollow,
     id: idToSave,
     platform: Platform.DOUYIN,
-    currentRoomId: normalizedRoomId.value || undefined,
   });
 
   // 查看 localStorage 中的缓存内容

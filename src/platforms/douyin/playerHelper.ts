@@ -31,10 +31,11 @@ export async function fetchAndPrepareDouyinStreamConfig(roomId: string, quality:
 
   try {
     const payloadData = { args: { room_id_str: roomId } };
+    const backendQuality = normalizeDouyinQuality(quality);
     // 使用画质参数调用抖音画质切换API
     const result = await invoke<LiveStreamInfo>('get_douyin_live_stream_url_with_quality', { 
       payload: payloadData,
-      quality: quality 
+      quality: backendQuality 
     });
 
     if (result.error_message) {
@@ -97,6 +98,14 @@ export async function fetchAndPrepareDouyinStreamConfig(roomId: string, quality:
         initialError: e.message || '获取直播信息失败: 未知错误' // Ensure string here
     };
   }
+}
+
+function normalizeDouyinQuality(input: string): string {
+  const upper = input.trim().toUpperCase();
+  if (upper === 'OD' || upper === '原画') return 'OD';
+  if (upper === 'BD' || upper === '高清') return 'BD';
+  if (upper === 'UHD' || upper === '标清') return 'UHD';
+  return 'OD';
 }
 
 export async function startDouyinDanmakuListener(

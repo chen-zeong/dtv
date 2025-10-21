@@ -59,7 +59,6 @@ pub struct DouyinPartitionApiResponse {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct LiveRoomFrontend {
     pub web_rid: String,
-    pub room_id: String,
     pub title: String,
     pub cover_url: String,
     pub owner_nickname: String,
@@ -135,7 +134,6 @@ pub async fn fetch_douyin_partition_rooms(
 
                     frontend_rooms.push(LiveRoomFrontend {
                         web_rid: room_data.actual_web_rid_for_frontend.clone(),
-                        room_id: room_details.room_id.clone(),
                         title: room_details.title,
                         cover_url: room_details
                             .cover

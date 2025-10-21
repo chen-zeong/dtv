@@ -134,7 +134,9 @@ pub async fn get_bilibili_cookie(
 }
 
 #[tauri::command]
-pub async fn bootstrap_bilibili_cookie(app_handle: AppHandle) -> Result<BilibiliCookieResult, String> {
+pub async fn bootstrap_bilibili_cookie(
+    app_handle: AppHandle,
+) -> Result<BilibiliCookieResult, String> {
     let label = "bilibili-silent-bootstrap".to_string();
     let url = "https://www.bilibili.com/".to_string();
 
@@ -159,12 +161,8 @@ pub async fn bootstrap_bilibili_cookie(app_handle: AppHandle) -> Result<Bilibili
 
     tokio::time::sleep(Duration::from_secs(3)).await;
 
-    let result = collect_cookie_from_labels(
-        app_handle.clone(),
-        vec![label.clone()],
-        url.clone(),
-    )
-    .await?;
+    let result =
+        collect_cookie_from_labels(app_handle.clone(), vec![label.clone()], url.clone()).await?;
 
     if let Some(window) = app_handle.get_webview_window(&label) {
         let _ = window.close();
