@@ -6,6 +6,8 @@ export interface CommonStreamer {
   room_cover: string;
   viewer_count_str: string;
   platform: 'huya' | 'douyin' | 'douyu' | 'bilibili' | string;
+  web_id?: string;
+  actual_room_id?: string;
 }
 
 export interface HuyaLiveListResponse {

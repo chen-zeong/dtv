@@ -54,6 +54,8 @@ pub struct LiveStreamInfo {
     pub available_streams: Option<Vec<StreamVariant>>,
     // 新增：规范化后的房间ID（例如从 web_id 提取出的 room.id_str）
     pub normalized_room_id: Option<String>,
+    // 新增：直播间的 web_rid（用于关注列表以 web_id 为主键）
+    pub web_rid: Option<String>,
 }
 
 #[derive(Default, Clone)]

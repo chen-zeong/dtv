@@ -24,6 +24,7 @@ pub async fn fetch_douyin_streamer_info(
             upstream_url: None,
             available_streams: None,
             normalized_room_id: None,
+            web_rid: None,
         });
     }
 
@@ -58,6 +59,7 @@ pub async fn fetch_douyin_streamer_info(
                             upstream_url: None,
                             available_streams: None,
                             normalized_room_id: None,
+                            web_rid: Some(room_id_str.clone()),
                         });
                     }
                 };
@@ -98,6 +100,17 @@ pub async fn fetch_douyin_streamer_info(
                     .get("id_str")
                     .and_then(|v| v.as_str())
                     .map(|s| s.to_string());
+                let web_rid = owner
+                    .and_then(|o| o.get("web_rid"))
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string())
+                    .or_else(|| {
+                        anchor
+                            .and_then(|a| a.get("web_rid"))
+                            .and_then(|v| v.as_str())
+                            .map(|s| s.to_string())
+                    })
+                    .or_else(|| Some(room_id_str.clone()));
 
                 Ok(crate::platforms::common::LiveStreamInfo {
                     title,
@@ -109,6 +122,7 @@ pub async fn fetch_douyin_streamer_info(
                     upstream_url: None,
                     available_streams: None,
                     normalized_room_id,
+                    web_rid,
                 })
             }
             Err(e) => {
@@ -122,6 +136,7 @@ pub async fn fetch_douyin_streamer_info(
                     upstream_url: None,
                     available_streams: None,
                     normalized_room_id: None,
+                    web_rid: Some(room_id_str.clone()),
                 });
             }
         }
@@ -142,6 +157,7 @@ pub async fn fetch_douyin_streamer_info(
                             upstream_url: None,
                             available_streams: None,
                             normalized_room_id: None,
+                            web_rid: None,
                         });
                     }
                 };
@@ -161,6 +177,10 @@ pub async fn fetch_douyin_streamer_info(
                     .and_then(|ul| ul.get(0))
                     .and_then(|v| v.as_str())
                     .map(|s| s.to_string());
+                let web_rid = owner
+                    .get("web_rid")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string());
 
                 Ok(crate::platforms::common::LiveStreamInfo {
                     title,
@@ -172,6 +192,7 @@ pub async fn fetch_douyin_streamer_info(
                     upstream_url: None,
                     available_streams: None,
                     normalized_room_id: Some(room_id_str.clone()),
+                    web_rid,
                 })
             }
             Err(e) => {
@@ -185,6 +206,7 @@ pub async fn fetch_douyin_streamer_info(
                     upstream_url: None,
                     available_streams: None,
                     normalized_room_id: None,
+                    web_rid: None,
                 });
             }
         }

@@ -31,6 +31,7 @@ export interface LiveStreamer extends BaseStreamer {
 export interface FollowedStreamer extends BaseStreamer {
   roomTitle?: string; // May not always be available or up-to-date for offline followed streamers
   followedAt?: number;
+  currentRoomId?: string; // 最近解析到的真实房间ID（如抖音 room_id）
 }
 
 // This can be a union type if details vary significantly between platforms
@@ -130,5 +131,7 @@ export interface LiveStreamInfo {
   available_streams?: StreamVariant[] | null;
   // 新增：规范化后的房间ID（例如从 web_id 提取出的 room.id_str）
   normalized_room_id?: string | null;
+  // 新增：抖音直播间的 web_rid（关注列表以 web_id 为主键）
+  web_rid?: string | null;
 }
 // Potentially other platform-specific fields if not covered by StreamRoomDetails

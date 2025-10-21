@@ -45,7 +45,7 @@
                   {{ anchor.roomTitle || '无直播标题' }}
                 </span>
                 <span class="result-roomid styled-badge">
-                  ID: {{ anchor.roomId }}
+                  ID: {{ anchor.webId || anchor.roomId }}
                 </span>
               </div>
             </div>
@@ -114,6 +114,8 @@ interface HuyaAnchorItem {
 interface SearchResultItem {
   platform: Platform;
   roomId: string;
+  webId?: string | null;
+  normalizedRoomId?: string | null;
   userName: string;
   roomTitle?: string | null;
   avatar: string | null;
@@ -240,20 +242,23 @@ const performDouyinIdSearch = async (userInputRoomId: string) => {
       payload: payloadData,
     });
     isLoadingSearch.value = false;
-    if (douyinInfo) {
-      if (douyinInfo.error_message) {
-        searchError.value = '没有搜索到主播。';
-      } else if (douyinInfo.anchor_name) {
-        const isLive = douyinInfo.status === 2;
-        const normalizedId = (douyinInfo as any).normalized_room_id ?? userInputRoomId;
-        searchResults.value = [{
-          platform: Platform.DOUYIN,
-          roomId: normalizedId,
-          userName: douyinInfo.anchor_name || '未知抖音主播',
-          roomTitle: douyinInfo.title || null,
-          avatar: douyinInfo.avatar || null,
-          liveStatus: isLive,
-          rawStatus: douyinInfo.status,
+      if (douyinInfo) {
+        if (douyinInfo.error_message) {
+          searchError.value = '没有搜索到主播。';
+        } else if (douyinInfo.anchor_name) {
+          const isLive = douyinInfo.status === 2;
+          const normalizedId = (douyinInfo as any).normalized_room_id ?? null;
+          const webId = (douyinInfo as any).web_rid ?? userInputRoomId;
+          searchResults.value = [{
+            platform: Platform.DOUYIN,
+            roomId: normalizedId || webId,
+            webId,
+            normalizedRoomId: normalizedId,
+            userName: douyinInfo.anchor_name || '未知抖音主播',
+            roomTitle: douyinInfo.title || null,
+            avatar: douyinInfo.avatar || null,
+            liveStatus: isLive,
+            rawStatus: douyinInfo.status,
         }];
       } else {
         searchError.value = '没有搜索到主播。';
@@ -391,10 +396,11 @@ const performBilibiliIdSearch = async (userInputRoomId: string) => {
 
 const selectAnchor = (anchor: SearchResultItem) => {
   emit('selectAnchor', {
-    id: anchor.roomId,
+    id: anchor.webId || anchor.roomId,
     platform: anchor.platform,
     nickname: anchor.userName,
     avatarUrl: anchor.avatar,
+    currentRoomId: anchor.normalizedRoomId || undefined,
   });
   searchQuery.value = '';
   searchResults.value = [];

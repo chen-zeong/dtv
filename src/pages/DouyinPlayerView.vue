@@ -37,6 +37,7 @@ const playerKey = ref(0);
 const normalizedRoomId = ref<string | null>(null);
 
 type DouyinFollowListRoomInfo = {
+  web_rid: string;
   room_id_str: string;
   nickname: string;
   room_name: string;
@@ -56,6 +57,26 @@ async function normalizeRoomId() {
     if (info && info.room_id_str) {
       normalizedRoomId.value = info.room_id_str;
       console.log('[DouyinPlayerView] normalizedRoomId ->', normalizedRoomId.value);
+
+      if (info.web_rid && info.web_rid !== props.roomId) {
+        if (followStore.isFollowed(Platform.DOUYIN, props.roomId)) {
+          followStore.replaceStreamerId(Platform.DOUYIN, props.roomId, info.web_rid);
+        }
+        console.log('[DouyinPlayerView] Route parameter differs from resolved web_rid, redirecting to canonical web_id:', info.web_rid);
+        router.replace({ name: 'douyinPlayer', params: { roomId: info.web_rid } });
+      }
+
+      const storeId = info.web_rid || props.roomId;
+      if (followStore.isFollowed(Platform.DOUYIN, storeId)) {
+        followStore.updateStreamerDetails({
+          platform: Platform.DOUYIN,
+          id: storeId,
+          currentRoomId: info.room_id_str,
+          nickname: info.nickname || `主播${props.roomId}`,
+          roomTitle: info.room_name || undefined,
+          avatarUrl: info.avatar_url || undefined,
+        });
+      }
     } else {
       normalizedRoomId.value = inputId; // 回退
       console.warn('[DouyinPlayerView] fetch_douyin_room_info 返回为空，使用原始ID作为 room_id:', inputId);
@@ -73,12 +94,11 @@ watch(() => props.roomId, () => {
 });
 
 const isFollowed = computed(() => {
-  const idToCheck = normalizedRoomId.value || props.roomId;
-  return followStore.isFollowed(Platform.DOUYIN, idToCheck);
+  return followStore.isFollowed(Platform.DOUYIN, props.roomId);
 });
 
 const handleFollow = () => {
-  const idToSave = normalizedRoomId.value || props.roomId;
+  const idToSave = props.roomId;
   const streamerToFollow: Omit<FollowedStreamer, 'platform' | 'id' | 'roomTitle' | 'isLive'> = {
     nickname: `主播${idToSave}`,
     avatarUrl: '',
@@ -94,6 +114,7 @@ const handleFollow = () => {
     ...streamerToFollow,
     id: idToSave,
     platform: Platform.DOUYIN,
+    currentRoomId: normalizedRoomId.value || undefined,
   });
 
   // 查看 localStorage 中的缓存内容
@@ -102,8 +123,7 @@ const handleFollow = () => {
 };
 
 const handleUnfollow = () => {
-  const idToRemove = normalizedRoomId.value || props.roomId;
-  followStore.unfollowStreamer(Platform.DOUYIN, idToRemove);
+  followStore.unfollowStreamer(Platform.DOUYIN, props.roomId);
 };
 
 const handleClosePlayer = () => {

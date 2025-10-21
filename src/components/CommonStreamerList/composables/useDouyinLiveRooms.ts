@@ -28,14 +28,18 @@ export function useDouyinLiveRooms(
   };
 
   const mapRawRoomToCommonStreamer = (rawRoom: any): CommonStreamer => {
+    const webId = rawRoom.web_rid?.toString?.() || rawRoom.room_id?.toString?.() || '';
+    const actualRoomId = rawRoom.room_id?.toString?.() || '';
     return {
-      room_id: rawRoom.room_id?.toString() || `N/A_RID_${Math.random()}`,
+      room_id: webId || `N/A_RID_${Math.random()}`,
       title: rawRoom.title || '未知标题',
       nickname: rawRoom.owner_nickname || '未知主播',
       avatar: rawRoom.avatar_url || '',
       room_cover: rawRoom.cover_url || 'https://via.placeholder.com/320x180.png?text=No+Image',
       viewer_count_str: rawRoom.user_count_str || '0 人',
       platform: 'douyin',
+      web_id: webId,
+      actual_room_id: actualRoomId || undefined,
     };
   };
 

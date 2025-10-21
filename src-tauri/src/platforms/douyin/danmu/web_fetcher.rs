@@ -2,18 +2,19 @@
 use crate::platforms::common::http_client::HttpClient;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use serde_json;
+use serde_json::{self, Value};
 use std::sync::Arc;
 use tokio::net::TcpStream;
 use tokio::sync::Mutex;
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
 
 use super::signature; // Assuming signature.rs is in the same directory (src)
-use reqwest::header::{ACCEPT, ACCEPT_LANGUAGE, REFERER, USER_AGENT};
+use reqwest::header::{ACCEPT, ACCEPT_LANGUAGE, HeaderMap, HeaderValue, REFERER, USER_AGENT};
 
 // New struct for frontend
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct DouyinFollowListRoomInfo {
+    pub web_rid: String,
     pub room_id_str: String,
     pub nickname: String,
     pub room_name: String, // Title of the room
@@ -21,10 +22,21 @@ pub struct DouyinFollowListRoomInfo {
     pub status: i32, // 0 for live, other values indicate not live or error
 }
 
+#[derive(Debug, Clone)]
+struct ResolvedRoomInfo {
+    pub web_rid: Option<String>,
+    pub room_id: String,
+    pub nickname: String,
+    pub room_name: String,
+    pub avatar_url: String,
+    pub status: i32,
+}
+
 pub struct DouyinLiveWebFetcher {
     pub live_id: String,
     pub ttwid: Option<String>,
     pub room_id: Option<String>,
+    resolved_info: Option<ResolvedRoomInfo>,
     pub user_agent: String,
     pub http_client: HttpClient,
     pub(crate) _ws_stream: Option<Arc<Mutex<WebSocketStream<MaybeTlsStream<TcpStream>>>>>,
@@ -43,11 +55,259 @@ impl DouyinLiveWebFetcher {
             live_id: live_id.to_string(),
             ttwid: None,
             room_id: None,
+            resolved_info: None,
             user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36 Edg/125.0.0.0".to_string(),
             http_client,
             _ws_stream: None,
             dy_cookie: None,
             user_unique_id: None,
+        })
+    }
+
+    async fn resolve_room_info(
+        &mut self,
+    ) -> Result<ResolvedRoomInfo, Box<dyn std::error::Error + Send + Sync>> {
+        if let Some(info) = &self.resolved_info {
+            return Ok(info.clone());
+        }
+
+        let live_id = self.live_id.clone();
+        let looks_numeric = live_id.chars().all(|c| c.is_ascii_digit());
+        let looks_like_room_id = looks_numeric && live_id.len() > 16;
+
+        if looks_like_room_id {
+            match self.fetch_room_info_by_room_id(&live_id).await {
+                Ok(info) => {
+                    self.room_id = Some(info.room_id.clone());
+                    self.resolved_info = Some(info.clone());
+                    return Ok(info);
+                }
+                Err(err) => {
+                    println!(
+                        "[DouyinLiveWebFetcher] Failed to resolve via room_id path for {}: {}. Falling back to web_rid path.",
+                        live_id, err
+                    );
+                }
+            }
+        }
+
+        match self.fetch_room_info_by_web_rid(&live_id).await {
+            Ok(info) => {
+                self.room_id = Some(info.room_id.clone());
+                self.resolved_info = Some(info.clone());
+                Ok(info)
+            }
+            Err(web_err) => {
+                if looks_numeric {
+                    // Try room_id path as a secondary attempt (covers numeric web_id inputs)
+                    let info = self.fetch_room_info_by_room_id(&live_id).await.map_err(|room_err| {
+                        format!(
+                            "Failed to resolve Douyin identifiers. room_id attempt: {}; web_rid attempt: {}",
+                            room_err, web_err
+                        )
+                    })?;
+                    self.room_id = Some(info.room_id.clone());
+                    self.resolved_info = Some(info.clone());
+                    Ok(info)
+                } else {
+                    Err(web_err)
+                }
+            }
+        }
+    }
+
+    async fn fetch_room_info_by_web_rid(
+        &self,
+        web_rid: &str,
+    ) -> Result<ResolvedRoomInfo, Box<dyn std::error::Error + Send + Sync>> {
+        let room_url = format!("https://live.douyin.com/{}", web_rid);
+
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            USER_AGENT,
+            HeaderValue::from_str(&self.user_agent)
+                .unwrap_or_else(|_| HeaderValue::from_static("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36 Edg/125.0.0.0")),
+        );
+        headers.insert(
+            REFERER,
+            HeaderValue::from_static("https://live.douyin.com"),
+        );
+
+        let text = self
+            .http_client
+            .get_text_with_headers(&room_url, Some(headers))
+            .await?;
+
+        let re = Regex::new(r#"\{\\\"state\\\":\{\\\"appStore.*?\]\\n"#)?;
+        let m = re
+            .find(&text)
+            .ok_or_else(|| "未能在 HTML 中解析到 Douyin state 数据".to_string())?;
+        let raw = m.as_str().trim();
+        let s = raw
+            .replace("\\\"", "\"")
+            .replace("\\\\", "\\")
+            .replace("]\\n", "");
+        let data: Value = serde_json::from_str(&s)?;
+        let state = data
+            .get("state")
+            .cloned()
+            .ok_or_else(|| "state 字段不存在".to_string())?;
+
+        let room_info = state
+            .get("roomStore")
+            .and_then(|v| v.get("roomInfo"))
+            .ok_or_else(|| "roomStore.roomInfo 字段不存在".to_string())?;
+        let room = room_info
+            .get("room")
+            .ok_or_else(|| "roomStore.roomInfo.room 字段不存在".to_string())?;
+        let owner = room
+            .get("owner")
+            .cloned()
+            .unwrap_or_else(|| Value::Null);
+        let anchor = room_info
+            .get("anchor")
+            .cloned()
+            .unwrap_or_else(|| Value::Null);
+
+        let room_id = room
+            .get("id_str")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| "未能解析到房间ID".to_string())?
+            .to_string();
+        let status = room
+            .get("status")
+            .and_then(|v| v.as_i64())
+            .unwrap_or(-1) as i32;
+        let room_name = room
+            .get("title")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+
+        let nickname = owner
+            .get("nickname")
+            .and_then(|v| v.as_str())
+            .or_else(|| anchor.get("nickname").and_then(|v| v.as_str()))
+            .unwrap_or("")
+            .to_string();
+        let avatar_url = owner
+            .get("avatar_thumb")
+            .or_else(|| anchor.get("avatar_thumb"))
+            .and_then(|a| a.get("url_list"))
+            .and_then(|ul| ul.get(0))
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+        let web_rid_val = owner
+            .get("web_rid")
+            .and_then(|v| v.as_str())
+            .or_else(|| anchor.get("web_rid").and_then(|v| v.as_str()))
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| web_rid.to_string());
+
+        Ok(ResolvedRoomInfo {
+            web_rid: Some(web_rid_val),
+            room_id,
+            nickname,
+            room_name,
+            avatar_url,
+            status,
+        })
+    }
+
+    async fn fetch_room_info_by_room_id(
+        &self,
+        room_id: &str,
+    ) -> Result<ResolvedRoomInfo, Box<dyn std::error::Error + Send + Sync>> {
+        let url = "https://webcast.amemv.com/webcast/room/reflow/info/";
+        let params = vec![
+            ("type_id", "0"),
+            ("live_id", "1"),
+            ("room_id", room_id),
+            ("sec_user_id", ""),
+            ("version_code", "99.99.99"),
+            ("app_id", "6383"),
+        ];
+        let mut query = String::new();
+        for (i, (k, v)) in params.iter().enumerate() {
+            if i > 0 {
+                query.push('&');
+            }
+            query.push_str(&format!("{}={}", k, v));
+        }
+        let full_url = format!("{}?{}", url, query);
+
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            REFERER,
+            HeaderValue::from_static("https://live.douyin.com"),
+        );
+        headers.insert(
+            USER_AGENT,
+            HeaderValue::from_str(&self.user_agent)
+                .unwrap_or_else(|_| HeaderValue::from_static("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36 Edg/125.0.0.0")),
+        );
+        headers.insert(
+            ACCEPT,
+            HeaderValue::from_static("application/json, text/plain, */*"),
+        );
+        headers.insert(
+            ACCEPT_LANGUAGE,
+            HeaderValue::from_static("zh-CN,zh;q=0.9"),
+        );
+
+        let json: Value = self
+            .http_client
+            .get_json_with_headers(&full_url, Some(headers))
+            .await?;
+
+        let room = json
+            .get("data")
+            .and_then(|d| d.get("room"))
+            .ok_or_else(|| "reflow 接口未返回房间数据".to_string())?;
+        let owner = room
+            .get("owner")
+            .cloned()
+            .unwrap_or_else(|| Value::Null);
+
+        let room_id_str = room
+            .get("id_str")
+            .and_then(|v| v.as_str())
+            .unwrap_or(room_id)
+            .to_string();
+        let status = room
+            .get("status")
+            .and_then(|v| v.as_i64())
+            .unwrap_or(-1) as i32;
+        let room_name = room
+            .get("title")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+        let nickname = owner
+            .get("nickname")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+        let avatar_url = owner
+            .get("avatar_thumb")
+            .and_then(|a| a.get("url_list"))
+            .and_then(|ul| ul.get(0))
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+        let web_rid = owner
+            .get("web_rid")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+
+        Ok(ResolvedRoomInfo {
+            web_rid,
+            room_id: room_id_str,
+            nickname,
+            room_name,
+            avatar_url,
+            status,
         })
     }
 
@@ -81,8 +341,9 @@ impl DouyinLiveWebFetcher {
     pub async fn collect_cookies_and_ids(
         &mut self,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        // 改为不解析房间 HTML，统一只收集站点 Cookie，并使用传入的值作为 room_id。
-        // 说明：前端现已传入真实的 room_id，因此此处无需再根据 web_rid 解析。
+        // Ensure room_id has been resolved before collecting cookies
+        self.resolve_room_info().await?;
+
         let homepage_url = "https://live.douyin.com/";
 
         // 先通过 HEAD 请求收集初始 Cookie
@@ -167,14 +428,6 @@ impl DouyinLiveWebFetcher {
         }
 
         // 设置 room_id：如果尚未设置，且传入的 live_id 是纯数字，则直接视为 room_id
-        if self.room_id.is_none() {
-            if self.live_id.chars().all(|c| c.is_ascii_digit()) {
-                self.room_id = Some(self.live_id.clone());
-            } else {
-                return Err("Expected numeric room_id; HTML parsing path removed".into());
-            }
-        }
-
         self.dy_cookie = Some(dy_cookie);
         self.user_unique_id = Some(user_unique_id);
         Ok(())
@@ -195,8 +448,8 @@ impl DouyinLiveWebFetcher {
         if let Some(room_id) = &self.room_id {
             return Ok(room_id.clone());
         }
-        // Ensure cookies collected and numeric room_id inferred from live_id
-        self.collect_cookies_and_ids().await?;
+        // Ensure identifiers resolved
+        self.resolve_room_info().await?;
         self.room_id
             .clone()
             .ok_or_else(|| "room_id not set after cookie collection".into())
@@ -371,142 +624,26 @@ pub async fn fetch_douyin_room_info(live_id: String) -> Result<DouyinFollowListR
         .map_err(|e| format!("Failed to create DouyinLiveWebFetcher: {}", e))?;
 
     // Ensure cookies and ids are collected
-    fetcher
-        .fetch_room_details()
+    let resolved = fetcher
+        .resolve_room_info()
         .await
-        .map_err(|e| format!("Failed to collect cookies and ids: {}", e))?;
+        .map_err(|e| format!("Failed to resolve Douyin room info: {}", e))?;
 
-    let room_id_str = fetcher
-        .get_room_id()
-        .await
-        .map_err(|e| format!("Failed to get room_id: {}", e))?;
-    let dy_cookie = fetcher
-        .get_dy_cookie()
-        .await
-        .map_err(|e| format!("Failed to get dy_cookie: {}", e))?;
-    let user_unique_id = fetcher
-        .get_user_unique_id()
-        .await
-        .map_err(|e| format!("Failed to get user_unique_id: {}", e))?;
-
-    // Parse msToken from dy_cookie if present
-    let ms_token = dy_cookie
-        .split(';')
-        .filter_map(|kv| {
-            let kv = kv.trim();
-            if kv.starts_with("msToken=") {
-                Some(kv.trim_start_matches("msToken=").to_string())
-            } else {
-                None
-            }
-        })
-        .next()
-        .unwrap_or_default();
-
-    // Construct the URL for the web/enter endpoint with the new unified scheme
-    let base_url = "https://live.douyin.com/webcast/room/web/enter/?aid=6383&app_name=douyin_web&live_id=1&device_platform=web&language=zh-CN&cookie_enabled=true";
-    let url = if ms_token.is_empty() {
-        format!(
-            "{}&room_id={}&user_unique_id={}",
-            base_url, room_id_str, user_unique_id
-        )
-    } else {
-        format!(
-            "{}&room_id={}&msToken={}&user_unique_id={}",
-            base_url, room_id_str, ms_token, user_unique_id
-        )
-    };
-
-    // Prepare headers per request
-    let mut headers = reqwest::header::HeaderMap::new();
-    headers.insert(
-        ACCEPT,
-        reqwest::header::HeaderValue::from_static("application/json, text/plain, */*"),
-    );
-    headers.insert(
-        ACCEPT_LANGUAGE,
-        reqwest::header::HeaderValue::from_static("zh-CN,zh;q=0.9"),
-    );
-    headers.insert(
-        REFERER,
-        reqwest::header::HeaderValue::from_str(&format!("https://live.douyin.com/{}", live_id))
-            .unwrap_or_else(|_| {
-                reqwest::header::HeaderValue::from_static("https://live.douyin.com")
-            }),
-    );
-    headers.insert(
-        reqwest::header::HeaderName::from_static("cookie"),
-        reqwest::header::HeaderValue::from_str(&dy_cookie)
-            .map_err(|e| format!("Invalid Cookie header: {}", e))?,
-    );
-
-    // Perform request directly with inner client to ensure per-request headers (especially Cookie) are honored
-    let resp = fetcher
-        .http_client
-        .inner
-        .get(&url)
-        .headers(headers)
-        .send()
-        .await
-        .map_err(|e| format!("Failed to send request: {}", e))?;
-    let status = resp.status();
-    if !status.is_success() {
-        let err_text = resp
-            .text()
-            .await
-            .unwrap_or_else(|_| "Failed to read error body".to_string());
-        return Err(format!(
-            "GET JSON {} failed with status {}: {}",
-            url, status, err_text
-        ));
-    }
-    let data: serde_json::Value = resp
-        .json()
-        .await
-        .map_err(|e| format!("Failed to parse JSON: {}", e))?;
-
-    // Extract required fields
-    let (nickname, room_name, avatar_url, status_i32) = {
-        if let Some(room_data_top) = data.get("data") {
-            if let Some(room_info) = room_data_top.get("room") {
-                let status_val = room_info
-                    .get("status")
-                    .and_then(|s| s.as_i64())
-                    .unwrap_or(-1);
-                let status_i32 = status_val as i32;
-                let room_name = room_info
-                    .get("title")
-                    .and_then(|s| s.as_str())
-                    .unwrap_or("")
-                    .to_string();
-                let avatar_url = room_info
-                    .get("owner")
-                    .and_then(|o| o.get("avatar_thumb"))
-                    .and_then(|at| at.get("url_list"))
-                    .and_then(|ul| ul.get(0))
-                    .and_then(|u| u.as_str())
-                    .unwrap_or("")
-                    .to_string();
-                let nickname = room_info
-                    .get("owner")
-                    .and_then(|o| o.get("nickname"))
-                    .and_then(|n| n.as_str())
-                    .unwrap_or("")
-                    .to_string();
-                (nickname, room_name, avatar_url, status_i32)
-            } else {
-                (String::new(), String::new(), String::new(), -1)
-            }
-        } else {
-            (String::new(), String::new(), String::new(), -1)
-        }
-    };
-
-    Ok(DouyinFollowListRoomInfo {
-        room_id_str,
+    let ResolvedRoomInfo {
+        web_rid,
+        room_id,
         nickname,
         room_name,
         avatar_url,
-        status: status_i32,
+        status,
+    } = resolved;
+
+    Ok(DouyinFollowListRoomInfo {
+        web_rid: web_rid.unwrap_or_else(|| live_id.clone()),
+        room_id_str: room_id,
+        nickname,
+        room_name,
+        avatar_url,
+        status,
     })
 }

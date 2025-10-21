@@ -27,6 +27,7 @@ pub async fn get_bilibili_live_stream_url_with_quality(
             upstream_url: None,
             available_streams: None,
             normalized_room_id: None,
+            web_rid: None,
         });
     }
 
@@ -261,6 +262,7 @@ pub async fn get_bilibili_live_stream_url_with_quality(
             upstream_url: None,
             available_streams: None,
             normalized_room_id: None,
+            web_rid: None,
         });
     }
 
@@ -333,6 +335,7 @@ pub async fn get_bilibili_live_stream_url_with_quality(
             upstream_url: None,
             available_streams: Some(variants),
             normalized_room_id: None,
+            web_rid: None,
         });
     }
 
@@ -348,6 +351,7 @@ pub async fn get_bilibili_live_stream_url_with_quality(
             upstream_url: None,
             available_streams: Some(variants),
             normalized_room_id: None,
+            web_rid: None,
         });
     }
 
@@ -385,5 +389,6 @@ pub async fn get_bilibili_live_stream_url_with_quality(
         upstream_url: Some(real_url),
         available_streams: Some(variants),
         normalized_room_id: None,
+        web_rid: None,
     })
 }

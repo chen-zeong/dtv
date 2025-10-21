@@ -383,7 +383,7 @@
         await ensureProxyStarted();
       }
 
-      const updates: FollowedStreamer[] = [];
+      const updates: { originalKey: string; updated: FollowedStreamer }[] = [];
       const items = [...props.followedAnchors];
 
       await runWithConcurrency(items, async (streamer) => {
@@ -433,29 +433,38 @@
             };
           } else {
             console.warn(`Unsupported platform for refresh: ${streamer.platform}`);
-            updates.push(streamer);
+            updates.push({
+              originalKey: `${streamer.platform}:${streamer.id}`,
+              updated: streamer,
+            });
             progressCurrent.value++;
             return;
           }
 
           updates.push({
-            ...streamer,
-            ...updatedStreamerData,
-          } as FollowedStreamer);
+            originalKey: `${streamer.platform}:${streamer.id}`,
+            updated: {
+              ...streamer,
+              ...updatedStreamerData,
+            } as FollowedStreamer,
+          });
         } catch (e) {
           console.error(`[FollowsList] Error during refresh for ${streamer.platform}/${streamer.id}, returning original:`, e);
-          updates.push(streamer);
+          updates.push({
+            originalKey: `${streamer.platform}:${streamer.id}`,
+            updated: streamer,
+          });
         } finally {
           // 更新进度
           progressCurrent.value++;
         }
       }, FOLLOW_REFRESH_CONCURRENCY);
 
-      const validUpdates = updates.filter((update: FollowedStreamer | undefined): update is FollowedStreamer => !!update && typeof update.id !== 'undefined');
+      const validUpdates = updates.filter((entry): entry is { originalKey: string; updated: FollowedStreamer } => !!entry && !!entry.updated && typeof entry.updated.id !== 'undefined');
       if (validUpdates.length > 0) {
         // Preserve original user-defined order: map updates back onto the original list order (use platform:id to avoid collisions)
         const toKey = (s: FollowedStreamer) => `${s.platform}:${s.id}`;
-        const updateMap = new Map<string, FollowedStreamer>(validUpdates.map(u => [toKey(u), u]));
+        const updateMap = new Map<string, FollowedStreamer>(validUpdates.map(u => [u.originalKey, u.updated]));
         const reorderedPreservingOrder = props.followedAnchors.map(orig => updateMap.get(toKey(orig)) ?? orig);
         const hasChanged = JSON.stringify(reorderedPreservingOrder) !== JSON.stringify(props.followedAnchors);
         if (hasChanged) {

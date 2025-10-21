@@ -8,6 +8,7 @@ use reqwest::header::{
 };
 use serde_json::Value;
 use tauri::{command, AppHandle, State};
+use regex::Regex;
 
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
@@ -63,6 +64,7 @@ pub async fn get_douyin_live_stream_url_with_quality(
             upstream_url: None,
             available_streams: None,
             normalized_room_id: None,
+            web_rid: None,
         };
         // 写入桌面文件
         // 已移除：写入桌面文件调用 write_douyin_return_to_desktop_simple(&result, &room_id_str, &quality, "N/A");
@@ -77,7 +79,55 @@ pub async fn get_douyin_live_stream_url_with_quality(
     ensure_ttwid(&mut http_client).await.ok();
     println!("[Douyin Stream Detail] ensure_ttwid 完成，准备选择解析路径");
 
-    let parse_path = "reflow(room_id)";
+    let mut resolved_room_id = room_id_str.clone();
+    let mut preferred_web_rid: Option<String> = None;
+
+    let looks_like_web_id = room_id_str.len() <= 16;
+    if looks_like_web_id {
+        match fetch_room_detail_by_web_rid_html(&http_client, &room_id_str).await {
+            Ok(state_json) => {
+                if let Some(room_info) = state_json
+                    .get("roomStore")
+                    .and_then(|v| v.get("roomInfo"))
+                {
+                    if let Some(room) = room_info.get("room") {
+                        if let Some(id_str) = room.get("id_str").and_then(|v| v.as_str()) {
+                            resolved_room_id = id_str.to_string();
+                            println!(
+                                "[Douyin Stream Detail] web_id '{}' 解析到 room_id '{}'",
+                                room_id_str, resolved_room_id
+                            );
+                        }
+                        preferred_web_rid = room
+                            .get("owner")
+                            .and_then(|o| o.get("web_rid"))
+                            .and_then(|v| v.as_str())
+                            .map(|s| s.to_string())
+                            .or_else(|| {
+                                room_info
+                                    .get("anchor")
+                                    .and_then(|a| a.get("web_rid"))
+                                    .and_then(|v| v.as_str())
+                                    .map(|s| s.to_string())
+                            })
+                            .or_else(|| Some(room_id_str.clone()));
+                    }
+                }
+            }
+            Err(err) => {
+                eprintln!(
+                    "[Douyin Stream Detail] 通过 web_id '{}' 解析 room_id 失败: {}，将继续使用原始标识",
+                    room_id_str, err
+                );
+            }
+        }
+    }
+
+    let parse_path = if looks_like_web_id {
+        "web_rid->reflow(room_id)"
+    } else {
+        "reflow(room_id)"
+    };
     println!(
         "[Douyin Stream Detail] 解析路径选择: {} -> {}",
         room_id_str, parse_path
@@ -90,7 +140,7 @@ pub async fn get_douyin_live_stream_url_with_quality(
     };
 
     // 统一使用 room_id 的 reflow info 接口
-    let detail = match fetch_room_detail_by_room_id(&http_client, &room_id_str).await {
+    let mut detail = match fetch_room_detail_by_room_id(&http_client, &resolved_room_id).await {
         Ok(json) => extract_detail_from_reflow(&json)
             .ok_or_else(|| "未能从 reflow info 中解析到房间详情".to_string())?,
         Err(e) => {
@@ -103,11 +153,29 @@ pub async fn get_douyin_live_stream_url_with_quality(
                 error_message: Some(format!("Reflow 接口请求失败: {}", e)),
                 upstream_url: None,
                 available_streams: None,
-                normalized_room_id: None,
+                normalized_room_id: if looks_like_web_id {
+                    Some(resolved_room_id.clone())
+                } else {
+                    None
+                },
+                web_rid: preferred_web_rid.clone(),
             };
             return write_and_ok(result);
         }
     };
+
+    if detail.room_id.is_none() {
+        detail.room_id = Some(resolved_room_id.clone());
+    }
+    if detail.web_rid.is_none() {
+        detail.web_rid = preferred_web_rid.clone().or_else(|| {
+            if looks_like_web_id {
+                Some(room_id_str.clone())
+            } else {
+                None
+            }
+        });
+    }
 
     // 不在线直接返回基础信息，stream_url 为空
     if detail.status != 2 {
@@ -121,6 +189,7 @@ pub async fn get_douyin_live_stream_url_with_quality(
             upstream_url: None,
             available_streams: None,
             normalized_room_id: detail.room_id.clone(),
+            web_rid: detail.web_rid.clone(),
         };
         return write_and_ok(result);
     }
@@ -134,13 +203,14 @@ pub async fn get_douyin_live_stream_url_with_quality(
                 avatar: detail.avatar,
                 stream_url: None,
                 status: Some(detail.status),
-                error_message: Some("主播在线，但未找到 stream_url".to_string()),
-                upstream_url: None,
-                available_streams: None,
-                normalized_room_id: detail.room_id.clone(),
-            };
-            return write_and_ok(result);
-        }
+            error_message: Some("主播在线，但未找到 stream_url".to_string()),
+            upstream_url: None,
+            available_streams: None,
+            normalized_room_id: detail.room_id.clone(),
+            web_rid: detail.web_rid.clone(),
+        };
+        return write_and_ok(result);
+    }
     };
 
     let has_live_core = stream_url_val.get("live_core_sdk_data").is_some();
@@ -281,6 +351,7 @@ pub async fn get_douyin_live_stream_url_with_quality(
                     upstream_url: None,
                     available_streams: None,
                     normalized_room_id: detail.room_id.clone(),
+                    web_rid: detail.web_rid.clone(),
                 });
             }
         };
@@ -295,6 +366,7 @@ pub async fn get_douyin_live_stream_url_with_quality(
             upstream_url: Some(real_url),
             available_streams: None,
             normalized_room_id: detail.room_id.clone(),
+            web_rid: detail.web_rid.clone(),
         })
     } else {
         eprintln!("[Douyin Stream Detail] 未能解析到任何可用的播放地址");
@@ -308,6 +380,7 @@ pub async fn get_douyin_live_stream_url_with_quality(
             upstream_url: None,
             available_streams: None,
             normalized_room_id: detail.room_id.clone(),
+            web_rid: detail.web_rid.clone(),
         })
     }
 }
@@ -382,6 +455,41 @@ async fn fetch_room_detail_by_room_id(
         .get_json_with_headers(&full_url, Some(headers))
         .await
         .map_err(|e| format!("请求 reflow info 失败: {}", e))
+}
+
+async fn fetch_room_detail_by_web_rid_html(
+    http_client: &HttpClient,
+    web_rid: &str,
+) -> Result<Value, String> {
+    let room_url = format!("https://live.douyin.com/{}", web_rid);
+    let mut headers = HeaderMap::new();
+    headers.insert(
+        USER_AGENT,
+        HeaderValue::from_static(DouyinSitePyDefaults::ua()),
+    );
+    headers.insert(
+        REFERER,
+        HeaderValue::from_static(DouyinSitePyDefaults::REFERER),
+    );
+
+    let text = http_client
+        .get_text_with_headers(&room_url, Some(headers))
+        .await
+        .map_err(|e| format!("获取房间页面失败: {}", e))?;
+
+    let re = Regex::new(r#"\{\\\"state\\\":\{\\\"appStore.*?\]\\n"#)
+        .map_err(|e| format!("构建正则失败: {}", e))?;
+    let m = re
+        .find(&text)
+        .ok_or_else(|| "未能在 HTML 中解析到 Douyin state 数据".to_string())?;
+    let raw = m.as_str().trim();
+    let s = raw
+        .replace("\\\"", "\"")
+        .replace("\\\\", "\\")
+        .replace("]\\n", "");
+    let data: Value =
+        serde_json::from_str(&s).map_err(|e| format!("解析 state JSON 失败: {}", e))?;
+    Ok(data["state"].clone())
 }
 
 fn extract_detail_from_reflow(json: &Value) -> Option<DetailInfo> {

@@ -110,6 +110,7 @@ pub async fn fetch_bilibili_streamer_info(
             upstream_url: None,
             available_streams: None,
             normalized_room_id: None,
+            web_rid: None,
         });
     }
 
@@ -167,6 +168,7 @@ pub async fn fetch_bilibili_streamer_info(
             upstream_url: None,
             available_streams: None,
             normalized_room_id: None,
+            web_rid: None,
         });
     }
     let j: Value = serde_json::from_str(&text)
@@ -191,5 +193,6 @@ pub async fn fetch_bilibili_streamer_info(
         upstream_url: None,
         available_streams: None,
         normalized_room_id: None,
+        web_rid: None,
     })
 }
