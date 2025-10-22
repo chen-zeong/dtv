@@ -1,9 +1,8 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen, type Event as TauriEvent } from '@tauri-apps/api/event';
-import Artplayer from 'artplayer';
 import type { LiveStreamInfo, StreamVariant } from '../common/types';
 import type { Ref } from 'vue';
-import type { DanmakuMessage } from '../../components/player/types';
+import type { DanmakuMessage, DanmuOverlayInstance } from '../../components/player/types';
 import { v4 as uuidv4 } from 'uuid';
 
 export async function getBilibiliStreamConfig(
@@ -72,7 +71,7 @@ interface UnifiedRustDanmakuPayload {
 
 export async function startBilibiliDanmakuListener(
   roomId: string,
-  artInstance: Artplayer,
+  danmuOverlay: DanmuOverlayInstance | null,
   danmakuMessagesRef: Ref<DanmakuMessage[]>,
   cookie?: string,
 ): Promise<() => void> {
@@ -96,11 +95,20 @@ export async function startBilibiliDanmakuListener(
       room_id: roomId,
     };
 
-    if (artInstance && (artInstance as any).plugins && (artInstance as any).plugins.artplayerPluginDanmuku) {
-      (artInstance as any).plugins.artplayerPluginDanmuku.emit({ 
-        text: frontendDanmaku.content, 
-        color: (frontendDanmaku as any).color || '#FFFFFF' 
-      });
+    if (danmuOverlay?.sendComment) {
+      try {
+        danmuOverlay.sendComment({
+          id: frontendDanmaku.id,
+          txt: frontendDanmaku.content,
+          duration: 12000,
+          mode: 'scroll',
+          style: {
+            color: (frontendDanmaku as any).color || '#FFFFFF',
+          },
+        });
+      } catch (emitError) {
+        console.warn('[BilibiliPlayerHelper] Failed emitting danmu.js comment:', emitError);
+      }
     }
 
     danmakuMessagesRef.value.push(frontendDanmaku);

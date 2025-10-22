@@ -14,14 +14,13 @@
     "@tauri-apps/plugin-opener": "^2.4.0",
     "@tauri-apps/plugin-os": "^2.3.0",
     "@vueuse/core": "^12.5.0",
-    "artplayer": "^5.2.2",
-    "artplayer-plugin-danmuku": "^5.1.4",
-    "hls.js": "^1.4.12",
-    "mpegts.js": "1.7.3",
+    "danmu.js": "1.1.13-douyin-1.5",
     "pinia": "^2.1.7",
     "uuid": "^11.1.0",
     "vue": "^3.5.13",
-    "vue-router": "^4.5.1"
+    "vue-router": "^4.5.1",
+    "xgplayer": "^3.0.23",
+    "xgplayer-flv": "^3.0.23"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.7.0",

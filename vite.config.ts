@@ -30,13 +30,6 @@ export default defineConfig(async () => ({
     },
   },
   build: {
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          mpegts: ['mpegts.js'],
-        },
-      },
-    },
   },
   // to make use of `TAURI_DEBUG` and other env variables
   // https://tauri.studio/v1/api/config#buildconfig.beforedevcommand

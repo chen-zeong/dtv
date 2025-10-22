@@ -1,9 +1,8 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen, type Event as TauriEvent } from '@tauri-apps/api/event';
-import Artplayer from 'artplayer';
 import { Ref } from 'vue';
 import { Platform } from '../common/types';
-import type { DanmakuMessage, RustGetStreamUrlPayload } from '../../components/player/types';
+import type { DanmakuMessage, DanmuOverlayInstance, RustGetStreamUrlPayload } from '../../components/player/types';
 import type { LiveStreamInfo } from '../common/types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -110,7 +109,7 @@ function normalizeDouyinQuality(input: string): string {
 
 export async function startDouyinDanmakuListener(
   roomId: string,
-  artInstance: Artplayer, // For emitting danmaku to player
+  danmuOverlay: DanmuOverlayInstance | null, // For emitting danmaku to overlay
   danmakuMessagesRef: Ref<DanmakuMessage[]> // For updating DanmuList
 ): Promise<() => void> {
   
@@ -123,9 +122,7 @@ export async function startDouyinDanmakuListener(
   const eventName = 'danmaku-message';
 
   const unlisten = await listen<DouyinRustDanmakuPayload>(eventName, (event: TauriEvent<DouyinRustDanmakuPayload>) => {
-    
-
-    if (artInstance && artInstance.plugins && artInstance.plugins.artplayerPluginDanmuku && event.payload) {
+    if (event.payload) {
       const rustP = event.payload;
       const frontendDanmaku: DanmakuMessage = {
         id: uuidv4(),
@@ -136,10 +133,21 @@ export async function startDouyinDanmakuListener(
         room_id: rustP.room_id || roomId, // Ensure room_id is present
       };
 
-      artInstance.plugins.artplayerPluginDanmuku.emit({
-        text: frontendDanmaku.content,
-        color: frontendDanmaku.color || '#FFFFFF', 
-      });
+      if (danmuOverlay?.sendComment) {
+        try {
+          danmuOverlay.sendComment({
+            id: frontendDanmaku.id,
+            txt: frontendDanmaku.content,
+            duration: 12000,
+            mode: 'scroll',
+            style: {
+              color: frontendDanmaku.color || '#FFFFFF',
+            },
+          });
+        } catch (emitError) {
+          console.warn('[DouyinPlayerHelper] Failed emitting danmu.js comment:', emitError);
+        }
+      }
       danmakuMessagesRef.value.push(frontendDanmaku);
       if (danmakuMessagesRef.value.length > 200) { // Manage danmaku array size
         danmakuMessagesRef.value.splice(0, danmakuMessagesRef.value.length - 200);

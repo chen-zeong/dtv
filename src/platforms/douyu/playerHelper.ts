@@ -1,8 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen, type Event as TauriEvent } from '@tauri-apps/api/event';
-import Artplayer from 'artplayer';
 import { Ref } from 'vue';
-import type { DanmakuMessage } from '../../components/player/types';
+import type { DanmakuMessage, DanmuOverlayInstance } from '../../components/player/types';
 import { v4 as uuidv4 } from 'uuid';
 
 // 统一的 Rust 弹幕事件负载（与 Douyin/Huya 保持一致）
@@ -74,7 +73,7 @@ export async function getDouyuStreamConfig(roomId: string, quality: string = '�
 
 export async function startDouyuDanmakuListener(
   roomId: string,
-  artInstance: Artplayer,
+  danmuOverlay: DanmuOverlayInstance | null,
   danmakuMessagesRef: Ref<DanmakuMessage[]>
 ): Promise<() => void> {
 
@@ -83,7 +82,7 @@ export async function startDouyuDanmakuListener(
   const eventName = 'danmaku-message';
 
   const unlisten = await listen<UnifiedRustDanmakuPayload>(eventName, (event: TauriEvent<UnifiedRustDanmakuPayload>) => {
-    if (artInstance && artInstance.plugins && artInstance.plugins.artplayerPluginDanmuku && event.payload) {
+    if (event.payload) {
       const rustP = event.payload;
 
       // 仅处理当前 roomId 的消息，避免跨房间干扰
@@ -98,10 +97,21 @@ export async function startDouyuDanmakuListener(
         room_id: rustP.room_id || roomId,
       };
 
-      artInstance.plugins.artplayerPluginDanmuku.emit({
-        text: frontendDanmaku.content,
-        color: frontendDanmaku.color || '#FFFFFF',
-      });
+      if (danmuOverlay?.sendComment) {
+        try {
+          danmuOverlay.sendComment({
+            id: frontendDanmaku.id,
+            txt: frontendDanmaku.content,
+            duration: 12000,
+            mode: 'scroll',
+            style: {
+              color: frontendDanmaku.color || '#FFFFFF',
+            },
+          });
+        } catch (emitError) {
+          console.warn('[DouyuPlayerHelper] Failed emitting danmu.js comment:', emitError);
+        }
+      }
       danmakuMessagesRef.value.push(frontendDanmaku);
       if (danmakuMessagesRef.value.length > 200) {
         danmakuMessagesRef.value.splice(0, danmakuMessagesRef.value.length - 200);

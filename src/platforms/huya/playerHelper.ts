@@ -1,8 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen, type Event as TauriEvent } from '@tauri-apps/api/event';
-import Artplayer from 'artplayer';
 import { Ref } from 'vue';
-import type { DanmakuMessage } from '../../components/player/types';
+import type { DanmakuMessage, DanmuOverlayInstance } from '../../components/player/types';
 import { v4 as uuidv4 } from 'uuid';
 
 export interface HuyaUnifiedEntry { quality: string; bitRate: number; url: string; }
@@ -73,7 +72,7 @@ let currentHuyaRoomId: string | null = null;
 
 export async function startHuyaDanmakuListener(
   roomId: string,
-  artInstance: Artplayer,
+  danmuOverlay: DanmuOverlayInstance | null,
   danmakuMessagesRef: Ref<DanmakuMessage[]>
 ): Promise<() => void> {
   console.log('[HuyaPlayerHelper] Starting Huya danmaku listener for room:', roomId);
@@ -108,12 +107,20 @@ export async function startHuyaDanmakuListener(
       room_id: roomId,
     };
 
-    // 添加到 Artplayer 弹幕插件
-    if (artInstance && (artInstance as any).plugins && (artInstance as any).plugins.artplayerPluginDanmuku) {
-      (artInstance as any).plugins.artplayerPluginDanmuku.emit({ 
-        text: frontendDanmaku.content, 
-        color: (frontendDanmaku as any).color || '#FFFFFF' 
-      });
+    if (danmuOverlay?.sendComment) {
+      try {
+        danmuOverlay.sendComment({
+          id: frontendDanmaku.id,
+          txt: frontendDanmaku.content,
+          duration: 12000,
+          mode: 'scroll',
+          style: {
+            color: (frontendDanmaku as any).color || '#FFFFFF',
+          },
+        });
+      } catch (emitError) {
+        console.warn('[HuyaPlayerHelper] Failed emitting danmu.js comment:', emitError);
+      }
     }
 
     // 添加到弹幕消息列表

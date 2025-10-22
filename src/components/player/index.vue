@@ -99,13 +99,16 @@
 
 <script setup lang="ts">
 import { ref, onMounted, watch, onUnmounted, shallowRef, nextTick } from 'vue';
-import Artplayer from 'artplayer';
-import artplayerPluginDanmuku from 'artplayer-plugin-danmuku';
+import Player from 'xgplayer';
+import FlvPlugin from 'xgplayer-flv';
+import DanmuJs from 'danmu.js';
+import 'xgplayer/dist/index.min.css';
+import Plugin, { POSITIONS } from 'xgplayer/es/plugin/plugin.js';
 
 import './player.css';
 
 import { Platform as StreamingPlatform } from '../../platforms/common/types';
-import type { DanmakuMessage } from './types';
+import type { DanmakuMessage, DanmuOverlayInstance } from './types';
 
 // Platform-specific player helpers
 import { getDouyuStreamConfig, startDouyuDanmakuListener, stopDouyuDanmaku, stopDouyuProxy } from '../../platforms/douyu/playerHelper';
@@ -122,6 +125,265 @@ import { useImageProxy } from '../FollowsList/useProxy';
 
 // Ensure image proxy helpers are available in this component
 const { ensureProxyStarted, proxify } = useImageProxy();
+
+class RefreshControl extends Plugin {
+  static override pluginName = 'refreshControl';
+  static override defaultConfig = {
+    position: POSITIONS.CONTROLS_LEFT,
+    index: 2,
+    disable: false,
+    onClick: null as (() => void) | null,
+  };
+
+  private handleClick: ((event: Event) => void) | null = null;
+  private isLoading = false;
+
+  override afterCreate() {
+    if (this.config.disable) {
+      return;
+    }
+    this.handleClick = (event: Event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (this.isLoading) {
+        return;
+      }
+      if (typeof this.config.onClick === 'function') {
+        this.config.onClick();
+      }
+    };
+    this.bind(['click', 'touchend'], this.handleClick);
+  }
+
+  override destroy() {
+    if (this.handleClick) {
+      this.unbind(['click', 'touchend'], this.handleClick);
+      this.handleClick = null;
+    }
+    this.setLoading(false);
+  }
+
+  override render() {
+    if (this.config.disable) {
+      return '';
+    }
+    return `<xg-icon class="xgplayer-refresh-control" title="刷新">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4.5 12a7.5 7.5 0 0 1 12.36-5.36L18.5 8" />
+        <path d="M19 4v5h-5" />
+        <path d="M19.5 12a7.5 7.5 0 0 1-12.36 5.36L5.5 16" />
+        <path d="M5 20v-5h5" />
+      </svg>
+    </xg-icon>`;
+  }
+
+  setLoading(isLoading: boolean) {
+    this.isLoading = isLoading;
+    const root = this.root as HTMLElement | null;
+    if (!root) {
+      return;
+    }
+    root.classList.toggle('is-loading', isLoading);
+    if (isLoading) {
+      root.setAttribute('aria-disabled', 'true');
+    } else {
+      root.removeAttribute('aria-disabled');
+    }
+  }
+}
+
+class QualityControl extends Plugin {
+  static override pluginName = 'qualityControl';
+  static override defaultConfig = {
+    position: POSITIONS.CONTROLS_RIGHT,
+    index: 5,
+    disable: false,
+    options: [] as string[],
+    getCurrent: (() => '') as () => string,
+    onSelect: (async (_value: string) => {}) as (value: string) => Promise<void> | void,
+  };
+
+  private dropdown: HTMLElement | null = null;
+  private handleToggle: ((event: Event) => void) | null = null;
+  private handleDocumentClick: ((event: MouseEvent) => void) | null = null;
+  private isSwitching = false;
+
+  override afterCreate() {
+    if (this.config.disable) {
+      return;
+    }
+
+    this.createDropdown();
+    this.updateLabel(this.getCurrent());
+
+    this.handleToggle = (event: Event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (this.isSwitching) {
+        return;
+      }
+      this.toggleDropdown();
+    };
+    this.bind(['click', 'touchend'], this.handleToggle);
+
+    if (typeof document !== 'undefined') {
+      this.handleDocumentClick = (event: MouseEvent) => {
+        if (!this.root.contains(event.target as Node)) {
+          this.hideDropdown();
+        }
+      };
+      document.addEventListener('click', this.handleDocumentClick);
+    }
+  }
+
+  override destroy() {
+    if (this.handleToggle) {
+      this.unbind(['click', 'touchend'], this.handleToggle);
+      this.handleToggle = null;
+    }
+    if (this.handleDocumentClick) {
+      document.removeEventListener('click', this.handleDocumentClick);
+      this.handleDocumentClick = null;
+    }
+    if (this.dropdown) {
+      this.dropdown.remove();
+      this.dropdown = null;
+    }
+    this.setSwitching(false);
+  }
+
+  override render() {
+    if (this.config.disable) {
+      return '';
+    }
+    const current = this.getCurrent();
+    return `<xg-icon class="xgplayer-quality-control" title="画质">
+      <span class="quality-label">${current}</span>
+      <svg class="quality-caret" width="10" height="10" viewBox="0 0 10 10" fill="none">
+        <path d="M2.5 3.5L5 6l2.5-2.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </xg-icon>`;
+  }
+
+  updateLabel(label: string) {
+    const textEl = this.find('.quality-label') as HTMLElement | null;
+    if (textEl) {
+      textEl.textContent = label;
+    }
+    this.updateActiveState(label);
+  }
+
+  setOptions(options: string[]) {
+    this.config.options = options;
+    this.populateDropdown();
+  }
+
+  private getCurrent() {
+    return typeof this.config.getCurrent === 'function' ? this.config.getCurrent() : '';
+  }
+
+  private createDropdown() {
+    this.dropdown = document.createElement('div');
+    this.dropdown.className = 'xgplayer-quality-dropdown';
+    this.root.appendChild(this.dropdown);
+    this.populateDropdown();
+  }
+
+  private populateDropdown() {
+    if (!this.dropdown) {
+      return;
+    }
+    this.dropdown.innerHTML = '';
+    const options: string[] = Array.isArray(this.config.options) ? this.config.options : [];
+    options.forEach((option) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'xgplayer-quality-item';
+      btn.innerHTML = `
+        <span class="quality-name">${option}</span>
+        <svg class="quality-check" width="12" height="12" viewBox="0 0 12 12" fill="none">
+          <path d="M3 6.5l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      `;
+      btn.addEventListener('click', (event) => {
+        event.stopPropagation();
+        event.preventDefault();
+        if (this.isSwitching) {
+          return;
+        }
+        let actionResult: Promise<void> | void;
+        try {
+          const callback = this.config.onSelect;
+          actionResult = typeof callback === 'function' ? callback(option) : undefined;
+        } catch (error) {
+          console.error('[QualityControl] onSelect error:', error);
+          actionResult = undefined;
+        }
+        Promise.resolve(actionResult).finally(() => {
+          this.hideDropdown();
+          this.updateLabel(this.getCurrent());
+        });
+      });
+      this.dropdown!.appendChild(btn);
+    });
+    this.updateActiveState(this.getCurrent());
+    this.applySwitchingState();
+  }
+
+  private toggleDropdown() {
+    if (this.isSwitching) {
+      return;
+    }
+    if (!this.dropdown) {
+      return;
+    }
+    const isOpen = this.dropdown.classList.toggle('show');
+    if (isOpen) {
+      this.updateActiveState(this.getCurrent());
+    }
+    this.root.classList.toggle('menu-open', isOpen);
+  }
+
+  private hideDropdown() {
+    if (this.dropdown) {
+      this.dropdown.classList.remove('show');
+    }
+    this.root.classList.remove('menu-open');
+  }
+
+  private updateActiveState(current: string) {
+    if (!this.dropdown) {
+      return;
+    }
+    const items = this.dropdown.querySelectorAll<HTMLButtonElement>('.xgplayer-quality-item');
+    items.forEach((item) => {
+      const label = item.querySelector('.quality-name')?.textContent?.trim();
+      item.classList.toggle('active', label === current);
+    });
+  }
+
+  setSwitching(isSwitching: boolean) {
+    this.isSwitching = isSwitching;
+    this.applySwitchingState();
+    if (isSwitching) {
+      this.hideDropdown();
+    }
+  }
+
+  private applySwitchingState() {
+    const root = this.root as HTMLElement | null;
+    if (root) {
+      root.classList.toggle('is-switching', this.isSwitching);
+    }
+    if (this.dropdown) {
+      this.dropdown.classList.toggle('disabled', this.isSwitching);
+      const buttons = this.dropdown.querySelectorAll<HTMLButtonElement>('.xgplayer-quality-item');
+      buttons.forEach((button) => {
+        button.disabled = this.isSwitching;
+      });
+    }
+  }
+}
 
 const props = defineProps<{
   roomId: string | null;
@@ -146,8 +408,10 @@ const emit = defineEmits<{
 }>();
 
 const playerContainerRef = ref<HTMLDivElement | null>(null);
-const art = shallowRef<Artplayer | null>(null);
-const flvPlayerInstance = shallowRef<any>(null);
+const playerInstance = shallowRef<Player | null>(null);
+const refreshControlPlugin = shallowRef<RefreshControl | null>(null);
+const qualityControlPlugin = shallowRef<QualityControl | null>(null);
+const danmuInstance = shallowRef<DanmuOverlayInstance | null>(null);
 const danmakuMessages = ref<DanmakuMessage[]>([]);
 const isDanmakuListenerActive = ref(false); // Tracks if a danmaku listener is supposed to be running
 let unlistenDanmakuFn: (() => void) | null = null;
@@ -170,175 +434,289 @@ const isFullScreen = ref(false); // True if EITHER native player OR web fullscre
 const osName = ref<string>('');
 
 // 画质切换相关
-const currentQuality = ref<string>('原画');
-const isQualitySwitching = ref(false);
+const qualityOptions = ['原画', '高清', '标清'] as const;
 
-const ARTPLAYER_STORAGE_ROOT_KEY = 'artplayer_settings';
-const DANMAKU_SETTINGS_STORAGE_KEY = 'danmakuSettings';
-
-type DanmakuMode = 0 | 1 | 2;
-
-const VALID_DANMAKU_MODES: DanmakuMode[] = [0, 1, 2];
-const VALID_DANMAKU_MODES_SET = new Set<DanmakuMode>(VALID_DANMAKU_MODES);
-
-type PercentageString = `${number}%`;
-
-type DanmakuPersistedSettings = {
-  speed?: number;
-  opacity?: number;
-  fontSize?: number | PercentageString;
-  color?: string;
-  margin?: [number | PercentageString, number | PercentageString];
-  mode?: DanmakuMode;
-  modes?: DanmakuMode[];
-  antiOverlap?: boolean;
-  synchronousPlayback?: boolean;
-  visible?: boolean;
+const resolveStoredQuality = (platform?: StreamingPlatform | null): string => {
+  if (!platform) {
+    return '原画';
+  }
+  if (typeof window === 'undefined') {
+    return '原画';
+  }
+  try {
+    const saved = window.localStorage.getItem(`${platform}_preferred_quality`);
+    if (saved && qualityOptions.includes(saved as (typeof qualityOptions)[number])) {
+      return saved;
+    }
+  } catch (error) {
+    console.warn('[Player] Failed to read stored quality preference:', error);
+  }
+  return '原画';
 };
 
-let teardownDanmakuPersistence: (() => void) | null = null;
+const currentQuality = ref<string>(resolveStoredQuality(props.platform));
+const isQualitySwitching = ref(false);
+const isRefreshingStream = ref(false);
 
-function clampNumber(value: number, min: number, max: number) {
-  return Math.min(Math.max(value, min), max);
+function resetFullscreenState() {
+  isInNativePlayerFullscreen.value = false;
+  isInWebFullscreen.value = false;
+  isFullScreen.value = false;
+  try {
+    document.documentElement.classList.remove('web-fs-active');
+  } catch (error) {
+    console.warn('[Player] Failed to reset web fullscreen flag:', error);
+  }
 }
 
-function sanitizeDanmakuSettings(raw: unknown): DanmakuPersistedSettings | null {
-  if (!raw || typeof raw !== 'object') {
+function updateFullscreenFlag() {
+  isFullScreen.value = isInNativePlayerFullscreen.value || isInWebFullscreen.value;
+  emit('fullscreen-change', isFullScreen.value);
+}
+
+function destroyPlayerInstance() {
+  const player = playerInstance.value;
+  if (player) {
+    try {
+      player.destroy();
+    } catch (error) {
+      console.error('[Player] Error destroying xgplayer instance:', error);
+    }
+    const overlayHost = player.root?.querySelector('.player-danmu-overlay') as HTMLElement | null;
+    overlayHost?.remove();
+  }
+  playerInstance.value = null;
+
+  const danmu = danmuInstance.value;
+  if (danmu) {
+    try {
+      danmu.stop?.();
+    } catch (error) {
+      console.error('[Player] Error stopping danmu overlay:', error);
+    }
+    danmuInstance.value = null;
+  }
+
+  refreshControlPlugin.value = null;
+  qualityControlPlugin.value = null;
+
+  resetFullscreenState();
+}
+
+function ensureDanmuOverlayHost(player: Player): HTMLElement | null {
+  const root = player.root as HTMLElement | undefined;
+  if (!root) {
     return null;
   }
 
-  const candidate = raw as Record<string, unknown>;
-  const sanitized: DanmakuPersistedSettings = {};
-
-  if (typeof candidate.speed === 'number' && Number.isFinite(candidate.speed)) {
-    sanitized.speed = clampNumber(candidate.speed, 1, 10);
-  }
-  if (typeof candidate.opacity === 'number' && Number.isFinite(candidate.opacity)) {
-    sanitized.opacity = clampNumber(candidate.opacity, 0, 1);
-  }
-  if (typeof candidate.fontSize === 'number' && Number.isFinite(candidate.fontSize)) {
-    sanitized.fontSize = clampNumber(candidate.fontSize, 12, 120);
-  } else if (typeof candidate.fontSize === 'string') {
-    const trimmed = candidate.fontSize.trim();
-    if (/^-?\d+(\.\d+)?%$/.test(trimmed)) {
-      sanitized.fontSize = trimmed as PercentageString;
-    }
-  }
-  if (typeof candidate.color === 'string' && candidate.color.trim().length > 0) {
-    sanitized.color = candidate.color;
-  }
-  if (Array.isArray(candidate.margin) && candidate.margin.length === 2) {
-    const [top, bottom] = candidate.margin;
-    const isValidMarginValue = (value: unknown) =>
-      (typeof value === 'number' && Number.isFinite(value)) ||
-      (typeof value === 'string' && /^-?\d+(\.\d+)?%$/.test(value.trim()));
-    if (isValidMarginValue(top) && isValidMarginValue(bottom)) {
-      const normalizeMarginValue = (value: unknown): number | PercentageString => {
-        if (typeof value === 'number') {
-          return value;
-        }
-        return (value as string).trim() as PercentageString;
-      };
-      sanitized.margin = [normalizeMarginValue(top), normalizeMarginValue(bottom)];
-    }
-  }
-  if (typeof candidate.mode === 'number' && VALID_DANMAKU_MODES_SET.has(candidate.mode as DanmakuMode)) {
-    sanitized.mode = candidate.mode as DanmakuMode;
-  }
-  if (Array.isArray(candidate.modes)) {
-    const filtered: DanmakuMode[] = [];
-    candidate.modes.forEach((value) => {
-      if (
-        typeof value === 'number' &&
-        VALID_DANMAKU_MODES_SET.has(value as DanmakuMode) &&
-        !filtered.includes(value as DanmakuMode)
-      ) {
-        filtered.push(value as DanmakuMode);
-      }
-    });
-    if (filtered.length) {
-      sanitized.modes = filtered;
-    }
-  }
-  if (typeof candidate.antiOverlap === 'boolean') {
-    sanitized.antiOverlap = candidate.antiOverlap;
-  }
-  if (typeof candidate.synchronousPlayback === 'boolean') {
-    sanitized.synchronousPlayback = candidate.synchronousPlayback;
-  }
-  if (typeof candidate.visible === 'boolean') {
-    sanitized.visible = candidate.visible;
+  let host = root.querySelector('.player-danmu-overlay') as HTMLElement | null;
+  if (!host) {
+    host = document.createElement('div');
+    host.className = 'player-danmu-overlay';
   }
 
-  return Object.keys(sanitized).length ? sanitized : null;
+  const videoContainer = root.querySelector('xg-video-container');
+  if (videoContainer && host.parentElement !== videoContainer) {
+    videoContainer.appendChild(host);
+  } else if (!videoContainer && host.parentElement !== root) {
+    root.appendChild(host);
+  } else if (!host.parentElement) {
+    root.appendChild(host);
+  }
+
+  return host;
 }
 
-function loadPersistedDanmakuSettingsFromStorage(): DanmakuPersistedSettings | null {
-  if (typeof window === 'undefined' || !window.localStorage) {
+function createDanmuOverlay(player: Player | null) {
+  if (!player) {
     return null;
   }
+
+  const overlayHost = ensureDanmuOverlayHost(player);
+  if (!overlayHost) {
+    return null;
+  }
+
+  overlayHost.innerHTML = '';
 
   try {
-    const raw = window.localStorage.getItem(ARTPLAYER_STORAGE_ROOT_KEY);
-    if (!raw) {
-      return null;
-    }
-    const parsed = JSON.parse(raw);
-    return sanitizeDanmakuSettings(parsed?.[DANMAKU_SETTINGS_STORAGE_KEY]);
+    const overlay = new DanmuJs({
+      container: overlayHost,
+      player: player.video || player.media || undefined,
+      comments: [],
+      mouseControl: false,
+      defaultOff: false,
+      channelSize: 36,
+      containerStyle: {
+        pointerEvents: 'none',
+      },
+    });
+
+    overlay.start?.();
+    danmuInstance.value = overlay;
+    return overlay;
   } catch (error) {
-    console.warn('[Player] Failed to read persisted danmaku settings:', error);
+    console.error('[Player] Failed to initialize danmu.js overlay:', error);
+    danmuInstance.value = null;
     return null;
   }
 }
 
-function setupDanmakuPersistence(artInstance: Artplayer) {
-  teardownDanmakuPersistence?.();
+async function mountXgPlayer(
+  streamUrl: string,
+  platformCode: StreamingPlatform,
+  roomId: string,
+) {
+  await nextTick();
 
-  const plugin = artInstance.plugins?.artplayerPluginDanmuku;
-  if (!plugin) {
-    console.warn('[Player] Danmaku plugin missing, skip persistence setup.');
-    teardownDanmakuPersistence = null;
+  if (!playerContainerRef.value) {
+    streamError.value = '播放器容器初始化失败。';
     return;
   }
 
-  const storedViaArt = sanitizeDanmakuSettings(artInstance.storage.get(DANMAKU_SETTINGS_STORAGE_KEY));
-  if (storedViaArt) {
-    try {
-      plugin.config(storedViaArt);
-    } catch (error) {
-      console.warn('[Player] Failed to apply saved danmaku settings via plugin.config:', error);
-    }
-  }
+  playerContainerRef.value.innerHTML = '';
 
-  const listener = (option: unknown) => {
-    const persistable = sanitizeDanmakuSettings(option);
-    if (!persistable) {
-      return;
-    }
-    try {
-      artInstance.storage.set(DANMAKU_SETTINGS_STORAGE_KEY, persistable);
-    } catch (error) {
-      console.warn('[Player] Persisting danmaku settings via Artplayer storage failed, fallback to localStorage.', error);
-      if (typeof window !== 'undefined' && window.localStorage) {
-        try {
-          const raw = window.localStorage.getItem(ARTPLAYER_STORAGE_ROOT_KEY);
-          const payload = raw ? JSON.parse(raw) : {};
-          payload[DANMAKU_SETTINGS_STORAGE_KEY] = persistable;
-          window.localStorage.setItem(ARTPLAYER_STORAGE_ROOT_KEY, JSON.stringify(payload));
-        } catch (fallbackError) {
-          console.warn('[Player] Fallback persisting danmaku settings failed:', fallbackError);
-        }
+  const player = new Player({
+    el: playerContainerRef.value,
+    url: streamUrl,
+    isLive: true,
+    autoplay: true,
+    playsinline: true,
+    lang: 'zh-cn',
+    width: '100%',
+    height: '100%',
+    videoFillMode: 'contain',
+    closeVideoClick: false,
+    keyShortcut: true,
+    volume: {
+      position: POSITIONS.CONTROLS_LEFT,
+      index: 3,
+    },
+    pip: {
+      position: POSITIONS.CONTROLS_RIGHT,
+      index: 3,
+      showIcon: true,
+    },
+    cssFullscreen: {
+      index: 2,
+    },
+    playbackRate: false,
+    controls: {
+      mode: 'normal',
+    },
+    plugins: [FlvPlugin],
+    flv: {
+      isLive: true,
+      cors: true,
+      autoCleanupSourceBuffer: true,
+      enableWorker: true,
+      stashInitialSize: 128,
+      lazyLoad: true,
+      lazyLoadMaxDuration: 30,
+      deferLoadAfterSourceOpen: true,
+    },
+  });
+
+  playerInstance.value = player;
+
+  refreshControlPlugin.value = player.registerPlugin(RefreshControl, {
+    position: POSITIONS.CONTROLS_LEFT,
+    index: 2,
+    onClick: () => {
+      void reloadCurrentStream('refresh');
+    },
+  }) as RefreshControl;
+
+  qualityControlPlugin.value = player.registerPlugin(QualityControl, {
+    position: POSITIONS.CONTROLS_RIGHT,
+    index: 5,
+    options: [...qualityOptions],
+    getCurrent: () => currentQuality.value,
+    onSelect: async (option: string) => {
+      if (option === currentQuality.value) {
+        return;
       }
-    }
-  };
+      await switchQuality(option);
+    },
+  }) as QualityControl;
+  qualityControlPlugin.value?.setOptions([...qualityOptions]);
+  qualityControlPlugin.value?.updateLabel(currentQuality.value);
 
-  const artWithEvents = artInstance as any;
-  artWithEvents.on?.('artplayerPluginDanmuku:config', listener);
-  teardownDanmakuPersistence = () => {
-    artWithEvents.off?.('artplayerPluginDanmuku:config', listener);
-    teardownDanmakuPersistence = null;
-  };
+  let overlayInstance = createDanmuOverlay(player);
+
+  player.on('ready', async () => {
+    ensureDanmuOverlayHost(player);
+    overlayInstance = overlayInstance ?? createDanmuOverlay(player);
+    try {
+      if (roomId) {
+        await startCurrentDanmakuListener(platformCode, roomId, overlayInstance);
+      }
+    } catch (error) {
+      console.error('[Player] Failed starting danmaku listener after ready:', error);
+    }
+    overlayInstance?.play?.();
+    updateFullscreenFlag();
+  });
+
+  player.on('play', () => {
+    overlayInstance?.play?.();
+  });
+
+  player.on('pause', () => {
+    overlayInstance?.pause?.();
+  });
+
+  player.on('destroy', () => {
+    overlayInstance?.stop?.();
+    overlayInstance = null;
+  });
+
+  player.on('error', (error: any) => {
+    console.error('[Player] xgplayer error:', error);
+    streamError.value = `播放器错误: ${error?.message || error}`;
+  });
+
+  player.on('enterFullscreen', () => {
+    isInNativePlayerFullscreen.value = true;
+    ensureDanmuOverlayHost(player);
+    overlayInstance = overlayInstance ?? createDanmuOverlay(player);
+    overlayInstance?.play?.();
+    updateFullscreenFlag();
+  });
+
+  player.on('exitFullscreen', () => {
+    isInNativePlayerFullscreen.value = false;
+    ensureDanmuOverlayHost(player);
+    overlayInstance = overlayInstance ?? createDanmuOverlay(player);
+    updateFullscreenFlag();
+  });
+
+  player.on('enterFullscreenWeb', () => {
+    isInWebFullscreen.value = true;
+    try {
+      document.documentElement.classList.add('web-fs-active');
+    } catch (error) {
+      console.warn('[Player] Failed to set web fullscreen flag:', error);
+    }
+    ensureDanmuOverlayHost(player);
+    overlayInstance = overlayInstance ?? createDanmuOverlay(player);
+    overlayInstance?.play?.();
+    updateFullscreenFlag();
+  });
+
+  player.on('exitFullscreenWeb', () => {
+    isInWebFullscreen.value = false;
+    try {
+      document.documentElement.classList.remove('web-fs-active');
+    } catch (error) {
+      console.warn('[Player] Failed to clear web fullscreen flag:', error);
+    }
+    ensureDanmuOverlayHost(player);
+    overlayInstance = overlayInstance ?? createDanmuOverlay(player);
+    updateFullscreenFlag();
+  });
 }
+
 
 async function initializePlayerAndStream(
   pRoomId: string, 
@@ -346,7 +724,7 @@ async function initializePlayerAndStream(
   _pStreamUrlProp?: string | null, 
   isRefresh: boolean = false,
   oldRoomIdForCleanup?: string | null,
-  oldPlatformForCleanup?: StreamingPlatform | null // Use renamed Platform
+  oldPlatformForCleanup?: StreamingPlatform | null
 ) {
   isLoadingStream.value = true;
   streamError.value = null;
@@ -359,361 +737,80 @@ async function initializePlayerAndStream(
     danmakuMessages.value = [];
   }
 
-  // Handle initialError from props (e.g., Douyin pre-check says "主播未开播")
   if (props.initialError && props.initialError.includes('主播未开播')) {
     streamError.value = props.initialError;
     isOfflineError.value = true;
-    // Update reactive player info based on props if offline state is from props
     playerTitle.value = props.title;
     playerAnchorName.value = props.anchorName;
     playerAvatar.value = props.avatar;
-    playerIsLive.value = false; // Explicitly set to false if error indicates offline
-
+    playerIsLive.value = false;
+    destroyPlayerInstance();
     isLoadingStream.value = false;
-    return; // Skip further initialization if streamer is known to be offline
+    return;
   }
 
-  if (art.value) {
-    teardownDanmakuPersistence?.();
-
-    // Stop danmaku for the *old* room if IDs are valid
-    if (oldRoomIdForCleanup && oldPlatformForCleanup !== undefined && oldPlatformForCleanup !== null) {
-        await stopCurrentDanmakuListener(oldPlatformForCleanup, oldRoomIdForCleanup);
-    } else {
-        console.warn("[Player] Cleanup in init: Old room/platform for danmaku stop not provided or invalid.");
-    }
-    
-    // Stop Douyu proxy if the *old* platform was Douyu
+  if (oldRoomIdForCleanup && oldPlatformForCleanup !== undefined && oldPlatformForCleanup !== null) {
+    await stopCurrentDanmakuListener(oldPlatformForCleanup, oldRoomIdForCleanup);
     if (oldPlatformForCleanup === StreamingPlatform.DOUYU) {
-        await stopDouyuProxy();
+      await stopDouyuProxy();
     }
-
-    // Attempt to unload media from Artplayer before destroying it
-    if (art.value.playing) {
-      art.value.pause();
+    if (oldPlatformForCleanup === StreamingPlatform.HUYA) {
+      await stopHuyaProxy();
     }
-    try {
-      art.value.url = ''; 
-    } catch (e) {
-      console.error('[Player] Error setting old Artplayer URL to empty during cleanup:', e);
-    }
-
-    art.value.destroy(true);
-    art.value = null;
-    
-    // 重置全屏状态变量，但不强制发送事件
-    // 让新的播放器实例自然地处理全屏状态
-    isInNativePlayerFullscreen.value = false;
-    isInWebFullscreen.value = false;
-    isFullScreen.value = false;
-    
-    await nextTick();
+  } else {
+    await stopCurrentDanmakuListener();
   }
+
+  destroyPlayerInstance();
 
   try {
-    let streamConfig: { streamUrl: string, streamType: string | undefined };
+    let streamConfig: { streamUrl: string; streamType: string | undefined };
 
     if (pPlatform === StreamingPlatform.DOUYU) {
-      if (playerIsLive.value === false) { // Explicitly check for false, as null/undefined might mean info not yet loaded
-        streamError.value = streamError.value || '主播未开播。'; // Preserve specific error if already set by initialError prop
+      if (playerIsLive.value === false) {
+        streamError.value = streamError.value || '主播未开播。';
         isOfflineError.value = true;
         isLoadingStream.value = false;
-        return; // Stop further execution for stream fetching and player init
+        return;
       }
       streamConfig = await getDouyuStreamConfig(pRoomId, currentQuality.value);
-
     } else if (pPlatform === StreamingPlatform.DOUYIN) {
       const douyinConfig = await fetchAndPrepareDouyinStreamConfig(pRoomId, currentQuality.value);
-      
-      // Update internal reactive state with fetched Douyin info
       playerTitle.value = douyinConfig.title;
       playerAnchorName.value = douyinConfig.anchorName;
       playerAvatar.value = douyinConfig.avatar;
       playerIsLive.value = douyinConfig.isLive;
-      
+
       if (douyinConfig.initialError || !douyinConfig.isLive || !douyinConfig.streamUrl) {
         streamError.value = douyinConfig.initialError || '主播未开播或无法获取直播流。';
-        isOfflineError.value = true; // Assume offline or error state
+        isOfflineError.value = true;
+        playerIsLive.value = false;
         isLoadingStream.value = false;
-        // Ensure playerIsLive is false if there's an error making it unplayable
-        playerIsLive.value = false; 
         console.warn(`[Player] Douyin config error or not live: ${streamError.value}`);
-        return; // Stop if not playable
+        return;
       }
+
       streamConfig = { streamUrl: douyinConfig.streamUrl, streamType: douyinConfig.streamType };
     } else if (pPlatform === StreamingPlatform.HUYA) {
-      console.log(`[Player/HUYA] Enter HUYA branch: roomId=${pRoomId}, quality=${currentQuality.value}, playerIsLive=${playerIsLive.value}`);
-      // 对虎牙，props 里的 isLive 不一定可靠，即使为 false 也尝试获取直播流
-      if (playerIsLive.value === false) {
-        console.warn(`[Player/HUYA] playerIsLive=false from props, but will still attempt to fetch stream for room ${pRoomId}`);
-      }
-      console.log(`[Player/HUYA] Invoking getHuyaStreamConfig(roomId=${pRoomId}, quality=${currentQuality.value})`);
       streamConfig = await getHuyaStreamConfig(pRoomId, currentQuality.value);
-      console.log('[Player/HUYA] Received streamConfig:', streamConfig);
     } else if (pPlatform === StreamingPlatform.BILIBILI) {
       streamConfig = await getBilibiliStreamConfig(pRoomId, currentQuality.value, props.cookie || undefined);
     } else {
       throw new Error(`不支持的平台: ${pPlatform}`);
     }
-    
+
     isLoadingStream.value = false;
-    await nextTick();
-
-    if (!playerContainerRef.value) {
-      console.error('[Player] playerContainerRef is null AFTER nextTick. Cannot init Artplayer. This is unexpected.');
-      streamError.value = '播放器容器初始化失败。';
-      return;
-    }
-
-    const persistedDanmakuSettings = loadPersistedDanmakuSettingsFromStorage();
-    const danmakuPluginInitialOptions = {
-        danmuku: [],
-        speed: persistedDanmakuSettings?.speed ?? 7,
-        opacity: persistedDanmakuSettings?.opacity ?? 1,
-        fontSize: persistedDanmakuSettings?.fontSize ?? 20,
-        color: persistedDanmakuSettings?.color ?? '#FFFFFF',
-        mode: persistedDanmakuSettings?.mode ?? 0,
-        modes: persistedDanmakuSettings?.modes ?? [...VALID_DANMAKU_MODES],
-        margin: persistedDanmakuSettings?.margin ?? [10, '2%'],
-        antiOverlap: persistedDanmakuSettings?.antiOverlap ?? true,
-        synchronousPlayback: persistedDanmakuSettings?.synchronousPlayback ?? false,
-        visible: persistedDanmakuSettings?.visible ?? true,
-        emitter: false,
-    };
-
-    // 播放器类型将直接使用 streamConfig.streamType，如果未定义则默认为 'flv'
-    const artPlayerOptions: any = {
-        container: playerContainerRef.value, 
-        url: streamConfig.streamUrl,
-        type: streamConfig.streamType || 'flv',
-        isLive: true, pip: true, autoplay: true, autoSize: false, aspectRatio: false,
-        fullscreen: true, // Player element native fullscreen - THIS IS THE KEY FOR OS FULLSCREEN ON NON-MAC
-        fullscreenWeb: true, // Player web fullscreen (takes over viewport)
-        miniProgressBar: true, mutex: true,
-        backdrop: false, playsInline: true, autoPlayback: true, theme: '#FB7299', lang: 'zh-cn',
-        moreVideoAttr: { playsInline: true },
-        plugins: [
-            artplayerPluginDanmuku(danmakuPluginInitialOptions),
-        ],
-        controls: [
-          {
-            name: 'streamRefresh', 
-            position: 'left',     
-            index: 15,
-            html: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"></path></svg>',
-            tooltip: '刷新',
-            click: async () => {
-              emit('request-player-reload');
-            }
-          },
-          {
-            name: 'qualitySelector',
-            position: 'right',
-            index: 10,
-            html: `<span style="font-size: 14px; color: #fff;">${currentQuality.value}</span>`,
-            selector: [
-              {
-                html: '原画',
-                value: '原画',
-                default: currentQuality.value === '原画'
-              },
-              {
-                html: '高清', 
-                value: '高清',
-                default: currentQuality.value === '高清'
-              },
-              {
-                html: '标清',
-                value: '标清',
-                default: currentQuality.value === '标清'
-              }
-            ],
-            onSelect: async (item: any) => {
-              await switchQuality(item.value);
-            }
-          }
-        ],
-        customType: {
-            flv: function(video: HTMLVideoElement, url: string) {
-                const platformForLog = pPlatform; 
-                import('mpegts.js').then(mpegts => {
-                    if (mpegts.default.isSupported()) {
-                        // 如果之前有实例，再次检查并销毁 (双重保险，主要销毁点在 Artplayer 销毁前)
-                        if (flvPlayerInstance.value) {
-                            try {
-                                flvPlayerInstance.value.destroy();
-                            } catch (e) {
-                                console.error(`[Player ${platformForLog}] Error destroying previous mpegts.js player in customType.flv:`, e);
-                            }
-                            flvPlayerInstance.value = null;
-                        }
-                        const flvPlayer = mpegts.default.createPlayer(
-                            { type: 'flv', url: url, isLive: true, cors: true, hasAudio: true, hasVideo: true }, 
-                            {}
-                        );
-                        flvPlayerInstance.value = flvPlayer; // <--- 保存新实例
-                        flvPlayer.attachMediaElement(video);
-                        flvPlayer.load();
-                        video.play().catch(e => console.error(`[Player ${platformForLog}] FLV Auto-play error:`, e));
-                        flvPlayer.on('error', (errType, errInfo) => {
-                            console.error(`[mpegts ${platformForLog}] Error:`, errType, errInfo);
-                            streamError.value = `FLV组件错误: ${errInfo.msg}`;
-                        });
-                    } else {
-                        console.error(`[Player ${platformForLog}] Browser does not support FLV playback (mpegts.js).`);
-                        streamError.value = '浏览器不支持FLV播放。';
-                    }
-                }).catch((e) => { 
-                    console.error(`[Player ${platformForLog}] Failed to load mpegts.js component:`, e);
-                    streamError.value = '加载FLV播放组件失败。'; 
-                });
-            },
-            m3u8: function(video: HTMLVideoElement, url: string) {
-                const platformForLog = pPlatform;
-                import('hls.js').then(HlsModule => {
-                    const Hls = HlsModule.default || HlsModule;
-                    // 如果浏览器原生支持 HLS（如 Safari），优先使用原生播放，避免 MSE 带来的卡顿
-                    const canNativeHls = typeof video.canPlayType === 'function' && video.canPlayType('application/vnd.apple.mpegURL');
-                    if (!Hls.isSupported() && canNativeHls) {
-                        try { if (flvPlayerInstance.value) { flvPlayerInstance.value.destroy(); flvPlayerInstance.value = null; } } catch (e) { console.error(`[Player ${platformForLog}] Error destroying previous mpegts.js before native HLS init:`, e); }
-                        try {
-                            video.preload = 'auto';
-                            video.crossOrigin = 'anonymous';
-                            (video as any).src = url;
-                            video.addEventListener('loadedmetadata', () => {
-                                video.play().catch(err => console.error(`[Player ${platformForLog}] Native HLS auto-play error:`, err));
-                            }, { once: true });
-                        } catch (e) {
-                            console.error(`[Player ${platformForLog}] Native HLS setup failed:`, e);
-                            streamError.value = '原生HLS播放初始化失败。';
-                        }
-                        return;
-                    }
-                    if (Hls.isSupported()) {
-                        // 销毁旧的 flv 实例，避免冲突
-                        if (flvPlayerInstance.value) {
-                            try { flvPlayerInstance.value.destroy(); } catch (e) { console.error(`[Player ${platformForLog}] Error destroying previous mpegts.js before HLS init:`, e); }
-                            flvPlayerInstance.value = null;
-                        }
-                        // 更稳妥的 HLS 配置，针对直播优化，减少卡顿
-                        const hls = new Hls({
-                            liveDurationInfinity: true,
-                            maxLiveSyncPlaybackRate: 1.5,
-                            liveSyncDurationCount: 3,
-                            liveMaxLatencyDurationCount: 10,
-                            maxBufferLength: 10,
-                            backBufferLength: 60,
-                            enableWorker: true,
-                            lowLatencyMode: false,
-                        });
-                        try {
-                            video.preload = 'auto';
-                            video.crossOrigin = 'anonymous';
-                            hls.attachMedia(video);
-                        } catch (e) {
-                            console.error(`[Player ${platformForLog}] HLS attachMedia failed:`, e);
-                            streamError.value = 'HLS播放器绑定失败。';
-                            return;
-                        }
-                        hls.on(Hls.Events.MEDIA_ATTACHED, () => {
-                            try {
-                                hls.loadSource(url);
-                            } catch (e) {
-                                console.error(`[Player ${platformForLog}] HLS loadSource failed:`, e);
-                                streamError.value = 'HLS资源加载失败。';
-                            }
-                        });
-                        // 输出一些有用的调试信息，观察直播段长与是否为直播
-                        hls.on(Hls.Events.LEVEL_LOADED, (_evt: any, data: any) => {
-                            try {
-                                const td = data?.details?.targetduration;
-                                const live = data?.details?.live;
-                                console.info(`[HLS ${platformForLog}] level loaded: targetduration=${td}, live=${live}`);
-                            } catch {}
-                        });
-                        hls.on(Hls.Events.ERROR, (_event: any, data: any) => {
-                            console.error(`[HLS ${platformForLog}] Error:`, data);
-                            if (data && data.details) {
-                                streamError.value = `HLS错误: ${data.details}`;
-                            }
-                            // 遇到致命错误时的自动恢复逻辑
-                            if (data?.fatal) {
-                                try {
-                                    if (data.type === (Hls as any).ErrorTypes.NETWORK_ERROR) {
-                                        console.warn('[HLS] Fatal network error, try to restart load');
-                                        hls.startLoad();
-                                    } else if (data.type === (Hls as any).ErrorTypes.MEDIA_ERROR) {
-                                        console.warn('[HLS] Fatal media error, try to recoverMediaError');
-                                        hls.recoverMediaError();
-                                    } else {
-                                        console.warn('[HLS] Fatal other error, destroy and hint retry');
-                                        hls.destroy();
-                                    }
-                                } catch (e) {
-                                    console.error('[HLS] Recovery handling failed:', e);
-                                }
-                            }
-                        });
-                    } else {
-                        console.error(`[Player ${platformForLog}] Browser does not support HLS.`);
-                        streamError.value = '浏览器不支持HLS播放。';
-                    }
-                }).catch((e) => {
-                    console.error(`[Player ${platformForLog}] Failed to load hls.js component:`, e);
-                    streamError.value = '加载HLS播放组件失败。';
-                });
-            }
-        },
-    };
-    art.value = new Artplayer(artPlayerOptions);
-    setupDanmakuPersistence(art.value);
-
-    art.value.on('ready', async () => {
-      if (pRoomId && pPlatform && art.value) { 
-        await startCurrentDanmakuListener(pPlatform, pRoomId, art.value);
-      }
-      
-      // 确保播放器初始化后正确同步全屏状态
-      // 这样可以解决刷新或切换画质后关注列表不显示的问题
-      emit('fullscreen-change', isFullScreen.value);
-    });
-    art.value.on('error', (error: any, _reconnectTime: number) => { 
-        console.error('[Player] Artplayer error:', error);
-        streamError.value = `播放器错误: ${error.message || error}`; 
-    });
-
-    // Listener for Artplayer's NATIVE element fullscreen changes
-    art.value.on('fullscreen', async (nativeActive: boolean) => {
-      isInNativePlayerFullscreen.value = nativeActive;
-      isFullScreen.value = isInNativePlayerFullscreen.value || isInWebFullscreen.value;
-      emit('fullscreen-change', isFullScreen.value);
-    });
-
-    // Listener for Artplayer's WEB fullscreen changes
-    art.value.on('fullscreenWeb', (webActive: boolean) => {
-      isInWebFullscreen.value = webActive;
-      isFullScreen.value = isInNativePlayerFullscreen.value || isInWebFullscreen.value;
-      // No OS fullscreen call here, this is just for player's web fullscreen state.
-      try {
-        if (webActive) {
-          document.documentElement.classList.add('web-fs-active');
-        } else {
-          document.documentElement.classList.remove('web-fs-active');
-        }
-      } catch (e) {
-        console.warn('[Player] Failed to toggle global web-fs-active class:', e);
-      }
-      emit('fullscreen-change', isFullScreen.value);
-    });
-
+    await mountXgPlayer(streamConfig.streamUrl, pPlatform, pRoomId);
   } catch (error: any) {
     console.error(`[Player] Error initializing stream for ${pPlatform} room ${pRoomId}:`, error);
-    const errorMessage = error.message || '加载直播流失败，请稍后再试。';
-    if (errorMessage.includes('主播未开播')) {
-      streamError.value = errorMessage; // Store the specific "主播未开播" message
-      isOfflineError.value = true;       // Set the flag for custom display
+    destroyPlayerInstance();
 
-      // 未开播时尝试获取并填充基础信息（标题、昵称、头像），以便离线页展示
+    const errorMessage = error?.message || '加载直播流失败，请稍后再试。';
+
+    if (errorMessage.includes('主播未开播')) {
+      streamError.value = errorMessage;
+      isOfflineError.value = true;
+
       try {
         if (pPlatform === StreamingPlatform.HUYA) {
           const result: any = await invoke('get_huya_unified_cmd', { roomId: pRoomId, quality: currentQuality.value });
@@ -730,22 +827,19 @@ async function initializePlayerAndStream(
           playerAnchorName.value = res?.anchor_name ?? props.anchorName;
           playerAvatar.value = proxify((res?.avatar ?? props.avatar ?? '') as string);
         }
-      } catch (e) {
-        console.warn('[Player] Failed to fetch basic streamer info for offline page:', e);
+      } catch (infoError) {
+        console.warn('[Player] Failed to fetch basic streamer info for offline page:', infoError);
       }
     } else {
       streamError.value = errorMessage;
       isOfflineError.value = false;
     }
+
     isLoadingStream.value = false;
   }
 }
-
-async function startCurrentDanmakuListener(platform: StreamingPlatform, roomId: string, artInstance: Artplayer | null) {
+async function startCurrentDanmakuListener(platform: StreamingPlatform, roomId: string, danmuOverlay: DanmuOverlayInstance | null) {
   if (!roomId) {
-    return;
-  }
-  if (!artInstance) {
     return;
   }
   if (isDanmakuListenerActive.value) {
@@ -753,17 +847,20 @@ async function startCurrentDanmakuListener(platform: StreamingPlatform, roomId: 
   }
 
   isDanmakuListenerActive.value = true;
+  if (!danmuOverlay) {
+    console.warn('[Player] Danmu overlay instance missing, incoming danmaku will not render on video but list will update.');
+  }
 
   try {
     let stopFn: (() => void) | null = null;
     if (platform === StreamingPlatform.DOUYU) {
-      stopFn = await startDouyuDanmakuListener(roomId, artInstance, danmakuMessages); 
+      stopFn = await startDouyuDanmakuListener(roomId, danmuOverlay, danmakuMessages); 
     } else if (platform === StreamingPlatform.DOUYIN) {
-      stopFn = await startDouyinDanmakuListener(roomId, artInstance, danmakuMessages);
+      stopFn = await startDouyinDanmakuListener(roomId, danmuOverlay, danmakuMessages);
     } else if (platform === StreamingPlatform.HUYA) {
-      stopFn = await startHuyaDanmakuListener(roomId, artInstance, danmakuMessages);
+      stopFn = await startHuyaDanmakuListener(roomId, danmuOverlay, danmakuMessages);
     } else if (platform === StreamingPlatform.BILIBILI) {
-      stopFn = await startBilibiliDanmakuListener(roomId, artInstance, danmakuMessages, props.cookie || undefined);
+      stopFn = await startBilibiliDanmakuListener(roomId, danmuOverlay, danmakuMessages, props.cookie || undefined);
     }
 
     if (stopFn) {
@@ -828,35 +925,41 @@ async function stopCurrentDanmakuListener(platform?: StreamingPlatform, roomId?:
   isDanmakuListenerActive.value = false;
 }
 
-const retryInitialization = () => {
-  emit('request-player-reload');
+const retryInitialization = async () => {
+  await reloadCurrentStream('refresh');
 };
 
 // 画质切换函数
 const switchQuality = async (quality: string) => {
-  if (isQualitySwitching.value || !props.roomId || !props.platform) {
+  if (isQualitySwitching.value) {
     return;
   }
-  
-  isQualitySwitching.value = true;
-  
-  try {
-    // 保存用户画质偏好
-    localStorage.setItem(`${props.platform}_preferred_quality`, quality);
-    currentQuality.value = quality;
-    
-    // 像刷新按钮一样，完全重新载入播放器
-    // 这样可以确保画质切换的可靠性
+  if (!qualityOptions.includes(quality as (typeof qualityOptions)[number])) {
+    return;
+  }
+  if (!props.roomId || props.platform == null) {
     emit('request-player-reload');
-    
-    console.log(`[Player] 画质切换请求: ${quality}`);
-    
+    return;
+  }
+  if (quality === currentQuality.value) {
+    return;
+  }
+
+  isQualitySwitching.value = true;
+  const previousQuality = currentQuality.value;
+
+  try {
+    currentQuality.value = quality;
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(`${props.platform}_preferred_quality`, quality);
+    }
+    await reloadCurrentStream('quality');
+    console.log(`[Player] 画质切换完成: ${quality}`);
   } catch (error) {
     console.error('[Player] 画质切换失败:', error);
-    // 恢复之前的画质设置
-    const savedQuality = localStorage.getItem(`${props.platform}_preferred_quality`);
-    if (savedQuality && ['原画', '高清', '标清'].includes(savedQuality)) {
-      currentQuality.value = savedQuality;
+    currentQuality.value = previousQuality;
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(`${props.platform}_preferred_quality`, previousQuality);
     }
   } finally {
     isQualitySwitching.value = false;
@@ -865,13 +968,59 @@ const switchQuality = async (quality: string) => {
 
 // 初始化画质偏好
 const initializeQualityPreference = () => {
-  if (props.platform) {
-    const savedQuality = localStorage.getItem(`${props.platform}_preferred_quality`);
-    if (savedQuality && ['原画', '高清', '标清'].includes(savedQuality)) {
-      currentQuality.value = savedQuality;
+  currentQuality.value = resolveStoredQuality(props.platform);
+};
+
+async function reloadCurrentStream(trigger: 'refresh' | 'quality' = 'refresh') {
+  if (isLoadingStream.value) {
+    return;
+  }
+  if (!props.roomId || props.platform == null) {
+    emit('request-player-reload');
+    return;
+  }
+  const isRefreshAction = trigger === 'refresh';
+  if (isRefreshAction) {
+    isRefreshingStream.value = true;
+  }
+  try {
+    await initializePlayerAndStream(
+      props.roomId,
+      props.platform,
+      props.streamUrl ?? null,
+      true,
+      props.roomId,
+      props.platform,
+    );
+  } finally {
+    if (isRefreshAction) {
+      isRefreshingStream.value = false;
     }
   }
-};
+  if (trigger === 'quality') {
+    qualityControlPlugin.value?.updateLabel(currentQuality.value);
+  }
+}
+
+watch(isRefreshingStream, (isLoading) => {
+  refreshControlPlugin.value?.setLoading(isLoading);
+});
+
+watch(refreshControlPlugin, (plugin) => {
+  plugin?.setLoading(isRefreshingStream.value);
+});
+
+watch(isQualitySwitching, (isSwitching) => {
+  qualityControlPlugin.value?.setSwitching(isSwitching);
+});
+
+watch(qualityControlPlugin, (plugin) => {
+  plugin?.setSwitching(isQualitySwitching.value);
+});
+
+watch(currentQuality, (quality) => {
+  qualityControlPlugin.value?.updateLabel(quality);
+});
 
 watch([() => props.roomId, () => props.platform, () => props.streamUrl, () => props.avatar, () => props.title, () => props.anchorName, () => props.isLive], 
   async ([newRoomId, newPlatform, newStreamUrl, _newAvatar, _newTitle, _newAnchorName, _newIsLive], [oldRoomId, oldPlatform, _oldStreamUrl, _oldAvatar, _oldTitle, _oldAnchorName, _oldIsLive]) => {
@@ -907,25 +1056,27 @@ watch([() => props.roomId, () => props.platform, () => props.streamUrl, () => pr
         // initializePlayerAndStream will handle undefined cleanup IDs gracefully.
         initializePlayerAndStream(newRoomId, newPlatform, newStreamUrl, false, oldRoomId, oldPlatform);
       }
-    } else if (!newRoomId && art.value) { 
-      // This block handles clearing the player when roomId becomes null (e.g. navigating away from player)
-      // It correctly uses oldRoomId and oldPlatform for cleanup as these are from the watcher.
+    } else if (!newRoomId) { 
       if (oldRoomId && oldPlatform !== null && oldPlatform !== undefined) { 
-          await stopCurrentDanmakuListener(oldPlatform, oldRoomId);
-          if (oldPlatform === StreamingPlatform.DOUYU) {
-              await stopDouyuProxy();
-          }
+        await stopCurrentDanmakuListener(oldPlatform, oldRoomId);
+        if (oldPlatform === StreamingPlatform.DOUYU) {
+          await stopDouyuProxy();
+        }
+        if (oldPlatform === StreamingPlatform.HUYA) {
+          await stopHuyaProxy();
+        }
+      } else {
+        await stopCurrentDanmakuListener();
       }
-      
-      // Player instance (art and flv) destruction is now handled by onUnmounted.
-      // We only reset component state here.
+
+      destroyPlayerInstance();
 
       isLoadingStream.value = false;
       danmakuMessages.value = [];
       streamError.value = null;
       isOfflineError.value = false; 
     }
-    if (!props.roomId || !props.platform) {
+    if (!props.roomId || props.platform == null) {
       if (props.initialError) {
         if (props.initialError.includes('主播未开播')) {
             streamError.value = props.initialError;
@@ -945,7 +1096,7 @@ onMounted(async () => {
   // 初始化画质偏好
   initializeQualityPreference();
   
-  if (!props.roomId || !props.platform) {
+  if (!props.roomId || props.platform == null) {
     if (props.initialError) {
       if (props.initialError.includes('主播未开播')) {
           streamError.value = props.initialError;
@@ -965,54 +1116,13 @@ onUnmounted(async () => {
   await stopCurrentDanmakuListener(platformToStop, roomIdToStop);
 
   if (props.platform === StreamingPlatform.DOUYU) {
-      await stopDouyuProxy();
+    await stopDouyuProxy();
   }
   if (props.platform === StreamingPlatform.HUYA) {
-      await stopHuyaProxy();
+    await stopHuyaProxy();
   }
 
-  teardownDanmakuPersistence?.();
-
-  if (art.value) {
-    if (art.value.playing) {
-      art.value.pause();
-    }
-    
-    // Attempt to unload media from Artplayer before flv instance and artplayer itself are destroyed
-    try {
-      art.value.url = ''; 
-    } catch (e) {
-      console.error('[Player] Error setting Artplayer URL to empty on unmount:', e);
-    }
-
-    // More aggressively stop and destroy mpegts.js instance if it exists
-    if (flvPlayerInstance.value) {
-        try {
-            if (typeof flvPlayerInstance.value.unload === 'function') {
-                flvPlayerInstance.value.unload();
-            }
-            if (typeof flvPlayerInstance.value.detachMediaElement === 'function') {
-                flvPlayerInstance.value.detachMediaElement();
-            }
-            flvPlayerInstance.value.destroy();
-        } catch (e) {
-            console.error('[Player] Error destroying mpegts.js player on unmount:', e);
-        }
-        flvPlayerInstance.value = null;
-    }
-
-    try {
-      art.value.destroy(true); // true to remove video element and all listeners
-    } catch (e) {
-      console.error('[Player] Error destroying Artplayer instance on unmount:', e);
-    }
-    art.value = null;
-  } else { // art.value was already null
-      if (flvPlayerInstance.value) { // But flv instance might exist
-          try { flvPlayerInstance.value.destroy(); } catch (e) { console.error('[Player] Error destroying orphaned mpegts.js player on unmount:', e); }
-          flvPlayerInstance.value = null;
-      }
-  }
+  destroyPlayerInstance();
   danmakuMessages.value = []; 
 });
 

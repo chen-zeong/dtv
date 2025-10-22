@@ -25,3 +25,18 @@ export interface DanmakuMessage {
   room_id?: string;     // The room ID this danmaku belongs to (useful for multi-room contexts or debugging)
   // Add any other fields that are common across platforms for display in DanmuList
 } 
+
+export interface DanmuOverlayInstance {
+  sendComment?: (comment: {
+    id?: string;
+    txt: string;
+    duration?: number;
+    start?: number;
+    mode?: string;
+    style?: Record<string, string>;
+  }) => void;
+  play?: () => void;
+  pause?: () => void;
+  stop?: () => void;
+  start?: () => void;
+}
