@@ -2,7 +2,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen, type Event as TauriEvent } from '@tauri-apps/api/event';
 import { Ref } from 'vue';
 import { Platform } from '../common/types';
-import type { DanmakuMessage, DanmuOverlayInstance, RustGetStreamUrlPayload } from '../../components/player/types';
+import type { DanmakuMessage, DanmuOverlayInstance, DanmuRenderOptions, RustGetStreamUrlPayload } from '../../components/player/types';
 import type { LiveStreamInfo } from '../common/types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -110,7 +110,8 @@ function normalizeDouyinQuality(input: string): string {
 export async function startDouyinDanmakuListener(
   roomId: string,
   danmuOverlay: DanmuOverlayInstance | null, // For emitting danmaku to overlay
-  danmakuMessagesRef: Ref<DanmakuMessage[]> // For updating DanmuList
+  danmakuMessagesRef: Ref<DanmakuMessage[]>, // For updating DanmuList
+  renderOptions?: DanmuRenderOptions
 ): Promise<() => void> {
   
   const rustPayload: RustGetStreamUrlPayload = { 
@@ -133,15 +134,21 @@ export async function startDouyinDanmakuListener(
         room_id: rustP.room_id || roomId, // Ensure room_id is present
       };
 
-      if (danmuOverlay?.sendComment) {
+      const shouldDisplay = renderOptions?.shouldDisplay ? renderOptions.shouldDisplay() : true;
+
+      if (shouldDisplay && danmuOverlay?.sendComment) {
         try {
+          const commentOptions = renderOptions?.buildCommentOptions?.(frontendDanmaku) ?? {};
+          const styleFromOptions = commentOptions.style ?? {};
+          const preferredColor = styleFromOptions.color || frontendDanmaku.color || '#FFFFFF';
           danmuOverlay.sendComment({
             id: frontendDanmaku.id,
             txt: frontendDanmaku.content,
-            duration: 12000,
-            mode: 'scroll',
+            duration: commentOptions.duration ?? 12000,
+            mode: commentOptions.mode ?? 'scroll',
             style: {
-              color: frontendDanmaku.color || '#FFFFFF',
+              ...styleFromOptions,
+              color: preferredColor,
             },
           });
         } catch (emitError) {

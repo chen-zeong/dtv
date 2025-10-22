@@ -2,7 +2,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen, type Event as TauriEvent } from '@tauri-apps/api/event';
 import type { LiveStreamInfo, StreamVariant } from '../common/types';
 import type { Ref } from 'vue';
-import type { DanmakuMessage, DanmuOverlayInstance } from '../../components/player/types';
+import type { DanmakuMessage, DanmuOverlayInstance, DanmuRenderOptions } from '../../components/player/types';
 import { v4 as uuidv4 } from 'uuid';
 
 export async function getBilibiliStreamConfig(
@@ -74,6 +74,7 @@ export async function startBilibiliDanmakuListener(
   danmuOverlay: DanmuOverlayInstance | null,
   danmakuMessagesRef: Ref<DanmakuMessage[]>,
   cookie?: string,
+  renderOptions?: DanmuRenderOptions,
 ): Promise<() => void> {
   // 启动后端 B 站弹幕监听（cookie 可选）；若未传，则从 localStorage 兜底读取
   const effectiveCookie = cookie ?? (typeof localStorage !== 'undefined' ? (localStorage.getItem('bilibili_cookie') || undefined) : undefined);
@@ -95,15 +96,21 @@ export async function startBilibiliDanmakuListener(
       room_id: roomId,
     };
 
-    if (danmuOverlay?.sendComment) {
+    const shouldDisplay = renderOptions?.shouldDisplay ? renderOptions.shouldDisplay() : true;
+
+    if (shouldDisplay && danmuOverlay?.sendComment) {
       try {
+        const commentOptions = renderOptions?.buildCommentOptions?.(frontendDanmaku) ?? {};
+        const styleFromOptions = commentOptions.style ?? {};
+        const preferredColor = styleFromOptions.color || (frontendDanmaku as any).color || '#FFFFFF';
         danmuOverlay.sendComment({
           id: frontendDanmaku.id,
           txt: frontendDanmaku.content,
-          duration: 12000,
-          mode: 'scroll',
+          duration: commentOptions.duration ?? 12000,
+          mode: commentOptions.mode ?? 'scroll',
           style: {
-            color: (frontendDanmaku as any).color || '#FFFFFF',
+            ...styleFromOptions,
+            color: preferredColor,
           },
         });
       } catch (emitError) {

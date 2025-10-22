@@ -98,7 +98,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch, onUnmounted, shallowRef, nextTick } from 'vue';
+import { ref, reactive, onMounted, watch, onUnmounted, shallowRef, nextTick } from 'vue';
 import Player from 'xgplayer';
 import FlvPlugin from 'xgplayer-flv';
 import DanmuJs from 'danmu.js';
@@ -125,6 +125,323 @@ import { useImageProxy } from '../FollowsList/useProxy';
 
 // Ensure image proxy helpers are available in this component
 const { ensureProxyStarted, proxify } = useImageProxy();
+
+type DanmuUserSettings = {
+  color: string;
+  fontSize: string;
+  duration: number;
+  mode: 'scroll' | 'top' | 'bottom';
+};
+
+class DanmuToggleControl extends Plugin {
+  static override pluginName = 'danmuToggle';
+  static override defaultConfig = {
+    position: POSITIONS.CONTROLS_LEFT,
+    index: 4,
+    disable: false,
+    getState: (() => true) as () => boolean,
+    onToggle: (async (_value: boolean) => {}) as (value: boolean) => Promise<void> | void,
+  };
+
+  private handleClick: ((event: Event) => void) | null = null;
+  private isActive = true;
+
+  override afterCreate() {
+    if (this.config.disable) {
+      return;
+    }
+    this.isActive = typeof this.config.getState === 'function' ? !!this.config.getState() : true;
+    this.updateState();
+    this.handleClick = (event: Event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      this.toggle();
+    };
+    this.bind(['click', 'touchend'], this.handleClick);
+  }
+
+  override destroy() {
+    if (this.handleClick) {
+      this.unbind(['click', 'touchend'], this.handleClick);
+      this.handleClick = null;
+    }
+  }
+
+  override render() {
+    if (this.config.disable) {
+      return '';
+    }
+    return `<xg-icon class="xgplayer-danmu-toggle" title="弹幕开关" role="button" aria-pressed="${this.isActive}">
+      <span class="danmu-toggle-label">弹幕</span>
+    </xg-icon>`;
+  }
+
+  private toggle() {
+    this.isActive = !this.isActive;
+    this.updateState();
+    const callback = this.config.onToggle;
+    if (typeof callback === 'function') {
+      callback(this.isActive);
+    }
+  }
+
+  private updateState() {
+    const root = this.root as HTMLElement | null;
+    if (!root) {
+      return;
+    }
+    root.classList.toggle('is-off', !this.isActive);
+    root.setAttribute('aria-pressed', this.isActive ? 'true' : 'false');
+  }
+
+  setState(isActive: boolean) {
+    this.isActive = isActive;
+    this.updateState();
+  }
+}
+
+class DanmuSettingsControl extends Plugin {
+  static override pluginName = 'danmuSettings';
+  static override defaultConfig = {
+    position: POSITIONS.CONTROLS_RIGHT,
+    index: 4,
+    disable: false,
+    getSettings: (() => ({
+      color: '#ffffff',
+      fontSize: '20px',
+      duration: 12000,
+      mode: 'scroll',
+    })) as () => DanmuUserSettings,
+    onChange: (async (_partial: Partial<DanmuUserSettings>) => {}) as (partial: Partial<DanmuUserSettings>) => Promise<void> | void,
+  };
+
+  private panel: HTMLElement | null = null;
+  private handleToggle: ((event: Event) => void) | null = null;
+  private handleDocumentClick: ((event: MouseEvent) => void) | null = null;
+  private isOpen = false;
+  private currentSettings: DanmuUserSettings = {
+    color: '#ffffff',
+    fontSize: '20px',
+    duration: 12000,
+    mode: 'scroll',
+  };
+  private colorInput: HTMLInputElement | null = null;
+  private fontSizeSlider: HTMLInputElement | null = null;
+  private durationSlider: HTMLInputElement | null = null;
+
+  override afterCreate() {
+    if (this.config.disable) {
+      return;
+    }
+    this.currentSettings = typeof this.config.getSettings === 'function'
+      ? this.config.getSettings()
+      : this.currentSettings;
+
+    this.createPanel();
+    this.updateInputs();
+
+    this.handleToggle = (event: Event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      this.togglePanel();
+    };
+
+    this.bind(['click', 'touchend'], this.handleToggle);
+
+    if (typeof document !== 'undefined') {
+      this.handleDocumentClick = (event: MouseEvent) => {
+        if (!this.root.contains(event.target as Node)) {
+          this.closePanel();
+        }
+      };
+      document.addEventListener('click', this.handleDocumentClick);
+    }
+  }
+
+  override destroy() {
+    if (this.handleToggle) {
+      this.unbind(['click', 'touchend'], this.handleToggle);
+      this.handleToggle = null;
+    }
+    if (this.handleDocumentClick) {
+      document.removeEventListener('click', this.handleDocumentClick);
+      this.handleDocumentClick = null;
+    }
+    (this.root as HTMLElement | null)?.classList.remove('menu-open');
+    this.panel?.remove();
+    this.panel = null;
+  }
+
+  override render() {
+    if (this.config.disable) {
+      return '';
+    }
+    return `<xg-icon class="xgplayer-danmu-settings" title="弹幕设置">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"></circle>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.65 1.65 0 0 0 15 19.4a1.65 1.65 0 0 0-1 .6 1.65 1.65 0 0 1-2 .45 1.65 1.65 0 0 1-1-.45 1.65 1.65 0 0 0-1-.6 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-.6-1 1.65 1.65 0 0 1-.45-2 1.65 1.65 0 0 1 .45-1 1.65 1.65 0 0 0 .6-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33 1.65 1.65 0 0 0 1-.6 1.65 1.65 0 0 1 2-.45 1.65 1.65 0 0 1 1 .45 1.65 1.65 0 0 0 1 .6 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82 1.65 1.65 0 0 0 .6 1 1.65 1.65 0 0 1 .45 2 1.65 1.65 0 0 1-.45 1 1.65 1.65 0 0 0-.6 1z"></path>
+      </svg>
+    </xg-icon>`;
+  }
+
+  private createPanel() {
+    this.panel = document.createElement('div');
+    this.panel.className = 'xgplayer-danmu-settings-panel';
+    this.panel.innerHTML = `
+      <div class="settings-row">
+        <label>颜色</label>
+        <input class="danmu-setting-color" type="color" value="${this.currentSettings.color}">
+      </div>
+      <div class="settings-row">
+        <label>字体 <span class="settings-value font-size-value">${this.currentSettings.fontSize}</span></label>
+        <input class="danmu-setting-font-range" type="range" min="14" max="30" step="2" value="${parseInt(this.currentSettings.fontSize, 10)}">
+      </div>
+      <div class="settings-row">
+        <label>速度 <span class="settings-value speed-value">${this.formatDurationLabel(this.currentSettings.duration)}</span></label>
+        <input class="danmu-setting-duration-range" type="range" min="3000" max="20000" step="500" value="${this.currentSettings.duration}">
+      </div>
+    `;
+    this.root.appendChild(this.panel);
+
+    this.panel.addEventListener('click', (event) => {
+      event.stopPropagation();
+    });
+    this.panel.addEventListener('pointerdown', (event) => {
+      event.stopPropagation();
+    });
+    this.panel.addEventListener('mousedown', (event) => {
+      event.stopPropagation();
+    });
+
+    this.colorInput = this.panel.querySelector<HTMLInputElement>('.danmu-setting-color');
+    this.fontSizeSlider = this.panel.querySelector<HTMLInputElement>('.danmu-setting-font-range');
+    this.durationSlider = this.panel.querySelector<HTMLInputElement>('.danmu-setting-duration-range');
+
+    this.colorInput?.addEventListener('input', (event) => {
+      const value = (event.target as HTMLInputElement).value;
+      this.currentSettings.color = value;
+      this.emitChange({ color: value });
+    });
+
+    const handleRange = (el: HTMLInputElement | null, key: keyof DanmuUserSettings, transform: (value: string) => unknown, displaySelector: string, formatter: (value: number) => string) => {
+      const updateDisplay = (value: number) => {
+        const label = this.panel?.querySelector<HTMLSpanElement>(displaySelector);
+        if (label) {
+          label.textContent = formatter(value);
+        }
+      };
+      el?.addEventListener('input', (event) => {
+        const rawValue = (event.target as HTMLInputElement).value;
+        const numericValue = Number(rawValue);
+        updateDisplay(numericValue);
+        const nextValue = transform(rawValue);
+        (this.currentSettings as Record<string, unknown>)[key as string] = nextValue;
+        this.emitChange({ [key]: nextValue } as Partial<DanmuUserSettings>);
+      });
+      if (el) {
+        updateDisplay(Number(el.value));
+      }
+    };
+
+    handleRange(
+      this.fontSizeSlider,
+      'fontSize',
+      (value) => `${Math.min(30, Math.max(14, Number(value)))}px`,
+      '.font-size-value',
+      (value) => `${Math.min(30, Math.max(14, value))}px`,
+    );
+
+    handleRange(
+      this.durationSlider,
+      'duration',
+      (value) => {
+        const numeric = Number(value);
+        const clamped = Number.isFinite(numeric) ? Math.min(20000, Math.max(3000, numeric)) : 12000;
+        return clamped;
+      },
+      '.speed-value',
+      (value) => this.formatDurationLabel(value),
+    );
+  }
+
+  private togglePanel() {
+    if (!this.panel) {
+      return;
+    }
+    this.isOpen = !this.isOpen;
+    this.panel.classList.toggle('show', this.isOpen);
+    this.root.classList.toggle('menu-open', this.isOpen);
+    if (this.isOpen) {
+      this.updateInputs();
+    }
+  }
+
+  private closePanel() {
+    if (!this.panel) {
+      return;
+    }
+    this.isOpen = false;
+    this.panel.classList.remove('show');
+    this.root.classList.remove('menu-open');
+  }
+
+  private updateInputs() {
+    if (!this.panel) {
+      return;
+    }
+    if (this.colorInput) {
+      this.colorInput.value = this.currentSettings.color;
+    }
+    if (this.fontSizeSlider) {
+      const numericFont = parseInt(this.currentSettings.fontSize, 10);
+      this.fontSizeSlider.value = String(Math.min(30, Math.max(14, numericFont)));
+      const fontLabel = this.panel.querySelector<HTMLSpanElement>('.font-size-value');
+      if (fontLabel) {
+        fontLabel.textContent = `${Math.min(30, Math.max(14, numericFont))}px`;
+      }
+    }
+    if (this.durationSlider) {
+      const durationValue = Math.min(20000, Math.max(3000, this.currentSettings.duration));
+      this.durationSlider.value = String(durationValue);
+      const speedLabel = this.panel.querySelector<HTMLSpanElement>('.speed-value');
+      if (speedLabel) {
+        speedLabel.textContent = this.formatDurationLabel(durationValue);
+      }
+    }
+  }
+
+  private formatDurationLabel(value: number): string {
+    const clamped = Math.min(20000, Math.max(3000, value));
+    if (clamped <= 5000) {
+      return '极快';
+    }
+    if (clamped <= 8000) {
+      return '很快';
+    }
+    if (clamped <= 12000) {
+      return '标准';
+    }
+    if (clamped <= 16000) {
+      return '稍慢';
+    }
+    return '慢速';
+  }
+
+  private emitChange(partial: Partial<DanmuUserSettings>) {
+    const callback = this.config.onChange;
+    if (typeof callback === 'function') {
+      callback(partial);
+    }
+  }
+
+  setSettings(settings: Partial<DanmuUserSettings>) {
+    this.currentSettings = {
+      ...this.currentSettings,
+      ...settings,
+    };
+    this.updateInputs();
+  }
+}
 
 class RefreshControl extends Plugin {
   static override pluginName = 'refreshControl';
@@ -169,10 +486,8 @@ class RefreshControl extends Plugin {
     }
     return `<xg-icon class="xgplayer-refresh-control" title="刷新">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M4.5 12a7.5 7.5 0 0 1 12.36-5.36L18.5 8" />
-        <path d="M19 4v5h-5" />
-        <path d="M19.5 12a7.5 7.5 0 0 1-12.36 5.36L5.5 16" />
-        <path d="M5 20v-5h5" />
+        <polyline points="1 4 1 10 7 10"></polyline>
+        <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
       </svg>
     </xg-icon>`;
   }
@@ -411,6 +726,8 @@ const playerContainerRef = ref<HTMLDivElement | null>(null);
 const playerInstance = shallowRef<Player | null>(null);
 const refreshControlPlugin = shallowRef<RefreshControl | null>(null);
 const qualityControlPlugin = shallowRef<QualityControl | null>(null);
+const danmuTogglePlugin = shallowRef<DanmuToggleControl | null>(null);
+const danmuSettingsPlugin = shallowRef<DanmuSettingsControl | null>(null);
 const danmuInstance = shallowRef<DanmuOverlayInstance | null>(null);
 const danmakuMessages = ref<DanmakuMessage[]>([]);
 const isDanmakuListenerActive = ref(false); // Tracks if a danmaku listener is supposed to be running
@@ -429,6 +746,14 @@ const playerIsLive = ref(props.isLive);
 const isInNativePlayerFullscreen = ref(false); // New: Tracks Artplayer element's native fullscreen
 const isInWebFullscreen = ref(false);
 const isFullScreen = ref(false); // True if EITHER native player OR web fullscreen is active
+
+const isDanmuEnabled = ref(true);
+const danmuSettings = reactive<DanmuUserSettings>({
+  color: '#ffffff',
+  fontSize: '20px',
+  duration: 12000,
+  mode: 'scroll',
+});
 
 // OS specific states
 const osName = ref<string>('');
@@ -499,6 +824,8 @@ function destroyPlayerInstance() {
 
   refreshControlPlugin.value = null;
   qualityControlPlugin.value = null;
+  danmuTogglePlugin.value = null;
+  danmuSettingsPlugin.value = null;
 
   resetFullscreenState();
 }
@@ -554,11 +881,59 @@ function createDanmuOverlay(player: Player | null) {
 
     overlay.start?.();
     danmuInstance.value = overlay;
+    applyDanmuOverlayPreferences(overlay);
+    syncDanmuEnabledState(overlay);
     return overlay;
   } catch (error) {
     console.error('[Player] Failed to initialize danmu.js overlay:', error);
     danmuInstance.value = null;
     return null;
+  }
+}
+
+function applyDanmuOverlayPreferences(overlay: DanmuOverlayInstance | null) {
+  if (!overlay) {
+    return;
+  }
+  const fontSizeValue = parseInt(danmuSettings.fontSize, 10);
+  if (!Number.isNaN(fontSizeValue)) {
+    try {
+      overlay.setFontSize?.(fontSizeValue);
+    } catch (error) {
+      console.warn('[Player] Failed to apply danmu font size:', error);
+    }
+  }
+  try {
+    overlay.setAllDuration?.('scroll', danmuSettings.duration);
+    overlay.setAllDuration?.('top', danmuSettings.duration);
+    overlay.setAllDuration?.('bottom', danmuSettings.duration);
+  } catch (error) {
+    // Non-critical for players that do not support bulk duration updates
+  }
+  try {
+    overlay.setOpacity?.(isDanmuEnabled.value ? 1 : 0);
+  } catch (error) {
+    // Non-critical
+  }
+}
+
+function syncDanmuEnabledState(overlay: DanmuOverlayInstance | null) {
+  if (!overlay) {
+    return;
+  }
+  try {
+    if (isDanmuEnabled.value) {
+      overlay.play?.();
+      overlay.setOpacity?.(1);
+      overlay.show?.('scroll');
+      overlay.show?.('top');
+      overlay.show?.('bottom');
+    } else {
+      overlay.pause?.();
+      overlay.setOpacity?.(0);
+    }
+  } catch (error) {
+    console.warn('[Player] Failed updating danmu enabled state:', error);
   }
 }
 
@@ -626,6 +1001,40 @@ async function mountXgPlayer(
       void reloadCurrentStream('refresh');
     },
   }) as RefreshControl;
+
+  danmuTogglePlugin.value = player.registerPlugin(DanmuToggleControl, {
+    position: POSITIONS.CONTROLS_LEFT,
+    index: 4,
+    getState: () => isDanmuEnabled.value,
+    onToggle: (enabled: boolean) => {
+      isDanmuEnabled.value = enabled;
+    },
+  }) as DanmuToggleControl;
+
+  danmuSettingsPlugin.value = player.registerPlugin(DanmuSettingsControl, {
+    position: POSITIONS.CONTROLS_RIGHT,
+    index: 4,
+    getSettings: () => ({
+      color: danmuSettings.color,
+      fontSize: danmuSettings.fontSize,
+      duration: danmuSettings.duration,
+      mode: danmuSettings.mode,
+    }),
+    onChange: (partial: Partial<DanmuUserSettings>) => {
+      if (partial.color) {
+        danmuSettings.color = partial.color;
+      }
+      if (partial.fontSize) {
+        danmuSettings.fontSize = partial.fontSize;
+      }
+      if (typeof partial.duration === 'number') {
+        danmuSettings.duration = partial.duration;
+      }
+      if (partial.mode) {
+        danmuSettings.mode = partial.mode;
+      }
+    },
+  }) as DanmuSettingsControl;
 
   qualityControlPlugin.value = player.registerPlugin(QualityControl, {
     position: POSITIONS.CONTROLS_RIGHT,
@@ -852,15 +1261,26 @@ async function startCurrentDanmakuListener(platform: StreamingPlatform, roomId: 
   }
 
   try {
+    const renderOptions = {
+      shouldDisplay: () => isDanmuEnabled.value,
+      buildCommentOptions: () => ({
+        duration: danmuSettings.duration,
+        mode: danmuSettings.mode,
+        style: {
+          color: danmuSettings.color,
+          fontSize: danmuSettings.fontSize,
+        },
+      }),
+    };
     let stopFn: (() => void) | null = null;
     if (platform === StreamingPlatform.DOUYU) {
-      stopFn = await startDouyuDanmakuListener(roomId, danmuOverlay, danmakuMessages); 
+      stopFn = await startDouyuDanmakuListener(roomId, danmuOverlay, danmakuMessages, renderOptions); 
     } else if (platform === StreamingPlatform.DOUYIN) {
-      stopFn = await startDouyinDanmakuListener(roomId, danmuOverlay, danmakuMessages);
+      stopFn = await startDouyinDanmakuListener(roomId, danmuOverlay, danmakuMessages, renderOptions);
     } else if (platform === StreamingPlatform.HUYA) {
-      stopFn = await startHuyaDanmakuListener(roomId, danmuOverlay, danmakuMessages);
+      stopFn = await startHuyaDanmakuListener(roomId, danmuOverlay, danmakuMessages, renderOptions);
     } else if (platform === StreamingPlatform.BILIBILI) {
-      stopFn = await startBilibiliDanmakuListener(roomId, danmuOverlay, danmakuMessages, props.cookie || undefined);
+      stopFn = await startBilibiliDanmakuListener(roomId, danmuOverlay, danmakuMessages, props.cookie || undefined, renderOptions);
     }
 
     if (stopFn) {
@@ -1016,6 +1436,46 @@ watch(isQualitySwitching, (isSwitching) => {
 
 watch(qualityControlPlugin, (plugin) => {
   plugin?.setSwitching(isQualitySwitching.value);
+});
+
+watch(isDanmuEnabled, (enabled) => {
+  danmuTogglePlugin.value?.setState(enabled);
+  syncDanmuEnabledState(danmuInstance.value);
+});
+
+watch(danmuTogglePlugin, (plugin) => {
+  plugin?.setState(isDanmuEnabled.value);
+});
+
+watch(danmuSettingsPlugin, (plugin) => {
+  if (!plugin) {
+    return;
+  }
+  plugin.setSettings({
+    color: danmuSettings.color,
+    fontSize: danmuSettings.fontSize,
+    duration: danmuSettings.duration,
+    mode: danmuSettings.mode,
+  });
+});
+
+watch(() => danmuSettings.color, (color) => {
+  danmuSettingsPlugin.value?.setSettings({ color });
+});
+
+watch(() => danmuSettings.fontSize, (fontSize) => {
+  danmuSettingsPlugin.value?.setSettings({ fontSize });
+  applyDanmuOverlayPreferences(danmuInstance.value);
+});
+
+watch(() => danmuSettings.duration, (duration) => {
+  danmuSettingsPlugin.value?.setSettings({ duration });
+  applyDanmuOverlayPreferences(danmuInstance.value);
+});
+
+watch(danmuInstance, (instance) => {
+  applyDanmuOverlayPreferences(instance);
+  syncDanmuEnabledState(instance);
 });
 
 watch(currentQuality, (quality) => {

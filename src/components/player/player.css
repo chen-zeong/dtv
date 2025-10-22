@@ -150,15 +150,27 @@
 }
 
 .xgplayer-refresh-control,
-.xgplayer-quality-control {
+.xgplayer-quality-control,
+.xgplayer-danmu-toggle,
+.xgplayer-danmu-settings {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 0 8px;
+  gap: 6px;
+  padding: 0 6px;
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(255, 255, 255, 0.88);
   cursor: pointer;
   position: relative;
+  border: none;
+  background: none;
+  transition: color 0.2s ease;
+}
+
+.xgplayer-refresh-control:hover,
+.xgplayer-quality-control:hover,
+.xgplayer-danmu-toggle:hover,
+.xgplayer-danmu-settings:hover {
+  color: #ffffff;
 }
 
 .xgplayer-quality-control.menu-open .quality-caret {
@@ -170,7 +182,9 @@
 }
 
 .xgplayer-refresh-control svg,
-.xgplayer-quality-control svg {
+.xgplayer-quality-control svg,
+.xgplayer-danmu-toggle svg,
+.xgplayer-danmu-settings svg {
   pointer-events: none;
 }
 
@@ -205,21 +219,35 @@
   display: none;
 }
 
+.xgplayer-danmu-toggle.is-off {
+  opacity: 0.65;
+}
+
+.xgplayer-danmu-toggle .danmu-toggle-label {
+  font-weight: 500;
+  letter-spacing: 0.03em;
+}
+
+.xgplayer-danmu-settings.menu-open,
+.xgplayer-quality-control.menu-open {
+  color: #ffffff;
+}
+
 .xgplayer-quality-dropdown {
   position: absolute;
-  bottom: 40px;
+  bottom: 44px;
   right: 0;
   display: none;
   flex-direction: column;
-  gap: 4px;
-  padding: 6px 10px;
-  min-width: 112px;
-  border-radius: 10px;
-  background: rgba(22, 24, 32, 0.92);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  gap: 6px;
+  padding: 10px 12px;
+  min-width: 130px;
+  border-radius: 14px;
+  background: rgba(16, 19, 28, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
   z-index: 12;
 }
 
@@ -231,9 +259,9 @@
   border: none;
   background: transparent;
   color: rgba(255, 255, 255, 0.85);
-  font-size: 12px;
-  padding: 6px 12px;
-  border-radius: 6px;
+  font-size: 13px;
+  padding: 8px 12px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -263,6 +291,97 @@
 
 .xgplayer-quality-item.active .quality-check {
   opacity: 1;
+}
+
+.xgplayer-danmu-settings-panel {
+  position: absolute;
+  bottom: 48px;
+  right: 0;
+  display: none;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 180px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(17, 20, 28, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  color: rgba(255, 255, 255, 0.9);
+  z-index: 14;
+}
+
+.xgplayer-danmu-settings-panel.show {
+  display: flex;
+}
+
+.xgplayer-danmu-settings-panel .settings-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.xgplayer-danmu-settings-panel .settings-row label {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.68);
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.xgplayer-danmu-settings-panel .settings-row .settings-value {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.xgplayer-danmu-settings-panel input[type="color"] {
+  width: 38px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.xgplayer-danmu-settings-panel input[type="range"] {
+  width: 100%;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.15);
+  outline: none;
+}
+
+.xgplayer-danmu-settings-panel input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.xgplayer-danmu-settings-panel input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.xgplayer-danmu-settings-panel input[type="range"]:active::-webkit-slider-thumb,
+.xgplayer-danmu-settings-panel input[type="range"]:active::-moz-range-thumb {
+  transform: scale(1.15);
 }
 
 
@@ -296,18 +415,16 @@
 .danmu-panel {
   width: 250px;
   height: 100%;
-  background-color: rgba(35, 37, 46, 0.75);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: transparent;
   border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  border: none;
+  box-shadow: none;
   transition: transform 0.3s ease, box-shadow 0.3s ease, opacity 0.3s ease;
 }
 
 .danmu-panel:hover {
   transform: translateY(-3px);
-  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.35);
+  box-shadow: none;
 }
 
 .hidden-panel {

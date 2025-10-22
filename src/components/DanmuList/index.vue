@@ -197,17 +197,21 @@
     position: relative;
     height: 100%;
     width: 220px;
-    background-color: var(--secondary-bg, #2c2c2e);
+    background: rgba(20, 22, 30, 0.55);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
     color: var(--primary-text, #e0e0e0);
-    border-radius: 8px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
     overflow: hidden;
   }
   
   .danmu-header {
-    padding: 8px 16px;
-    border-bottom: 1px solid var(--border-color-dark, #1e1e1e);
+    padding: 10px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     flex-shrink: 0;
-    background-color: var(--tertiary-bg, #3a3a3c);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0));
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -235,12 +239,12 @@
   
   .danmu-messages-area {
     position: absolute;
-    top: 40px;
+    top: 44px;
     bottom: 0;
     left: 0;
     right: 0;
     overflow-y: auto; 
-    padding: 8px 12px;
+    padding: 12px 14px;
     scroll-behavior: smooth;
   }
   
@@ -258,22 +262,23 @@
   
   .danmu-item {
     text-align: left;
-    padding: 4px 6px;
-    border-radius: 4px;
-    background-color: rgba(0, 0, 0, 0.1);
+    padding: 6px 10px;
+    border-radius: 8px;
+    background-color: rgba(0, 0, 0, 0.2);
     word-wrap: break-word;
     overflow-wrap: break-word;
-    margin-bottom: 8px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-    transition: transform 0.15s ease-out, background-color 0.15s ease;
+    margin-bottom: 10px;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.18);
+    transition: transform 0.18s ease-out, background-color 0.18s ease, box-shadow 0.18s ease;
     display: flex;
     flex-direction: column;
     max-width: 100%; 
   }
   
   .danmu-item:hover {
-    background: linear-gradient(to right, rgba(0,0,0,0.3), rgba(0,0,0,0.15));
+    background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
     transform: translateY(-1px);
+    box-shadow: 0 10px 24px rgba(0,0,0,0.25);
   }
   
   .danmu-meta-line {
@@ -323,12 +328,12 @@
   }
   
   .danmu-content {
-    color: var(--primary-text-light, #f0f0f0); 
+    color: rgba(255, 255, 255, 0.92); 
     white-space: pre-wrap; 
     word-wrap: break-word;
     overflow-wrap: break-word;
-    font-size: 0.875rem; 
-    line-height: 1.4;
+    font-size: 0.9rem; 
+    line-height: 1.45;
   }
   
   .danmu-messages-area::-webkit-scrollbar {

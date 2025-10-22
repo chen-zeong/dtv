@@ -1,7 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen, type Event as TauriEvent } from '@tauri-apps/api/event';
 import { Ref } from 'vue';
-import type { DanmakuMessage, DanmuOverlayInstance } from '../../components/player/types';
+import type { DanmakuMessage, DanmuOverlayInstance, DanmuRenderOptions } from '../../components/player/types';
 import { v4 as uuidv4 } from 'uuid';
 
 export interface HuyaUnifiedEntry { quality: string; bitRate: number; url: string; }
@@ -73,7 +73,8 @@ let currentHuyaRoomId: string | null = null;
 export async function startHuyaDanmakuListener(
   roomId: string,
   danmuOverlay: DanmuOverlayInstance | null,
-  danmakuMessagesRef: Ref<DanmakuMessage[]>
+  danmakuMessagesRef: Ref<DanmakuMessage[]>,
+  renderOptions?: DanmuRenderOptions
 ): Promise<() => void> {
   console.log('[HuyaPlayerHelper] Starting Huya danmaku listener for room:', roomId);
   currentHuyaRoomId = roomId;
@@ -107,15 +108,21 @@ export async function startHuyaDanmakuListener(
       room_id: roomId,
     };
 
-    if (danmuOverlay?.sendComment) {
+    const shouldDisplay = renderOptions?.shouldDisplay ? renderOptions.shouldDisplay() : true;
+
+    if (shouldDisplay && danmuOverlay?.sendComment) {
       try {
+        const commentOptions = renderOptions?.buildCommentOptions?.(frontendDanmaku) ?? {};
+        const styleFromOptions = commentOptions.style ?? {};
+        const preferredColor = styleFromOptions.color || (frontendDanmaku as any).color || '#FFFFFF';
         danmuOverlay.sendComment({
           id: frontendDanmaku.id,
           txt: frontendDanmaku.content,
-          duration: 12000,
-          mode: 'scroll',
+          duration: commentOptions.duration ?? 12000,
+          mode: commentOptions.mode ?? 'scroll',
           style: {
-            color: (frontendDanmaku as any).color || '#FFFFFF',
+            ...styleFromOptions,
+            color: preferredColor,
           },
         });
       } catch (emitError) {
