@@ -186,7 +186,7 @@ const ICONS = {
   fullscreen: createLucideIconSvg('fullscreen', '<path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path><rect width="10" height="8" x="7" y="8" rx="1"></rect>'),
   pictureInPicture2: createLucideIconSvg('picture-in-picture-2', '<path d="M21 9V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v10c0 1.1.9 2 2 2h4"></path><rect width="10" height="7" x="12" y="13" rx="2"></rect>'),
   cog: createLucideIconSvg('cog', '<path d="M11 10.27 7 3.34"></path><path d="m11 13.73-4 6.93"></path><path d="M12 22v-2"></path><path d="M12 2v2"></path><path d="M14 12h8"></path><path d="m17 20.66-1-1.73"></path><path d="m17 3.34-1 1.73"></path><path d="M2 12h2"></path><path d="m20.66 17-1.73-1"></path><path d="m20.66 7-1.73 1"></path><path d="m3.34 17 1.73-1"></path><path d="m3.34 7 1.73 1"></path><circle cx="12" cy="12" r="2"></circle><circle cx="12" cy="12" r="8"></circle>'),
-  refreshCw: createLucideIconSvg('refresh-cw', '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M8 16H3v5"></path>'),
+  rotateCcw: createLucideIconSvg('rotate-ccw', '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path>'),
   volume2: createLucideIconSvg('volume-2', '<path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"></path><path d="M16 9a5 5 0 0 1 0 6"></path><path d="M19.364 18.364a9 9 0 0 0 0-12.728"></path>')
 };
 
@@ -209,7 +209,7 @@ const loadDanmuPreferences = (): { enabled: boolean; settings: DanmuUserSettings
       settings: {
         color: typeof settings.color === 'string' ? settings.color : '#ffffff',
         fontSize: typeof settings.fontSize === 'string' ? settings.fontSize : '20px',
-        duration: Number.isFinite(settings.duration) ? settings.duration : 12000,
+        duration: Number.isFinite(settings.duration) ? settings.duration : 10000,
         area: Number.isFinite(settings.area) ? sanitizeDanmuArea(settings.area) : 0.5,
         mode: settings.mode === 'top' || settings.mode === 'bottom' ? settings.mode : 'scroll',
       },
@@ -311,7 +311,7 @@ class DanmuSettingsControl extends Plugin {
     getSettings: (() => ({
       color: '#ffffff',
       fontSize: '20px',
-      duration: 12000,
+      duration: 10000,
       area: 0.5,
       mode: 'scroll',
     })) as () => DanmuUserSettings,
@@ -328,7 +328,7 @@ class DanmuSettingsControl extends Plugin {
   private currentSettings: DanmuUserSettings = {
     color: '#ffffff',
     fontSize: '20px',
-    duration: 12000,
+    duration: 10000,
     area: 0.5,
     mode: 'scroll',
   };
@@ -508,7 +508,7 @@ class DanmuSettingsControl extends Plugin {
       'duration',
       (value) => {
         const numeric = Number(value);
-        const clamped = Number.isFinite(numeric) ? Math.min(20000, Math.max(3000, numeric)) : 12000;
+        const clamped = Number.isFinite(numeric) ? Math.min(20000, Math.max(3000, numeric)) : 10000;
         return clamped;
       },
       '.speed-value',
@@ -612,16 +612,16 @@ class DanmuSettingsControl extends Plugin {
 
   private formatDurationLabel(value: number): string {
     const clamped = Math.min(20000, Math.max(3000, value));
-    if (clamped <= 5000) {
+    if (clamped <= 4500) {
       return '极快';
     }
-    if (clamped <= 8000) {
+    if (clamped <= 7500) {
       return '很快';
     }
-    if (clamped <= 12000) {
+    if (clamped <= 10000) {
       return '标准';
     }
-    if (clamped <= 16000) {
+    if (clamped <= 14000) {
       return '稍慢';
     }
     return '慢速';
@@ -666,15 +666,18 @@ class VolumeControl extends Plugin {
     disable: false,
   };
 
+  private volumeIcon: HTMLElement | null = null;
   private slider: HTMLInputElement | null = null;
   private valueLabel: HTMLElement | null = null;
   private onVolumeChange: ((value: number) => void) | null = null;
+  private handleIconClick: ((event: Event) => void) | null = null;
+  private previousVolume = 1;
 
   override render() {
     if (this.config.disable) {
       return '';
     }
-    return `<xg-icon class="xgplayer-volume-control" title="">
+    return `<xg-icon class="xgplayer-volume-control" title="音量/静音切换">
       <div class="volume-icon">
         ${ICONS.volume2}
       </div>
@@ -687,11 +690,15 @@ class VolumeControl extends Plugin {
     if (this.config.disable) {
       return;
     }
+    this.volumeIcon = this.find('.volume-icon') as HTMLElement | null;
     this.slider = this.find('.volume-slider') as HTMLInputElement | null;
     this.valueLabel = this.find('.volume-value') as HTMLElement | null;
 
     const updateUI = (volume: number) => {
       const clamped = Math.max(0, Math.min(1, volume));
+      if (clamped > 0) {
+        this.previousVolume = clamped;
+      }
       if (this.slider) {
         this.slider.value = String(Math.round(clamped * 100));
         this.updateSliderVisual(this.slider);
@@ -699,12 +706,23 @@ class VolumeControl extends Plugin {
       if (this.valueLabel) {
         this.valueLabel.textContent = `${Math.round(clamped * 100)}%`;
       }
+      if (this.volumeIcon) {
+        this.volumeIcon.setAttribute('data-muted', clamped === 0 ? 'true' : 'false');
+      }
     };
 
     const storedVolume = loadStoredVolume();
     if (storedVolume !== null) {
+      if (storedVolume > 0) {
+        this.previousVolume = storedVolume;
+      }
       this.player.volume = storedVolume;
       this.player.muted = storedVolume === 0 ? true : this.player.muted;
+    } else {
+      const initial = this.player.volume ?? 1;
+      if (initial > 0) {
+        this.previousVolume = initial;
+      }
     }
 
     updateUI(this.player.volume ?? storedVolume ?? 1);
@@ -713,14 +731,41 @@ class VolumeControl extends Plugin {
       const value = Number((event.target as HTMLInputElement).value);
       const clampedPercent = Math.max(0, Math.min(100, value));
       const normalized = clampedPercent / 100;
-      this.player.muted = false;
-      this.player.volume = normalized;
-      if (this.valueLabel) {
-        this.valueLabel.textContent = `${Math.round(clampedPercent)}%`;
+      if (normalized === 0) {
+        this.player.muted = true;
+      } else {
+        this.player.muted = false;
+        this.previousVolume = normalized;
       }
-      this.updateSliderVisual(this.slider);
+      this.player.volume = normalized;
+      updateUI(normalized);
       persistStoredVolume(normalized);
     });
+
+    this.handleIconClick = (event: Event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const currentVolume = this.player.volume ?? 0;
+      if (currentVolume > 0) {
+        this.previousVolume = currentVolume;
+        this.player.volume = 0;
+        this.player.muted = true;
+        updateUI(0);
+        persistStoredVolume(0);
+      } else {
+        const restoreVolume = this.previousVolume > 0 ? this.previousVolume : 1;
+        this.player.muted = false;
+        this.player.volume = restoreVolume;
+        updateUI(restoreVolume);
+        persistStoredVolume(restoreVolume);
+      }
+    };
+
+    this.volumeIcon?.addEventListener('click', this.handleIconClick);
+    if (this.volumeIcon) {
+      this.volumeIcon.setAttribute('title', '点击静音 / 取消静音');
+      this.volumeIcon.style.cursor = 'pointer';
+    }
 
     this.onVolumeChange = () => {
       const current = this.player.volume ?? 1;
@@ -731,10 +776,15 @@ class VolumeControl extends Plugin {
   }
 
   override destroy() {
+    if (this.handleIconClick && this.volumeIcon) {
+      this.volumeIcon.removeEventListener('click', this.handleIconClick);
+      this.handleIconClick = null;
+    }
     if (this.onVolumeChange) {
       this.player.off('volumechange', this.onVolumeChange);
       this.onVolumeChange = null;
     }
+    this.volumeIcon = null;
     this.slider = null;
     this.valueLabel = null;
   }
@@ -790,8 +840,8 @@ class RefreshControl extends Plugin {
     if (this.config.disable) {
       return '';
     }
-    return `<xg-icon class="xgplayer-refresh-control" title="">
-      ${ICONS.refreshCw}
+    return `<xg-icon class="xgplayer-refresh-control" title="刷新">
+      ${ICONS.rotateCcw}
     </xg-icon>`;
   }
 
@@ -1105,7 +1155,7 @@ const isDanmuEnabled = ref(true);
 const danmuSettings = reactive<DanmuUserSettings>({
   color: '#ffffff',
   fontSize: '20px',
-  duration: 12000,
+  duration: 10000,
   area: 0.5,
   mode: 'scroll',
 });
