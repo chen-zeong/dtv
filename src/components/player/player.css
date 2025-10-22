@@ -1,3 +1,10 @@
+/* 全局主题变量 */
+:root {
+  --player-accent: #f5f5f5;
+  --player-accent-strong: rgba(255, 255, 255, 0.28);
+  --player-accent-gradient: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(180, 180, 180, 0.85));
+}
+
 /* 整体布局 */
 .player-page {
   display: flex;
@@ -51,6 +58,61 @@
   height: 100%;
   gap: 36px;
   padding: 28px 16px 16px 16px;
+}
+
+:deep(.xgplayer-controls) {
+  display: flex;
+  width: 100%;
+  gap: 16px;
+  padding: 0 18px 16px;
+  align-items: center;
+  justify-content: space-between;
+  box-sizing: border-box;
+}
+
+:deep(.xgplayer-controls-left),
+:deep(.xgplayer-controls-right) {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+:deep(.xgplayer-left-cluster),
+:deep(.danmu-control-group) {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 14px;
+  background: rgba(24, 28, 38, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+:deep(.danmu-control-group) {
+  gap: 10px;
+  padding: 6px 12px;
+}
+
+:deep(.xgplayer-left-cluster .xgplayer-refresh-control),
+:deep(.xgplayer-left-cluster .xgplayer-play),
+:deep(.danmu-control-group .xgplayer-danmu-settings),
+:deep(.danmu-control-group .xgplayer-danmu-toggle) {
+  padding: 0;
+}
+
+:deep(.xgplayer-left-cluster:hover),
+:deep(.danmu-control-group:hover) {
+  background: rgba(34, 38, 50, 0.8);
+  border-color: rgba(255, 255, 255, 0.18);
 }
 
 /* 确保全屏时播放器容器也能正确显示 */
@@ -140,6 +202,12 @@
   z-index: 6;
 }
 
+.player-danmu-overlay span,
+.player-danmu-overlay div {
+  font-weight: 600;
+  -webkit-text-stroke: 0.6px rgba(0, 0, 0, 0.9);
+}
+
 @keyframes player-control-spin {
   from {
     transform: rotate(0deg);
@@ -152,7 +220,8 @@
 .xgplayer-refresh-control,
 .xgplayer-quality-control,
 .xgplayer-danmu-toggle,
-.xgplayer-danmu-settings {
+.xgplayer-danmu-settings,
+.xgplayer-volume-control {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -169,7 +238,8 @@
 .xgplayer-refresh-control:hover,
 .xgplayer-quality-control:hover,
 .xgplayer-danmu-toggle:hover,
-.xgplayer-danmu-settings:hover {
+.xgplayer-danmu-settings:hover,
+.xgplayer-volume-control:hover {
   color: #ffffff;
 }
 
@@ -184,7 +254,8 @@
 .xgplayer-refresh-control svg,
 .xgplayer-quality-control svg,
 .xgplayer-danmu-toggle svg,
-.xgplayer-danmu-settings svg {
+.xgplayer-danmu-settings svg,
+.xgplayer-volume-control svg {
   pointer-events: none;
 }
 
@@ -196,6 +267,7 @@
 
 .xgplayer-refresh-control.is-loading svg {
   animation: player-control-spin 0.9s linear infinite;
+  stroke: var(--player-accent);
 }
 
 .xgplayer-quality-control.is-switching {
@@ -210,8 +282,8 @@
   height: 12px;
   margin-left: 4px;
   border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.35);
-  border-top-color: rgba(255, 255, 255, 0.9);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-top-color: var(--player-accent);
   animation: player-control-spin 0.9s linear infinite;
 }
 
@@ -219,13 +291,135 @@
   display: none;
 }
 
-.xgplayer-danmu-toggle.is-off {
-  opacity: 0.65;
-}
-
 .xgplayer-danmu-toggle .danmu-toggle-label {
   font-weight: 500;
   letter-spacing: 0.03em;
+}
+
+.xgplayer-danmu-toggle {
+  gap: 10px;
+  padding: 0;
+  border-radius: 999px;
+  background: transparent;
+  border: none;
+  transition: color 0.2s ease;
+}
+
+.xgplayer-danmu-toggle:hover {
+  color: #ffffff;
+}
+
+.xgplayer-danmu-toggle.is-off {
+  opacity: 0.85;
+}
+
+.xgplayer-danmu-toggle .danmu-toggle-switch {
+  position: relative;
+  width: 30px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.xgplayer-danmu-toggle .danmu-toggle-switch .switch-track {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
+  transition: background 0.2s ease;
+}
+
+.xgplayer-danmu-toggle .danmu-toggle-switch .switch-thumb {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.3);
+  transform: translateX(1px);
+  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1), background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.xgplayer-danmu-toggle:not(.is-off) .danmu-toggle-switch .switch-track {
+  background: var(--player-accent-gradient);
+}
+
+.xgplayer-danmu-toggle:not(.is-off) .danmu-toggle-switch .switch-thumb {
+  transform: translateX(15px);
+  background: #1a1a1a;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.45);
+}
+
+.xgplayer-volume-control {
+  gap: 8px;
+  padding: 0 0 0 6px;
+  border-radius: 0;
+  background: transparent;
+  border: none;
+}
+
+.xgplayer-volume-control .volume-icon svg {
+  display: block;
+}
+
+.xgplayer-volume-control .volume-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 90px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.15);
+  outline: none;
+  transition: background 0.2s ease;
+}
+
+.xgplayer-volume-control .volume-slider::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: transparent;
+}
+
+.xgplayer-volume-control .volume-slider::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: transparent;
+}
+
+.xgplayer-volume-control .volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  margin-top: -5px;
+}
+
+.xgplayer-volume-control .volume-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transform: translateY(-2px);
+}
+
+.xgplayer-volume-control .volume-slider:active::-webkit-slider-thumb,
+.xgplayer-volume-control .volume-slider:active::-moz-range-thumb {
+  transform: scale(1.15);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.35);
+}
+
+.xgplayer-volume-control .volume-value {
+  font-size: 11px;
+  color: var(--player-accent);
+  min-width: 36px;
+  text-align: right;
 }
 
 .xgplayer-danmu-settings.menu-open,
@@ -233,11 +427,24 @@
   color: #ffffff;
 }
 
+.xgplayer-danmu-settings {
+  gap: 8px;
+  padding: 0;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  transition: color 0.2s ease;
+}
+
+.xgplayer-danmu-settings:hover {
+  color: #ffffff;
+}
+
 .xgplayer-quality-dropdown {
   position: absolute;
   bottom: 44px;
   right: 0;
-  display: none;
+  display: flex;
   flex-direction: column;
   gap: 6px;
   padding: 10px 12px;
@@ -249,10 +456,19 @@
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
   z-index: 12;
+  opacity: 0;
+  transform: translateY(8px);
+  pointer-events: none;
+  visibility: hidden;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  will-change: opacity, transform;
 }
 
 .xgplayer-quality-dropdown.show {
-  display: flex;
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+  visibility: visible;
 }
 
 .xgplayer-quality-item {
@@ -276,12 +492,12 @@
 }
 
 .xgplayer-quality-item:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--player-accent-strong);
 }
 
 .xgplayer-quality-item.active {
-  color: #ff6a9f;
-  background: rgba(255, 106, 159, 0.2);
+  color: var(--player-accent);
+  background: var(--player-accent-strong);
 }
 
 .xgplayer-quality-item .quality-check {
@@ -293,11 +509,15 @@
   opacity: 1;
 }
 
+.xgplayer-quality-item.active .quality-check path {
+  stroke: var(--player-accent);
+}
+
 .xgplayer-danmu-settings-panel {
   position: absolute;
   bottom: 48px;
   right: 0;
-  display: none;
+  display: flex;
   flex-direction: column;
   gap: 10px;
   min-width: 180px;
@@ -310,10 +530,32 @@
   -webkit-backdrop-filter: blur(20px);
   color: rgba(255, 255, 255, 0.9);
   z-index: 14;
+  opacity: 0;
+  transform: translateY(8px);
+  pointer-events: none;
+  visibility: hidden;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  will-change: opacity, transform;
 }
 
 .xgplayer-danmu-settings-panel.show {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+  visibility: visible;
+}
+
+.xgplayer-danmu-settings-panel .settings-shell {
+  width: 100%;
   display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.xgplayer-danmu-settings-panel .settings-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .xgplayer-danmu-settings-panel .settings-row {
@@ -321,6 +563,17 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 6px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+}
+
+.xgplayer-danmu-settings-panel .settings-row-color {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .xgplayer-danmu-settings-panel .settings-row label {
@@ -333,9 +586,15 @@
   gap: 8px;
 }
 
+.xgplayer-danmu-settings-panel .settings-label {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.68);
+  white-space: nowrap;
+}
+
 .xgplayer-danmu-settings-panel .settings-row .settings-value {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--player-accent);
 }
 
 .xgplayer-danmu-settings-panel input[type="color"] {
@@ -346,6 +605,7 @@
   border-radius: 8px;
   background: transparent;
   cursor: pointer;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.12);
 }
 
 .xgplayer-danmu-settings-panel input[type="range"] {
@@ -356,6 +616,19 @@
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.15);
   outline: none;
+  transition: background 0.2s ease;
+}
+
+.xgplayer-danmu-settings-panel input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: transparent;
+}
+
+.xgplayer-danmu-settings-panel input[type="range"]::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: transparent;
 }
 
 .xgplayer-danmu-settings-panel input[type="range"]::-webkit-slider-thumb {
@@ -367,6 +640,7 @@
   box-shadow: 0 0 6px rgba(255, 255, 255, 0.6);
   cursor: pointer;
   transition: transform 0.15s ease;
+  margin-top: -5px;
 }
 
 .xgplayer-danmu-settings-panel input[type="range"]::-moz-range-thumb {
@@ -377,6 +651,7 @@
   box-shadow: 0 0 6px rgba(255, 255, 255, 0.6);
   cursor: pointer;
   transition: transform 0.15s ease;
+  transform: translateY(-2px);
 }
 
 .xgplayer-danmu-settings-panel input[type="range"]:active::-webkit-slider-thumb,
@@ -428,6 +703,12 @@
 }
 
 .hidden-panel {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+}
+
+html.web-fs-active .danmu-panel {
   display: none !important;
   visibility: hidden !important;
   opacity: 0 !important;

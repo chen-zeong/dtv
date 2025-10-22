@@ -15,6 +15,7 @@
     "@tauri-apps/plugin-os": "^2.3.0",
     "@vueuse/core": "^12.5.0",
     "danmu.js": "1.1.13-douyin-1.5",
+    "lucide-vue-next": "^0.546.0",
     "pinia": "^2.1.7",
     "uuid": "^11.1.0",
     "vue": "^3.5.13",

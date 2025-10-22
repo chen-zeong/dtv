@@ -205,6 +205,31 @@
     border: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
     overflow: hidden;
+    isolation: isolate;
+  }
+
+  .danmu-list-wrapper::before {
+    content: '';
+    position: absolute;
+    inset: -30% -10% 40% -10%;
+    background: radial-gradient(120% 80% at 50% 0%, rgba(124, 255, 218, 0.25), transparent 70%);
+    opacity: 0.85;
+    pointer-events: none;
+  }
+
+  .danmu-list-wrapper::after {
+    content: '';
+    position: absolute;
+    inset: auto -30% -30% -30%;
+    height: 60%;
+    background: radial-gradient(120% 80% at 50% 100%, rgba(86, 161, 255, 0.2), transparent 70%);
+    opacity: 0.8;
+    pointer-events: none;
+  }
+
+  .danmu-list-wrapper > * {
+    position: relative;
+    z-index: 1;
   }
   
   .danmu-header {
@@ -219,9 +244,10 @@
   
   .danmu-header h4 {
     margin: 0;
-    font-size: 0.9rem;
+    font-size: 1rem;
     font-weight: 600;
-    color: var(--primary-text-light, #f5f5f5);
+    letter-spacing: 0.04em;
+    color: rgba(255, 255, 255, 0.92);
   }
   
   .danmu-controls {
@@ -282,8 +308,8 @@
   }
   
   .danmu-meta-line {
-    font-size: 0.8rem;
-    color: var(--secondary-text, #aaa);
+    font-size: 0.78rem;
+    color: rgba(220, 220, 220, 0.64);
     margin-bottom: 2px;
     display: flex;
     align-items: center;
@@ -291,10 +317,10 @@
   }
   
   .danmu-badge {
-    background-color: var(--tag-bg, #FB7299); 
+    background: linear-gradient(135deg, rgba(251, 114, 153, 0.85), rgba(255, 163, 158, 0.75)); 
     color: #ffffff; 
     padding: 2px 6px;
-    border-radius: 4px;
+    border-radius: 6px;
     font-size: 0.7rem; 
     margin-right: 8px;
     white-space: nowrap;
@@ -390,8 +416,8 @@
   }
   
   .danmu-item.system-message {
-    background-color: rgba(40, 167, 69, 0.1);
-    border-left: 3px solid #28a745;
+    background-color: rgba(40, 167, 69, 0.16);
+    border-left: 3px solid rgba(40, 167, 69, 0.75);
     margin-top: 4px;
     margin-bottom: 8px;
   }

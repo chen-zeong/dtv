@@ -101,4 +101,13 @@ a:hover {
   text-decoration: underline;
 }
 
+html.web-fs-active .app-sidebar,
+html.web-fs-active .app-header {
+  display: none !important;
+}
+
+html.web-fs-active .app {
+  padding: 0 !important;
+}
+
 /* Add more global styles or utility classes as needed */ 
