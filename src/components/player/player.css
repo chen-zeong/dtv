@@ -11,7 +11,7 @@
   width: 100%;
   height: 100%;
   background: linear-gradient(135deg, #1a1b1f 0%, #2d2f39 100%);
-  padding: 20px;
+  padding: 12px 0 12px 0;
   box-sizing: border-box;
   overflow: hidden;
   position: relative;
@@ -33,15 +33,18 @@
   display: flex;
   width: 100%;
   height: 100%;
-  gap: 20px;
+  gap: 12px;
+  box-sizing: border-box;
 }
 
-.main-content {
+.player-layout .main-content {
   flex: 1;
   display: flex;
   flex-direction: column;
   min-width: 0;
   height: 100%;
+  padding-left: 12px;
+  box-sizing: border-box;
 }
 
 /* 播放器容器 */
@@ -56,8 +59,8 @@
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
   overflow: hidden;
   height: 100%;
-  gap: 36px;
-  padding: 28px 16px 16px 16px;
+  gap: 0;
+  padding: 0;
 }
 
 :deep(.xgplayer-controls) {
@@ -176,12 +179,12 @@
 .video-container {
   position: relative;
   width: 100%;
-  flex-grow: 1;
-  border-radius: 12px;
+  flex: 1 1 auto;
+  border-radius: 0 0 12px 12px;
   overflow: hidden;
   background-color: #000;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-  min-height: 250px;
+  min-height: 560px;
 }
 
 .video-player {
@@ -681,9 +684,7 @@
 
 /* 主播信息 */
 .streamer-info {
-  background: transparent !important;
-  box-shadow: none !important;
-  padding: 0 !important;
+  box-shadow: none;
 }
 
 /* 弹幕面板 */
@@ -977,7 +978,7 @@ html.web-fs-active .danmu-panel {
 @media (max-width: 1024px) {
   .player-layout {
     flex-direction: column;
-    gap: 16px;
+    gap: 12px;
   }
 
   .danmu-panel {
@@ -988,7 +989,11 @@ html.web-fs-active .danmu-panel {
 
 @media (max-width: 768px) {
   .player-page {
-    padding: 15px;
+    padding: 12px 0;
+  }
+
+  .player-layout .main-content {
+    padding-left: 0;
   }
 
   .player-close-btn {
@@ -999,12 +1004,12 @@ html.web-fs-active .danmu-panel {
   }
 
   .player-container {
-    padding: 12px;
-    gap: 12px;
+    padding: 12px 0;
+    gap: 0;
   }
 
   .video-container {
-    min-height: 220px;
+    min-height: 260px;
     border-radius: 10px;
   }
 

@@ -65,34 +65,65 @@
   </template>
   
   <style scoped>
-  .streamer-info {
-    width: 100%;
-    padding: 24px 0 32px 0; /* 增加上下边距，特别是下边距 */
-  }
+.streamer-info {
+  width: 100%;
+  padding: 20px 28px 16px;
+  box-sizing: border-box;
+  position: relative;
+  color: var(--primary-text, rgba(244, 247, 255, 0.96));
+  background: linear-gradient(180deg, rgba(37, 40, 56, 0.94), rgba(18, 20, 32, 0.9));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  margin-bottom: 0;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  z-index: 2;
+}
+
+.streamer-info::before,
+.streamer-info::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.75;
+  border-radius: inherit;
+}
+
+.streamer-info::before {
+  background: radial-gradient(120% 90% at 0% 0%, rgba(90, 160, 255, 0.22), transparent 60%);
+}
+
+.streamer-info::after {
+  background: radial-gradient(110% 70% at 100% 100%, rgba(232, 118, 209, 0.18), transparent 70%);
+}
+
+.streamer-layout {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  z-index: 1;
+}
   
-  .streamer-layout {
-    display: flex;
-    align-items: center; /* 改为居中对齐，确保所有元素垂直居中 */
-    gap: 16px;
-    position: relative;
-  }
-  
-  .avatar-wrapper {
-    width: 48px;
-    height: 48px;
-    border-radius: 12px;
-    overflow: hidden;
-    flex-shrink: 0;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-    border: 2px solid rgba(255, 255, 255, 0.15);
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
-    transition: transform 0.2s ease, border-color 0.2s ease;
-  }
-  
-  .avatar-wrapper:hover {
-    transform: translateY(-1px);
-    border-color: rgba(255, 255, 255, 0.25);
-  }
+.avatar-wrapper {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  overflow: hidden;
+  flex-shrink: 0;
+  box-shadow: 0 14px 28px rgba(9, 12, 24, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: linear-gradient(135deg, rgba(96, 156, 255, 0.5), rgba(219, 134, 255, 0.34));
+  transition: transform 0.25s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.avatar-wrapper:hover {
+  transform: translateY(-3px);
+  border-color: rgba(255, 255, 255, 0.38);
+  box-shadow: 0 18px 32px rgba(9, 12, 24, 0.62);
+}
   
   .avatar-img {
     width: 100%;
@@ -112,42 +143,45 @@
     background: linear-gradient(135deg, #ff4757, #ff6b81);
   }
   
-  .streamer-details-main {
-    flex-grow: 1; /* Takes available space, pushing actions to the right */
-    display: flex;
-    flex-direction: column;
-    gap: 8px; /* Space between title and meta-row */
-    min-width: 0; /* Prevents overflow issues with long text */
-  }
-  
-  .room-title {
-    font-size: 1rem;
-    font-weight: 600;
-    color: #ffffff;
-    margin: 0;
-    line-height: 1.4;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    line-clamp: 2; /* Standard property */
-    -webkit-box-orient: vertical;
-    letter-spacing: 0.2px;
-    text-align: left; /* Ensure room title is left-aligned */
-  }
-  
-  .streamer-meta-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-  }
-  
-  .streamer-name {
-    font-size: 0.85rem;
-    color: rgba(255, 255, 255, 0.85);
-    font-weight: 500;
-  }
+.streamer-details-main {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.room-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: rgba(250, 251, 255, 0.98);
+  margin: 0;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  letter-spacing: 0.25px;
+  text-align: left;
+  text-shadow: 0 8px 20px rgba(8, 11, 20, 0.5);
+}
+
+.streamer-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  color: rgba(202, 210, 232, 0.82);
+}
+
+.streamer-name {
+  font-size: 0.88rem;
+  color: rgba(214, 223, 255, 0.9);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
 
   /* Cookie / login status */
   .cookie-status {
@@ -204,90 +238,84 @@
   
   .streamer-actions {
     display: flex;
-    margin-left: auto; 
-    flex-shrink: 0; 
-    align-items: center; /* 确保垂直居中 */
-    align-self: center; /* 在flex容器中自身居中 */
+    justify-content: flex-end;
+    align-items: center;
+    margin-left: auto;
+    flex-shrink: 0;
   }
   
-  .id-follow-container {
-    display: flex;
-    align-items: stretch; 
-    border-radius: 6px; 
-    overflow: hidden; /* Important for clipping the pseudo-element */
-    box-shadow: 0 1px 3px rgba(0,0,0,0.15); 
-    background-color: #2c2f38; /* Base container background */
-    position: relative; /* For the pseudo-element */
-    /* CSS variables for dynamic highlight, to be set by JS */
-    --id-width: 100px; /* Default/initial value */
-    --button-width: 80px; /* Default/initial value */
-    --highlight-left: calc(100px + 1px); /* Default to button highlight */
-    --highlight-width: calc(80px - 2px); /* Default to button highlight */
-  }
-  
-  /* The sliding highlight pseudo-element */
-  .id-follow-container::before {
-    content: '';
-    position: absolute;
-    top: 2px; /* Small inset from container edges */
-    bottom: 2px;
-    height: calc(100% - 4px); /* Full height within insets */
-    background-color: #439ed9; /* MODIFIED - Unified highlight color */
-    z-index: 0; /* Behind text and icons */
-    border-radius: 4px; /* Rounded corners for the highlight pill itself */
-    transition: left 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), width 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
-    /* Dynamic positioning via CSS variables */
-    left: var(--highlight-left);
-    width: var(--highlight-width);
-  }
-  
-  
+.id-follow-container {
+  display: flex;
+  align-items: stretch;
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
+  padding: 2px;
+  background: rgba(15, 18, 28, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 14px 28px rgba(9, 12, 24, 0.5);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  --id-width: 110px;
+  --button-width: 92px;
+  --highlight-left: calc(110px + 2px);
+  --highlight-width: calc(92px - 4px);
+  min-width: 210px;
+}
+
+.id-follow-container::before {
+  content: '';
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: var(--highlight-left);
+  width: var(--highlight-width);
+  background: linear-gradient(135deg, rgba(102, 170, 255, 0.95), rgba(238, 126, 214, 0.88));
+  border-radius: 12px;
+  transition: left 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), width 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  z-index: 0;
+}
+
   .streamer-id,
   .follow-btn {
-    background-color: transparent !important; 
-    padding: 6px 10px; 
-    font-weight: 500;
-    display: flex; 
-    align-items: center;
-    justify-content: center; 
-    position: relative; 
+    position: relative;
     z-index: 1;
-    transition: color 0.2s ease-in-out 0.1s; 
-    border: none; 
+    background: none;
+    border: none;
+    padding: 8px 14px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    transition: color 0.2s ease-in-out;
   }
   
-  .follow-btn {
-    cursor: pointer;
-    /* flex: 2; Removed */
-    width: 80px; /* Fixed width */
-    min-width: 80px; /* Ensure it doesn't shrink below this */
-    white-space: nowrap; 
-    color: #9098a3; 
-    border-top-right-radius: 6px; 
-    border-bottom-right-radius: 6px;
-    font-size: 0.8rem; 
-  }
-  
-  .streamer-id {
-    color: #9098a3; 
-    border-top-left-radius: 6px; 
-    border-bottom-left-radius: 6px;
-    font-size: 0.75rem; 
-    /* flex: 3; Removed */
-    flex-grow: 1; /* Allow to grow */
-    flex-shrink: 1; /* Allow to shrink */
-    min-width: 80px; /* Minimum width same as button */
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap; /* Ensure ID text itself doesn't wrap */
-    cursor: default; 
-  }
+.follow-btn {
+  cursor: pointer;
+  min-width: 92px;
+  white-space: nowrap; 
+  color: rgba(26, 32, 46, 0.9); 
+  font-size: 0.82rem; 
+  gap: 8px;
+}
+
+.streamer-id {
+  color: rgba(210, 220, 246, 0.85); 
+  font-size: 0.78rem; 
+  flex: 1 1 auto; 
+  min-width: 90px; 
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap; 
+  cursor: default; 
+}
   
   .streamer-id.text-active-on-highlight,
-  /* .streamer-id.text-active-on-highlight .room-id-number, Removed as .room-id-number is gone */
   .follow-btn.text-active-on-highlight .follow-text, 
   .follow-btn.text-active-on-highlight .follow-icon-wrapper svg {
-    color: white !important; /* Active text color when highlight is underneath */
+    color: white !important;
   }
   
   /* Icon animation styles - preserved */
@@ -329,49 +357,102 @@
   
   /* .follow-text transition is now part of the general .follow-btn color transition */
   
-  .status-tag {
-    font-size: 0.7rem; 
-    padding: 2px 7px; 
-    border-radius: 5px; 
-    color: #ffffff;
-    font-weight: 500;
-    display: inline-flex;
-    align-items: center;
-    line-height: 1.3; 
+.status-tag {
+  font-size: 0.72rem; 
+  padding: 3px 10px; 
+  border-radius: 999px; 
+  color: #ffffff;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1.3; 
+  letter-spacing: 0.05em;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: none;
+  transition: background 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+.status-tag.live {
+  background: linear-gradient(135deg, #35d27a, #23b263);
+  border-color: rgba(53, 210, 122, 0.5);
+}
+
+.status-tag.replay {
+  background: linear-gradient(135deg, #5a7aff, #7c5dff);
+  border-color: rgba(96, 118, 255, 0.45);
+}
+
+.status-tag.looping {
+  background: linear-gradient(135deg, #8091ff, #a071ff);
+  border-color: rgba(128, 145, 255, 0.4);
+}
+
+.status-tag.offline {
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(225, 229, 243, 0.78);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.viewers-tag {
+  font-size: 0.78rem;
+  color: rgba(216, 224, 253, 0.88);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(12, 16, 28, 0.65);
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 12px 24px rgba(8, 10, 20, 0.35);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.viewers-tag svg {
+  width: 13px;
+  height: 13px;
+  opacity: 0.9;
+}
+
+@media (max-width: 1024px) {
+  .streamer-info {
+    padding: 24px 26px 30px;
+    margin-bottom: -18px;
+    border-bottom-left-radius: 22px;
+    border-bottom-right-radius: 22px;
   }
-  
-  .status-tag.live {
-    background: #32b65c; /* MODIFIED - Unified live color */
+
+  .streamer-layout {
+    gap: 16px;
   }
-  
-  .status-tag.replay {
-    background: linear-gradient(135deg, #5352ed, #6c6bff);
+}
+
+@media (max-width: 768px) {
+  .streamer-info {
+    padding: 20px 20px 24px;
+    margin-bottom: -14px;
+    border-bottom-left-radius: 18px;
+    border-bottom-right-radius: 18px;
   }
-  
-  .status-tag.looping { /* New style for looping status */
-    background: linear-gradient(135deg, #7879f1, #8a8bf8); /* Similar to replay or choose a new one */
+
+  .streamer-layout {
+    gap: 14px;
   }
-  
-  .status-tag.offline {
-    background: rgba(255, 255, 255, 0.1);
+
+  .avatar-wrapper {
+    width: 48px;
+    height: 48px;
   }
-  
-  .viewers-tag {
-    font-size: 0.8rem;
-    color: rgba(255, 255, 255, 0.85);
-    display: inline-flex;
-    align-items: center;
-    gap: 5px; /* Adjusted gap */
-    background: rgba(255, 255, 255, 0.08);
-    padding: 3px 10px; /* Adjusted padding */
-    border-radius: 8px; /* Consistent border radius */
+
+  .room-title {
+    font-size: 0.95rem;
   }
-  
-  .viewers-tag svg {
-    width: 12px;
-    height: 12px;
-    opacity: 0.9;
+
+  .streamer-name {
+    font-size: 0.82rem;
   }
+}
 
   @keyframes idPulse {
     0% { text-shadow: 0 0 2px rgba(251, 114, 153, 0); }
@@ -379,79 +460,120 @@
     100% { text-shadow: 0 0 2px rgba(251, 114, 153, 0); }
   }
 
-  :root[data-theme="light"] .avatar-wrapper {
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-    border: 1px solid var(--border-color-light, #e0e0e0);
-    background: var(--content-bg-light, #ffffff);
+  :root[data-theme="light"] .streamer-info {
+    color: var(--primary-text-light, #1f2937);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(236, 240, 252, 0.94));
+    border-bottom: 1px solid rgba(189, 200, 224, 0.55);
   }
 
-  :root[data-theme="light"] .avatar-wrapper:hover {
-    border-color: var(--border-color-hover-light, #cccccc);
+  :root[data-theme="light"] .streamer-info::before {
+    background: radial-gradient(120% 90% at 0% 0%, rgba(132, 176, 255, 0.25), transparent 60%);
   }
 
-  :root[data-theme="light"] .avatar-fallback {
-    color: var(--primary-text-light, #333333);
-    background: linear-gradient(135deg, #e0e0e0, #f0f0f0);
-  }
-
-  :root[data-theme="light"] .room-title {
-    color: var(--primary-text-light, #212529);
+  :root[data-theme="light"] .streamer-info::after {
+    background: radial-gradient(110% 70% at 100% 100%, rgba(255, 186, 226, 0.2), transparent 70%);
   }
 
   :root[data-theme="light"] .streamer-name {
-    color: var(--secondary-text-light, #555555);
+    color: rgba(55, 65, 81, 0.95);
+  }
+
+  :root[data-theme="light"] .room-title {
+    color: var(--primary-text-light, #1f2937);
+    text-shadow: none;
+  }
+
+  :root[data-theme="light"] .streamer-meta-row {
+    color: rgba(71, 85, 105, 0.85);
+  }
+
+  :root[data-theme="light"] .avatar-wrapper {
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.12);
+    border: 1px solid rgba(189, 200, 224, 0.6);
+    background: linear-gradient(135deg, rgba(136, 188, 255, 0.5), rgba(213, 157, 255, 0.38));
+  }
+
+  :root[data-theme="light"] .avatar-wrapper:hover {
+    border-color: rgba(136, 188, 255, 0.65);
+  }
+
+  :root[data-theme="light"] .avatar-fallback {
+    color: var(--primary-text-light, #1f2937);
+    background: linear-gradient(135deg, #dae4ff, #f2f5ff);
   }
 
   :root[data-theme="light"] .id-follow-container {
-    background-color: var(--button-group-bg-light, #e9ecef); /* Light gray background for the container */
-    box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+    background: rgba(255, 255, 255, 0.94);
+    border: 1px solid rgba(189, 200, 224, 0.6);
+    box-shadow: 0 14px 24px rgba(15, 23, 42, 0.1);
   }
 
   :root[data-theme="light"] .id-follow-container::before {
-    background-color: #439ed9; /* MODIFIED - Unified highlight color */
+    background: linear-gradient(135deg, rgba(120, 184, 255, 0.95), rgba(194, 134, 255, 0.88));
   }
 
-  :root[data-theme="light"] .streamer-id,
+  :root[data-theme="light"] .streamer-id {
+    color: rgba(71, 85, 105, 0.85);
+  }
+
   :root[data-theme="light"] .follow-btn {
-    color: var(--button-group-text-light, #495057); /* Text color for ID and button text before highlight */
+    color: rgba(33, 45, 68, 0.9);
   }
 
   :root[data-theme="light"] .streamer-id.text-active-on-highlight,
   :root[data-theme="light"] .follow-btn.text-active-on-highlight .follow-text,
   :root[data-theme="light"] .follow-btn.text-active-on-highlight .follow-icon-wrapper svg {
-    color: white !important; /* Text color when highlighted in day mode */
+    color: #ffffff !important;
   }
 
   :root[data-theme="light"] .status-tag {
-    color: #ffffff; /* Text color on status tags is usually white for contrast */
+    background: rgba(15, 23, 42, 0.07);
+    color: rgba(31, 41, 55, 0.95);
+    border-color: rgba(15, 23, 42, 0.12);
   }
 
   :root[data-theme="light"] .status-tag.live {
-    background: #32b65c; /* MODIFIED - Unified live color */
+    background: linear-gradient(135deg, #27c169, #44d980);
+    color: #ffffff;
+    border-color: rgba(39, 193, 105, 0.45);
   }
 
   :root[data-theme="light"] .status-tag.replay {
-    background: linear-gradient(135deg, var(--status-replay-bg-start-light, #007bff), var(--status-replay-bg-end-light, #0056b3)); /* Blue gradient for replay */
+    background: linear-gradient(135deg, #5d7dff, #7485ff);
+    color: #ffffff;
+    border-color: rgba(93, 125, 255, 0.38);
   }
 
-  :root[data-theme="light"] .status-tag.looping { /* New style for looping status */
-    background: linear-gradient(135deg, var(--status-looping-bg-start-light, #007bff), var(--status-looping-bg-end-light, #0056b3)); /* Blue gradient for looping */
+  :root[data-theme="light"] .status-tag.looping {
+    background: linear-gradient(135deg, #8a98ff, #a588ff);
+    color: #ffffff;
+    border-color: rgba(138, 152, 255, 0.36);
   }
 
   :root[data-theme="light"] .status-tag.offline {
-    background: var(--status-offline-bg-light, #6c757d); /* Gray for offline */
-    color: var(--status-offline-text-light, #ffffff);
+    background: rgba(15, 23, 42, 0.08);
+    color: rgba(71, 85, 105, 0.85);
+    border-color: rgba(15, 23, 42, 0.12);
   }
 
   :root[data-theme="light"] .viewers-tag {
-    color: var(--secondary-text-light, #555555);
-    background: var(--tag-bg-light, #f0f0f0);
-    /* border: 1px solid var(--border-color-light, #e0e0e0); Optional border */
+    color: rgba(55, 65, 81, 0.88);
+    background: rgba(15, 23, 42, 0.06);
+    border-color: rgba(15, 23, 42, 0.08);
+    box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);
   }
 
   :root[data-theme="light"] .viewers-tag svg {
-    color: var(--icon-color-light, #888888);
+    color: rgba(71, 85, 105, 0.85);
     opacity: 1;
+  }
+
+  :root[data-theme="light"] .success-icon {
+    fill: var(--system-success-text-light, #2f8f46);
+  }
+
+  :root[data-theme="light"] .connection-status-placeholder.success {
+    color: var(--system-success-text-light, #2f8f46);
   }
   </style>
   

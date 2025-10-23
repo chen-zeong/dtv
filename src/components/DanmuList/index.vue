@@ -197,13 +197,13 @@
     position: relative;
     height: 100%;
     width: 220px;
-    background: rgba(20, 22, 30, 0.55);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    color: var(--primary-text, #e0e0e0);
-    border-radius: 14px;
+    background: linear-gradient(160deg, rgba(36, 40, 58, 0.94), rgba(20, 23, 36, 0.88));
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    color: var(--primary-text, #e5e9f5);
+    border-radius: 16px;
     border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+    box-shadow: 0 18px 42px rgba(7, 10, 20, 0.58);
     overflow: hidden;
     isolation: isolate;
   }
@@ -211,19 +211,18 @@
   .danmu-list-wrapper::before {
     content: '';
     position: absolute;
-    inset: -30% -10% 40% -10%;
-    background: radial-gradient(120% 80% at 50% 0%, rgba(124, 255, 218, 0.25), transparent 70%);
-    opacity: 0.85;
+    inset: -30% -15% 45% -15%;
+    background: radial-gradient(115% 75% at 25% -5%, rgba(102, 164, 255, 0.35), transparent 70%);
+    opacity: 0.9;
     pointer-events: none;
   }
 
   .danmu-list-wrapper::after {
     content: '';
     position: absolute;
-    inset: auto -30% -30% -30%;
-    height: 60%;
-    background: radial-gradient(120% 80% at 50% 100%, rgba(86, 161, 255, 0.2), transparent 70%);
-    opacity: 0.8;
+    inset: 55% -25% -40% -25%;
+    background: radial-gradient(130% 70% at 80% 120%, rgba(236, 112, 214, 0.28), transparent 72%);
+    opacity: 0.85;
     pointer-events: none;
   }
 
@@ -233,21 +232,23 @@
   }
   
   .danmu-header {
-    padding: 10px 16px;
+    padding: 12px 18px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     flex-shrink: 0;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0));
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02));
     display: flex;
     justify-content: space-between;
     align-items: center;
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
   }
   
   .danmu-header h4 {
     margin: 0;
     font-size: 1rem;
     font-weight: 600;
-    letter-spacing: 0.04em;
-    color: rgba(255, 255, 255, 0.92);
+    letter-spacing: 0.05em;
+    color: rgba(236, 240, 255, 0.95);
   }
   
   .danmu-controls {
@@ -288,40 +289,43 @@
   
   .danmu-item {
     text-align: left;
-    padding: 6px 10px;
-    border-radius: 8px;
-    background-color: rgba(0, 0, 0, 0.2);
+    padding: 8px 12px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.04);
     word-wrap: break-word;
     overflow-wrap: break-word;
-    margin-bottom: 10px;
-    box-shadow: 0 6px 16px rgba(0,0,0,0.18);
-    transition: transform 0.18s ease-out, background-color 0.18s ease, box-shadow 0.18s ease;
+    margin-bottom: 12px;
+    box-shadow: 0 12px 28px rgba(8, 10, 22, 0.35);
+    transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
     display: flex;
     flex-direction: column;
     max-width: 100%; 
   }
   
   .danmu-item:hover {
-    background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
-    transform: translateY(-1px);
-    box-shadow: 0 10px 24px rgba(0,0,0,0.25);
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-2px);
+    border-color: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 16px 32px rgba(8, 10, 22, 0.42);
   }
   
   .danmu-meta-line {
     font-size: 0.78rem;
-    color: rgba(220, 220, 220, 0.64);
-    margin-bottom: 2px;
+    color: rgba(204, 212, 236, 0.78);
+    margin-bottom: 3px;
     display: flex;
     align-items: center;
     flex-wrap: wrap;
+    letter-spacing: 0.01em;
   }
   
   .danmu-badge {
-    background: linear-gradient(135deg, rgba(251, 114, 153, 0.85), rgba(255, 163, 158, 0.75)); 
+    background: linear-gradient(135deg, rgba(92, 153, 255, 0.9), rgba(236, 112, 214, 0.85)); 
     color: #ffffff; 
-    padding: 2px 6px;
-    border-radius: 6px;
-    font-size: 0.7rem; 
+    padding: 2px 7px;
+    border-radius: 999px;
+    font-size: 0.68rem; 
     margin-right: 8px;
     white-space: nowrap;
     display: inline-flex;
@@ -329,37 +333,40 @@
     height: auto;
     line-height: normal;
     flex-shrink: 0;
+    box-shadow: 0 6px 14px rgba(100, 140, 255, 0.32);
   }
   
   .badge-level {
     margin-left: 4px;
-    font-weight: bold;
+    font-weight: 600;
     font-size: 0.65rem; 
   }
   
   .danmu-user {
-    font-weight: 500;
-    margin-right: 5px;
+    font-weight: 600;
+    margin-right: 6px;
+    color: inherit;
   }
   
   .user-level {
     font-size: 0.7rem;
-    color: var(--meta-text, #ababab); 
+    color: rgba(166, 183, 219, 0.85); 
     margin-right: 5px;
   }
   
   .danmu-content-line {
-    font-size: 0.85rem;
-    line-height: 1.4;
+    font-size: 0.88rem;
+    line-height: 1.45;
   }
   
   .danmu-content {
-    color: rgba(255, 255, 255, 0.92); 
+    color: rgba(244, 246, 255, 0.94); 
     white-space: pre-wrap; 
     word-wrap: break-word;
     overflow-wrap: break-word;
-    font-size: 0.9rem; 
-    line-height: 1.45;
+    font-size: 0.92rem; 
+    line-height: 1.5;
+    text-shadow: 0 1px 2px rgba(6, 9, 18, 0.6);
   }
   
   .danmu-messages-area::-webkit-scrollbar {
@@ -367,22 +374,22 @@
   }
   
   .danmu-messages-area::-webkit-scrollbar-track {
-    background: var(--tertiary-bg, #3a3a3c);
+    background: rgba(255, 255, 255, 0.04);
     border-radius: 3px;
   }
   
   .danmu-messages-area::-webkit-scrollbar-thumb {
-    background-color: var(--border-color-light, #5a5a5e);
+    background-color: rgba(102, 164, 255, 0.45);
     border-radius: 3px;
   }
   
   .danmu-messages-area::-webkit-scrollbar-thumb:hover {
-    background-color: var(--primary-accent, #007aff);
+    background-color: rgba(236, 112, 214, 0.65);
   }
   
   .danmu-messages-area {
     scrollbar-width: thin;
-    scrollbar-color: var(--border-color-light, #5a5a5e) var(--tertiary-bg, #3a3a3c);
+    scrollbar-color: rgba(102, 164, 255, 0.45) rgba(255, 255, 255, 0.04);
   }
   
   .connection-status-placeholder {
@@ -400,7 +407,7 @@
   }
   
   .connection-status-placeholder.success {
-    color: #28a745;
+    color: #2f8f46;
   }
   
   .connection-status-placeholder .status-icon {
@@ -416,19 +423,21 @@
   }
   
   .danmu-item.system-message {
-    background-color: rgba(40, 167, 69, 0.16);
-    border-left: 3px solid rgba(40, 167, 69, 0.75);
+    background: rgba(57, 185, 108, 0.16);
+    border-left: 3px solid rgba(57, 185, 108, 0.75);
     margin-top: 4px;
     margin-bottom: 8px;
+    box-shadow: 0 12px 24px rgba(26, 54, 39, 0.38);
   }
 
   .danmu-item.system-message .danmu-content {
-    font-weight: normal;
+    font-weight: 500;
+    color: rgba(210, 240, 220, 0.95);
   }
 
   .danmu-item.system-message.success .danmu-content {
-    color: #218838;
-    font-weight: 500;
+    color: #49df85;
+    font-weight: 600;
   }
 
   .inline-icon {
@@ -438,98 +447,101 @@
     vertical-align: -0.15em;
   }
   
-  .success-icon {
-    fill: #28a745;
-  }
+.success-icon {
+  fill: #49df85;
+}
   
 
 :root[data-theme="light"] .danmu-list-wrapper {
-  background-color: var(--primary-bg-light, #ffffff);
-  color: var(--primary-text-light, #333333);
-  border: 1px solid var(--border-color-light, #e0e0e0);
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.98), rgba(241, 245, 255, 0.94));
+  color: var(--primary-text-light, #1f2937);
+  border: 1px solid rgba(189, 200, 224, 0.55);
+  box-shadow: 0 18px 32px rgba(15, 23, 42, 0.12);
 }
 
 :root[data-theme="light"] .danmu-header {
-  background-color: var(--header-bg-light, #e9ecef);
-  border-bottom: 1px solid var(--border-color-light, #e0e0e0);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.85), rgba(235, 240, 255, 0.75));
+  border-bottom: 1px solid rgba(189, 200, 224, 0.55);
 }
 
 :root[data-theme="light"] .danmu-header h4 {
-  color: var(--primary-text-light, #333333);
+  color: var(--primary-text-light, #1f2937);
 }
 
 :root[data-theme="light"] .danmu-messages-area {
-  /* Scrollbar for light theme */
-  scrollbar-color: var(--scrollbar-thumb-light, #cccccc) var(--scrollbar-track-light, #f0f0f0);
+  scrollbar-color: rgba(125, 155, 238, 0.6) rgba(226, 232, 250, 0.75);
 }
 
 :root[data-theme="light"] .danmu-messages-area::-webkit-scrollbar-track {
-  background: var(--scrollbar-track-light, #f0f0f0);
+  background: rgba(226, 232, 250, 0.75);
 }
 
 :root[data-theme="light"] .danmu-messages-area::-webkit-scrollbar-thumb {
-  background-color: var(--scrollbar-thumb-light, #cccccc);
+  background-color: rgba(125, 155, 238, 0.6);
 }
 
 :root[data-theme="light"] .danmu-messages-area::-webkit-scrollbar-thumb:hover {
-  background-color: var(--scrollbar-thumb-hover-light, #aaaaaa);
+  background-color: rgba(190, 142, 255, 0.7);
 }
 
 :root[data-theme="light"] .empty-danmu-placeholder p {
-  color: var(--secondary-text-light, #777777);
+  color: rgba(100, 116, 139, 0.85);
 }
 
 :root[data-theme="light"] .danmu-item {
-  background-color: var(--danmu-item-bg-light, #f9f9f9);
-  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-  border: 1px solid var(--danmu-item-border-light, #eeeeee);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);
+  border: 1px solid rgba(189, 200, 224, 0.5);
 }
 
 :root[data-theme="light"] .danmu-item:hover {
-  background-color: var(--danmu-item-hover-bg-light, #f0f0f0);
-  transform: none; /* Optional: remove transform for light mode if it feels too busy */
+  background: rgba(235, 240, 255, 0.95);
+  transform: translateY(-2px);
+  border-color: rgba(125, 155, 238, 0.45);
 }
 
 :root[data-theme="light"] .danmu-meta-line {
-  color: var(--meta-text-light, #666666);
+  color: rgba(71, 85, 105, 0.85);
 }
 
 :root[data-theme="light"] .danmu-badge {
-   color: #ffffff; 
+  color: #ffffff; 
+  box-shadow: 0 6px 14px rgba(100, 140, 255, 0.28);
 }
 
 :root[data-theme="light"] .user-level {
-  color: var(--meta-text-light, #888888);
+  color: rgba(100, 116, 139, 0.78);
 }
 
 :root[data-theme="light"] .danmu-content {
-  color: var(--primary-text-light, #333333);
+  color: var(--primary-text-light, #1f2937);
+  text-shadow: none;
 }
 
 :root[data-theme="light"] .danmu-item.system-message {
-  background-color: var(--system-message-bg-light, #e6f7ff);
-  border-left-color: var(--system-message-border-light, #91d5ff);
+  background: rgba(226, 246, 233, 0.95);
+  border-left-color: rgba(78, 196, 120, 0.75);
 }
 
 :root[data-theme="light"] .danmu-item.system-message .danmu-content {
-  color: var(--system-message-text-light, #0050b3);
+  color: rgba(31, 106, 58, 0.9);
 }
 
 :root[data-theme="light"] .danmu-item.system-message.success {
-  background-color: var(--system-success-bg-light, #f6ffed); /* Light green for success */
-  border-left-color: var(--system-success-border-light, #b7eb8f);
+  background: rgba(238, 252, 238, 0.96);
+  border-left-color: rgba(126, 217, 137, 0.85);
 }
 
 :root[data-theme="light"] .danmu-item.system-message.success .danmu-content {
-  color: var(--system-success-text-light, #389e0d);
+  color: rgba(46, 114, 66, 0.95);
 }
 
 :root[data-theme="light"] .success-icon {
-  fill: var(--system-success-text-light, #389e0d); /* Match success text color */
+  fill: rgba(46, 114, 66, 0.95);
 }
 
 :root[data-theme="light"] .connection-status-placeholder.success {
-    color: var(--system-success-text-light, #28a745); /* Consistent green for success */
+  color: rgba(46, 114, 66, 0.95);
 }
   
   </style>
