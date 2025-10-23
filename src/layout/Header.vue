@@ -74,26 +74,36 @@
         <button 
         @click="toggleTheme" 
         class="theme-btn"
+        :class="{ 'is-animating': themeToggleAnimating }"
         :title="effectiveTheme === 'dark' ? '切换到日间模式' : '切换到夜间模式'"
         data-tauri-drag-region="none"
       >
-        <svg v-if="effectiveTheme === 'dark'" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
-        </svg>
-        <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21c1.33 0 2.597-.266 3.752-.748z" />
-        </svg>
+        <Transition name="theme-icon" mode="out-in">
+          <Sun
+            v-if="effectiveTheme === 'dark'"
+            key="sun"
+            class="theme-icon"
+            :stroke-width="1.8"
+          />
+          <Moon
+            v-else
+            key="moon"
+            class="theme-icon"
+            :stroke-width="1.8"
+          />
+        </Transition>
       </button>
     </div>
   </header>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onBeforeUnmount } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import { Platform } from '../platforms/common/types';
 import { useThemeStore } from '../stores/theme';
 import { useRoute } from 'vue-router';
+import { Sun, Moon } from 'lucide-vue-next';
 
 interface DouyinApiStreamInfo {
   title?: string | null;
@@ -188,7 +198,22 @@ const placeholderText = computed(() => {
   return '搜索主播';
 });
 
+const themeToggleAnimating = ref(false);
+let themeAnimationTimer: number | null = null;
+
+const triggerThemeAnimation = () => {
+  if (themeAnimationTimer !== null) {
+    window.clearTimeout(themeAnimationTimer);
+  }
+  themeToggleAnimating.value = true;
+  themeAnimationTimer = window.setTimeout(() => {
+    themeToggleAnimating.value = false;
+    themeAnimationTimer = null;
+  }, 360);
+};
+
 const toggleTheme = () => {
+  triggerThemeAnimation();
   const currentTheme = themeStore.getEffectiveTheme();
   if (currentTheme === 'light') {
     themeStore.setUserPreference('dark');
@@ -196,6 +221,12 @@ const toggleTheme = () => {
     themeStore.setUserPreference('light');
   }
 };
+
+onBeforeUnmount(() => {
+  if (themeAnimationTimer !== null) {
+    window.clearTimeout(themeAnimationTimer);
+  }
+});
 
 let searchTimeout: number | null = null;
 
@@ -505,7 +536,7 @@ const selectAnchor = (anchor: SearchResultItem) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color 0.2s ease, color 0.2s ease;
+  transition: background-color 0.2s ease, color 0.2s ease, transform 0.35s ease;
   width: 38px; 
   height: 38px; 
 }
@@ -513,6 +544,33 @@ const selectAnchor = (anchor: SearchResultItem) => {
 .theme-btn:hover {
   background-color: var(--h-btn-hover-bg);
   color: var(--h-text-secondary); 
+}
+
+.theme-btn.is-animating {
+  transform: scale(1.08) rotate(-14deg);
+}
+
+.theme-icon {
+  width: 20px;
+  height: 20px;
+  color: currentColor;
+}
+
+.theme-icon-enter-active,
+.theme-icon-leave-active {
+  transition: opacity 0.2s ease, transform 0.28s ease;
+}
+
+.theme-icon-enter-from,
+.theme-icon-leave-to {
+  opacity: 0;
+  transform: scale(0.7) rotate(-20deg);
+}
+
+.theme-icon-enter-to,
+.theme-icon-leave-from {
+  opacity: 1;
+  transform: scale(1) rotate(0deg);
 }
 
 .search-box {
