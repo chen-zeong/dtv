@@ -63,98 +63,53 @@ const selectAll = () => {
 }
 
 .cate3-item {
-  /* Shared dimensions and basic properties from cate2-card */
-  /* width: 120px; */ /* Cate3 items are usually narrower, let flexbox decide or define custom width if needed */
   padding: 4px 12px;
   height: 30px;
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
-  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
   box-sizing: border-box;
-  overflow: hidden;
-  /* text-align: center; */ /* Usually left-aligned for list items */
-  display: inline-flex; /* To align text vertically like cate2-card */
+  display: inline-flex;
   align-items: center;
-  font-size: 13px; /* Existing font size */
-
-  /* Night mode default (Matches cate2-card night mode default) */
-  background: var(--cate2-card-bg-dark, rgba(31, 31, 35, 1)); 
-  border: 1px solid var(--cate2-card-border-dark, transparent); 
-  color: var(--cate2-card-text-dark, #ccc); 
+  font-size: 13px;
+  background: linear-gradient(170deg, rgba(23, 28, 38, 0.95), rgba(17, 21, 30, 0.9));
+  border: 1px solid rgba(90, 176, 255, 0.12);
+  color: rgba(226, 232, 240, 0.86);
 }
 
-/* Day Mode: Default (Matches cate2-card day mode default) */
-:root[data-theme="light"] .cate3-item {
-  background-color: var(--content-card-bg-light, #FFFFFF);
-  border: 1px solid var(--content-card-border-light, #e0e0e0);
-  box-shadow: var(--content-card-shadow-light, 0 1px 3px rgba(0,0,0,0.08));
-  color: var(--main-text-primary-light, #212529);
-}
-
-/* Night mode default hover (Matches cate2-card night mode default hover) - Added Glow */
 .cate3-item:hover {
-  background-color: var(--cate2-card-hover-bg-dark, rgba(45, 48, 56, 1));
-  border: 1px solid var(--cate2-card-hover-border-dark-glow, rgba(79, 209, 197, 0.5)); /* Cyan glow border, more transparent */
-  color: var(--cate2-card-text-dark-hover, #ddd);
-  box-shadow: var(--cate2-card-hover-shadow-dark-glow, 0 0 5px rgba(79, 209, 197, 0.2), 0 0 0 1px rgba(79, 209, 197, 0.15)); /* Softer cyan glow */
+  background: linear-gradient(170deg, rgba(30, 37, 50, 0.95), rgba(23, 29, 41, 0.9));
+  border-color: rgba(125, 211, 252, 0.32);
+  color: rgba(241, 245, 249, 0.95);
+  box-shadow: 0 10px 20px rgba(10, 20, 38, 0.38);
 }
 
-/* Day Mode: Hover style (Matches cate2-card day mode hover - Glow Effect) */
+.cate3-item.active {
+  background: linear-gradient(150deg, rgba(79, 209, 197, 0.35), rgba(59, 130, 246, 0.28));
+  border-color: rgba(125, 211, 252, 0.45);
+  color: rgba(222, 255, 250, 0.95);
+  box-shadow: 0 12px 28px rgba(15, 118, 110, 0.32);
+  font-weight: 600;
+}
+
+:root[data-theme="light"] .cate3-item {
+  background: rgba(248, 250, 255, 0.9);
+  border: 1px solid rgba(203, 213, 225, 0.65);
+  color: #334155;
+  box-shadow: none;
+}
+
 :root[data-theme="light"] .cate3-item:hover {
-  background-color: var(--content-card-hover-bg-light, #f8f9fa);
-  border: 1px solid transparent;
-  box-shadow: var(--douyu-cate2-hover-shadow-light-glow, 0 0 0 2px rgba(50, 150, 255, 0.35), 0 0 9px rgba(50, 150, 255, 0.2));
-  /* Text color inherited from day mode .cate3-item or .cate2-card */
+  background: rgba(241, 245, 255, 0.96);
+  border-color: rgba(148, 163, 184, 0.7);
+  color: #1f2f4d;
 }
 
-/* Night Mode Active (Matches cate2-card night mode active - Revived Glow Style) */
-.cate3-item.active { 
-  background-color: var(--cate2-card-bg-dark, rgba(31, 31, 35, 1)); 
-  border: 1px solid transparent; /* Removed border for night mode active */
-  box-shadow: var(--douyu-cate2-active-shadow-dark-glow-revived, 0 0 0 2px rgba(79, 209, 197, 0.45), 0 0 10px rgba(79, 209, 197, 0.3)); 
-  font-weight: 500; /* Keep existing font-weight for active */
-}
-
-:root[data-theme="dark"] .cate3-item.active {
-  background-color: var(--cate2-card-bg-dark, rgba(31, 31, 35, 1)); 
-  border-color: transparent; /* Removed border for night mode active */
-  box-shadow: var(--douyu-cate2-active-shadow-dark-glow-revived, 0 0 0 2px rgba(79, 209, 197, 0.45), 0 0 10px rgba(79, 209, 197, 0.3)); 
-  /* Text color for active item name specifically handled below */
-}
-
-/* Text color for name inside active card in dark mode (Matches cate2-card night mode active text) */
-:root[data-theme="dark"] .cate3-item.active { 
-  color: var(--douyu-cate2-active-text-dark-glow-revived, rgb(79, 209, 197)); 
-}
-
-/* Night Mode: Hover on ACTIVE card (Matches cate2-card night mode active hover - Intensified Glow) */
-:root[data-theme="dark"] .cate3-item.active:hover {
-  background-color: var(--cate2-card-bg-dark, rgba(31, 31, 35, 1)); 
-  border-color: var(--douyu-cate2-active-border-dark-glow-revived, rgb(79, 209, 197)); 
-  box-shadow: var(--douyu-cate2-active-shadow-dark-glow-revived-hover, 0 0 0 2.5px rgba(79, 209, 197, 0.55), 0 0 12px rgba(79, 209, 197, 0.4)); 
-  /* Text color inherited from .active night mode style */
-}
-
-/* Light Mode Active (Matches cate2-card light mode active - Scheme A: Deep Emphasis) */
 :root[data-theme="light"] .cate3-item.active {
-  background-color: var(--douyu-cate2-active-bg-light-scheme-a, #429cdd); 
-  border-color: transparent; 
-  box-shadow: var(--douyu-cate2-active-shadow-light-scheme-a, 0 2px 5px rgba(0,0,0,0.12)); 
-  font-weight: 500; /* Keep existing font-weight for active */
-  /* Text color for active item name specifically handled below */
-}
-
-/* Text color for name inside active card in light mode (Matches cate2-card light mode active text) */
-:root[data-theme="light"] .cate3-item.active {
-  color: var(--douyu-cate2-active-text-light-scheme-a, #FFFFFF);
-}
-
-/* Hover on Active card in Light Mode (Matches cate2-card light mode active hover - Scheme A) */
-:root[data-theme="light"] .cate3-item.active:hover {
-  background-color: var(--douyu-cate2-active-bg-light-scheme-a, #429cdd); 
-  box-shadow: var(--content-card-hover-shadow-light-larger, 0 5px 12px rgba(0,0,0,0.15)); 
-  border: 1px solid transparent;
-  /* Text color inherited from .active light mode style */
+  background: #dbe7ff;
+  border-color: #85a5ff;
+  box-shadow: 0 0 0 2px rgba(133, 165, 255, 0.18);
+  color: #1f3f85;
 }
 
 .loading-cate3 {

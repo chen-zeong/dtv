@@ -304,9 +304,9 @@ const formatCategoryName = (name: string) => {
   width: 120px; 
   height: var(--cate2-card-height, 36px); 
   padding: 6px 8px; 
-  border-radius: 8px;
+  border-radius: 12px;
   cursor: pointer;
-  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
   box-sizing: border-box;
   overflow: hidden;
   text-align: center; 
@@ -314,90 +314,57 @@ const formatCategoryName = (name: string) => {
   align-items: center; 
   gap: 8px; 
 
-  /* Night mode default */
-  background: var(--cate2-card-bg-dark, #252731);
-  border: 1px solid var(--cate2-card-border-dark, transparent); 
-  color: var(--cate2-card-text-dark, #ccc); 
+  background: linear-gradient(170deg, rgba(23, 28, 38, 0.95), rgba(17, 21, 30, 0.9));
+  border: 1px solid rgba(90, 176, 255, 0.12);
+  box-shadow: 0 8px 22px rgba(3, 8, 20, 0.42);
+  color: rgba(226, 232, 240, 0.86);
 }
 
-/* Day Mode: Ensure background is white and has appropriate border/shadow */
-:root[data-theme="light"] .cate2-card {
-  background-color: var(--content-card-bg-light, #FFFFFF); /* This should resolve to white */
-  border: 1px solid var(--content-card-border-light, #e0e0e0); /* Adjusted for white bg - slightly darker border */
-  box-shadow: var(--content-card-shadow-light, 0 1px 3px rgba(0,0,0,0.08)); /* Adjusted for white bg - slightly more visible shadow */
-  color: var(--main-text-primary-light, #212529);
-}
-
-/* Night mode default hover for .cate2-card - Added Glow */
 .cate2-card:hover {
-  background-color: var(--cate2-card-hover-bg-dark, rgba(45, 48, 56, 1)); 
-  border: 1px solid var(--cate2-card-hover-border-dark-glow, rgba(79, 209, 197, 0.5)); /* Cyan glow border, more transparent */
-  color: var(--cate2-card-text-dark-hover, #ddd); 
-  box-shadow: var(--cate2-card-hover-shadow-dark-glow, 0 0 5px rgba(79, 209, 197, 0.2), 0 0 0 1px rgba(79, 209, 197, 0.15)); /* Softer cyan glow */
+  background: linear-gradient(170deg, rgba(30, 37, 50, 0.95), rgba(23, 29, 41, 0.9));
+  border-color: rgba(125, 211, 252, 0.32);
+  color: rgba(241, 245, 249, 0.95);
+  box-shadow: 0 12px 26px rgba(10, 20, 38, 0.44);
 }
 
-/* Day Mode: Hover style for ANY card - Glow Effect (like Header Search active) */
-:root[data-theme="light"] .cate2-card:hover {
-  background-color: var(--content-card-hover-bg-light, #f8f9fa); /* Standard light hover bg */
-  border: 1px solid transparent; /* --- MODIFIED --- */
-  box-shadow: var(--douyu-cate2-hover-shadow-light-glow, 0 0 0 2px rgba(50, 150, 255, 0.35), 0 0 9px rgba(50, 150, 255, 0.2)); /* Blue glow */
-  /* Text color inherited from day mode .cate2-card */
-}
-
-/* Night Mode Active - Revived Glow Style */
 .cate2-card.active { 
-  background-color: var(--cate2-card-bg-dark, #252731); 
-  border: 1px solid transparent; /* Removed border for active state */
-  box-shadow: var(--douyu-cate2-active-shadow-dark-glow-revived, 0 0 0 2px rgba(79, 209, 197, 0.45), 0 0 10px rgba(79, 209, 197, 0.3)); /* Restored cyan glow */
+  background: linear-gradient(150deg, rgba(79, 209, 197, 0.35), rgba(59, 130, 246, 0.28));
+  border-color: rgba(125, 211, 252, 0.45);
+  color: rgba(222, 255, 250, 0.95);
+  box-shadow: 0 14px 34px rgba(15, 118, 110, 0.35);
 }
 
-:root[data-theme="dark"] .cate2-card.active {
-  background-color: var(--cate2-card-bg-dark, #252731); 
-  border-color: transparent; /* Removed border for active state */
-  box-shadow: var(--douyu-cate2-active-shadow-dark-glow-revived, 0 0 0 2px rgba(79, 209, 197, 0.45), 0 0 10px rgba(79, 209, 197, 0.3)); /* Restored cyan glow */
+.cate2-card.active .cate2-name {
+  color: rgba(222, 255, 250, 0.95);
 }
 
-/* Text color for name inside active card in dark mode - Revived Glow Style */
-:root[data-theme="dark"] .cate2-card.active .cate2-name { 
-  color: var(--douyu-cate2-active-text-dark-glow-revived, rgb(79, 209, 197)); /* Restored cyan glow text */
+:root[data-theme="light"] .cate2-card {
+  background: rgba(248, 250, 255, 0.9);
+  border: 1px solid rgba(203, 213, 225, 0.65);
+  box-shadow: none;
+  color: #334155;
 }
 
-/* Icon color for ACTIVE DARK mode - ensure original icon visible */
-:root[data-theme="dark"] .cate2-card.active .cate2-icon img {
-  filter: none; 
+:root[data-theme="light"] .cate2-card:hover {
+  background: rgba(241, 245, 255, 0.96);
+  border-color: rgba(148, 163, 184, 0.7);
+  color: #1f2f4d;
+  box-shadow: none;
 }
 
-/* Night Mode: Hover on ACTIVE card - Intensified Glow */
-:root[data-theme="dark"] .cate2-card.active:hover {
-  background-color: var(--cate2-card-bg-dark, #252731); /* MODIFIED - Keep unselected bg */
-  border-color: var(--douyu-cate2-active-border-dark-glow-revived, rgb(79, 209, 197)); /* Keep cyan border */
-  box-shadow: var(--douyu-cate2-active-shadow-dark-glow-revived-hover, 0 0 0 2.5px rgba(79, 209, 197, 0.55), 0 0 12px rgba(79, 209, 197, 0.4)); /* Intensified cyan glow */
-  /* Text and icon color inherited from .active night mode style */
-}
-
-/* Light Mode Active - Scheme A: Deep Emphasis (Modified) */
 :root[data-theme="light"] .cate2-card.active {
-  background-color: var(--douyu-cate2-active-bg-light-scheme-a, #429cdd); /* Blue background */
-  border-color: transparent; /* No border when active */
-  box-shadow: var(--douyu-cate2-active-shadow-light-scheme-a, 0 2px 5px rgba(0,0,0,0.12)); /* Normal active shadow */
+  background: #dbe7ff;
+  border-color: #85a5ff;
+  box-shadow: 0 0 0 2px rgba(133, 165, 255, 0.18);
+  color: #1f3f85;
 }
 
-/* Text color for name inside active card in light mode - Scheme A */
+:root[data-theme="light"] .cate2-card:not(.active) .cate2-name {
+  color: #31415d;
+}
+
 :root[data-theme="light"] .cate2-card.active .cate2-name {
-  color: var(--douyu-cate2-active-text-light-scheme-a, #FFFFFF);
-}
-
-/* Icon color for ACTIVE LIGHT mode - Scheme A (original icon color) */
-:root[data-theme="light"] .cate2-card.active .cate2-icon img {
-  filter: none; /* Original icon color */
-}
-
-/* Hover on Active card in Light Mode - Scheme A */
-:root[data-theme="light"] .cate2-card.active:hover {
-  background-color: var(--douyu-cate2-active-bg-light-scheme-a, #429cdd); /* Keep blue background */
-  border: 1px solid transparent; /* --- ENSURED --- */
-  box-shadow: var(--content-card-hover-shadow-light-larger, 0 5px 12px rgba(0,0,0,0.15)); /* Larger shadow like other hovers */
-  /* Text and icon color are inherited from .active styles */
+  color: #1f3f85;
 }
 
 /* Icon Styling */
