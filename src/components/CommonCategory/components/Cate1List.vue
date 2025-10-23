@@ -47,45 +47,48 @@ defineProps<{
 .cate1-item {
   padding: 6px 14px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease, color 0.22s ease;
   font-size: 13px;
   border-radius: 20px;
   white-space: nowrap;
-  border: 1px solid rgba(125, 211, 252, 0.08);
-  background-color: #1f222c;
-  color: var(--cate1-item-text-dark, #e0e0e0);
+  border: 1px solid rgba(90, 176, 255, 0.14);
+  background: linear-gradient(165deg, rgba(22, 27, 36, 0.96), rgba(18, 22, 31, 0.92));
+  color: rgba(227, 236, 255, 0.82);
 }
 
 :root[data-theme="light"] .cate1-item {
-  background-color: #f3f5fc;
-  color: var(--control-text-light, #343a40);
-  border-color: var(--control-border-light, #ced4da);
+  background: rgba(248, 250, 255, 0.92);
+  border-color: rgba(203, 213, 225, 0.6);
+  color: #334155;
+  box-shadow: none;
 }
 
 .cate1-item:hover {
-  background: var(--cate1-item-hover-bg-dark, rgba(255, 255, 255, 0.2));
-  color: var(--primary-text, #FFFFFF);
+  background: linear-gradient(165deg, rgba(32, 39, 50, 0.94), rgba(24, 29, 40, 0.92));
+  border-color: rgba(125, 211, 252, 0.3);
+  color: rgba(236, 244, 255, 0.92);
 }
 
 :root[data-theme="light"] .cate1-item:hover {
-  background-color: var(--control-hover-bg-light, #e2e6ea);
-  border-color: var(--control-hover-border-light, #adb5bd);
+  background: rgba(241, 245, 255, 0.96);
+  border-color: rgba(148, 163, 184, 0.65);
+  color: #1f2f4d;
 }
 
 .cate1-item.selected {
-  background-color: rgba(125, 211, 252, 0.16);
-  border: 1px solid rgba(125, 211, 252, 0.28);
-  box-shadow: 0 0 0 1px rgba(125, 211, 252, 0.22), 0 0 12px rgba(125, 211, 252, 0.28);
-  color: var(--douyu-cate2-active-text-dark-glow-revived, rgb(79, 209, 197));
-  font-weight: 500;
+  background: linear-gradient(150deg, rgba(79, 209, 197, 0.35), rgba(59, 130, 246, 0.28));
+  border: 1px solid rgba(125, 211, 252, 0.45);
+  box-shadow: 0 12px 32px rgba(14, 116, 144, 0.32);
+  color: rgba(222, 255, 250, 0.95);
+  font-weight: 600;
 }
 
 :root[data-theme="light"] .cate1-item.selected {
-  background-color: #d7e4ff;
-  border-color: #96b7ff;
-  box-shadow: 0 6px 16px rgba(67, 103, 190, 0.24);
-  color: #1f3b7a;
-  font-weight: 500;
+  background: #dbe7ff;
+  border-color: #85a5ff;
+  box-shadow: 0 0 0 2px rgba(133, 165, 255, 0.18);
+  color: #1f3f85;
+  font-weight: 600;
 }
 
 .cate1-name {

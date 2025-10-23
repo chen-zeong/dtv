@@ -1,6 +1,12 @@
 <template>
-  <aside class="app-sidebar">
-    <nav class="navigation" ref="navListRef" :data-active-platform="activePlatformKey || undefined">
+  <aside class="app-sidebar" data-tauri-drag-region>
+    <nav 
+      class="navigation" 
+      ref="navListRef" 
+      :data-active-platform="activePlatformKey || undefined"
+      data-tauri-drag-region
+    >
+      <div class="nav-drag-spacer" data-tauri-drag-region></div>
       <span
         v-if="highlight.visible"
         class="nav-shared-highlight"
@@ -19,6 +25,7 @@
           class="nav-item"
           :data-platform="item.key"
           :class="{ 'is-active': isActive }"
+          data-tauri-drag-region="none"
           @click="(event) => handleNavClick(event, navigate, item.path)"
           :ref="(el) => setNavItemRef(item.key, el)"
         >
@@ -251,14 +258,19 @@ defineExpose({ router });
   position: relative;
 }
 
+.nav-drag-spacer {
+  height: 4px;
+  flex: 0 0 auto;
+}
+
 .nav-shared-highlight {
   position: absolute;
   left: 14px;
   right: 14px;
   border-radius: 16px;
-  background: linear-gradient(135deg, rgba(24, 28, 48, 0.45), rgba(18, 22, 38, 0.18));
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 10px 22px rgba(12, 16, 35, 0.28);
+  background: transparent;
+  border: 1px solid transparent;
+  box-shadow: none;
   backdrop-filter: blur(22px);
   -webkit-backdrop-filter: blur(22px);
   transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1), height 0.45s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.28s ease, background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
@@ -267,9 +279,9 @@ defineExpose({ router });
 }
 
 :root[data-theme="light"] .nav-shared-highlight {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(236, 241, 255, 0.8));
-  border-color: rgba(148, 163, 184, 0.3);
-  box-shadow: 0 12px 26px rgba(203, 213, 225, 0.26);
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
 }
 
 .navigation[data-active-platform="douyu"] .nav-shared-highlight {
@@ -460,7 +472,6 @@ defineExpose({ router });
   color: var(--primary-text, #e2e8f0);
   border-color: rgba(255, 255, 255, 0.09);
   background: linear-gradient(135deg, rgba(28, 31, 43, 0.84), rgba(18, 21, 32, 0.78));
-  box-shadow: 0 12px 26px rgba(4, 6, 16, 0.24);
 }
 
 .nav-item:hover .nav-backdrop,
@@ -479,14 +490,13 @@ defineExpose({ router });
 .nav-item:hover .nav-icon,
 .nav-item:focus-visible .nav-icon {
   color: var(--nav-accent-secondary);
-  box-shadow: inset 0 -1px 4px rgba(0, 0, 0, 0.18), 0 10px 18px rgba(0, 0, 0, 0.25);
+  box-shadow: inset 0 -1px 4px rgba(0, 0, 0, 0.18);
 }
 
 .nav-item.is-active {
   color: var(--primary-text, #f8fafc);
   border-color: rgba(255, 255, 255, 0.14);
   background: linear-gradient(135deg, rgba(18, 21, 33, 0.78), rgba(10, 11, 18, 0.66));
-  box-shadow: 0 16px 28px rgba(3, 7, 18, 0.32);
   animation: navActivate 0.65s ease;
 }
 
@@ -509,7 +519,7 @@ defineExpose({ router });
 .nav-item.is-active .nav-icon {
   color: var(--nav-accent-secondary);
   transform: scale(1.05);
-  box-shadow: inset 0 -1px 4px rgba(0, 0, 0, 0.2), 0 12px 22px rgba(0, 0, 0, 0.28);
+  box-shadow: inset 0 -1px 4px rgba(0, 0, 0, 0.2);
   animation: navIconPop 0.4s ease;
 }
 
@@ -517,7 +527,7 @@ defineExpose({ router });
   color: #4a5568;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(240, 245, 255, 0.86));
   border: 1px solid rgba(148, 163, 184, 0.18);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.24), 0 8px 18px rgba(148, 163, 184, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.24);
 }
 
 :root[data-theme="light"] .nav-item .nav-name {
@@ -526,18 +536,16 @@ defineExpose({ router });
 
 :root[data-theme="light"] .nav-item .nav-icon {
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.96), var(--nav-icon-bg));
-  box-shadow: inset 0 -1px 3px rgba(148, 163, 184, 0.22), 0 6px 10px rgba(148, 163, 184, 0.2);
+  box-shadow: inset 0 -1px 3px rgba(148, 163, 184, 0.22);
 }
 
 :root[data-theme="light"] .nav-item:hover,
 :root[data-theme="light"] .nav-item:focus-visible {
   color: #1a202c;
   border-color: rgba(99, 102, 241, 0.25);
-  box-shadow: 0 14px 24px rgba(148, 163, 184, 0.22);
 }
 
 :root[data-theme="light"] .nav-item.is-active {
-  box-shadow: 0 18px 30px rgba(148, 163, 184, 0.26);
 }
 
 @keyframes navActivate {

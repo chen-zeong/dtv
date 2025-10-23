@@ -150,7 +150,7 @@ function computePanelMetrics() {
       if (!isNaN(parsed)) gapPx = Math.round(parsed);
     }
     const count = Array.isArray(props.items) ? props.items.length : 0;
-    const columns = 4;
+    const columns = 5;
     const rows = Math.max(1, Math.ceil(count / columns));
     const contentHeight = rows * cardH + (rows - 1) * gapPx + LIST_PAD_TOP + LIST_PAD_BOTTOM;
     const desired = headerHeight.value + contentHeight + 8 + 10; // overlay-content padding: 上8 下10
@@ -312,7 +312,7 @@ const handleSelect = (s: FollowedStreamer) => {
 
 .overlay-streamers-list {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 14px;
   list-style: none;
   margin: 0;
@@ -343,25 +343,45 @@ const handleSelect = (s: FollowedStreamer) => {
   transform: none;
   box-shadow: none;
   background: var(--card-bg, rgba(255,255,255,0.04));
+  overflow: visible;
 }
 .overlay-remove-btn {
   position: absolute;
-  top: 4px;
-  right: 4px;
-  border: none;
-  background: transparent;
-  color: rgba(248, 113, 113, 0.82);
-  font-size: 16px;
+  top: -6px;
+  right: -6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid rgba(248, 113, 113, 0.6);
+  background: rgba(248, 113, 113, 0.92);
+  color: #ffffff;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   line-height: 1;
   padding: 0;
-  z-index: 2;
-  transition: color 0.2s ease, transform 0.2s ease;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 14px rgba(248, 113, 113, 0.2);
+  transition: transform 0.18s ease, background 0.2s ease, color 0.2s ease;
 }
 .overlay-remove-btn:hover {
-  color: rgba(248, 113, 113, 1);
-  transform: scale(1.1);
+  background: rgba(239, 68, 68, 1);
+  transform: translate(1px, 1px) scale(1.05);
+}
+.overlay-remove-btn:active {
+  transform: translate(1px, 1px) scale(0.95);
+}
+:root[data-theme="light"] .overlay-remove-btn {
+  border-color: rgba(248, 113, 113, 0.55);
+  background: rgba(248, 113, 113, 0.92);
+  color: #ffffff;
+  box-shadow: 0 3px 8px rgba(248, 113, 113, 0.16);
+}
+:root[data-theme="light"] .overlay-remove-btn:hover {
+  background: rgba(239, 68, 68, 1);
 }
 
 .overlay-fade-enter-active,

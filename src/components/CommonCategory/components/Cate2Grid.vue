@@ -235,62 +235,62 @@ const handleToggleInternalExpand = () => {
   padding: 6px 8px;
   border-radius: 12px;
   cursor: pointer;
-  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
   box-sizing: border-box;
   overflow: hidden;
   text-align: center;
   display: flex;
   align-items: center;
   gap: 8px;
-  background-color: #1f222d;
-  border: 1px solid rgba(125, 211, 252, 0.08);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+  background: linear-gradient(170deg, rgba(23, 28, 38, 0.95), rgba(17, 21, 30, 0.9));
+  border: 1px solid rgba(90, 176, 255, 0.12);
+  box-shadow: 0 8px 22px rgba(3, 8, 20, 0.42);
   color: rgba(226, 232, 240, 0.86);
 }
 
 .cate2-card:hover {
-  background-color: rgba(125, 211, 252, 0.12);
+  background: linear-gradient(170deg, rgba(30, 37, 50, 0.95), rgba(23, 29, 41, 0.9));
   border-color: rgba(125, 211, 252, 0.32);
   color: rgba(241, 245, 249, 0.95);
-  box-shadow: 0 10px 24px rgba(8, 16, 28, 0.32);
+  box-shadow: 0 12px 26px rgba(10, 20, 38, 0.44);
 }
 
 .cate2-card.active {
-  background-color: rgba(125, 211, 252, 0.16);
-  border-color: rgba(125, 211, 252, 0.28);
-  color: var(--douyu-cate2-active-text-dark-glow-revived, rgb(79, 209, 197));
-  box-shadow: 0 0 0 1px rgba(125, 211, 252, 0.22), 0 0 12px rgba(125, 211, 252, 0.28);
+  background: linear-gradient(150deg, rgba(79, 209, 197, 0.35), rgba(59, 130, 246, 0.28));
+  border-color: rgba(125, 211, 252, 0.45);
+  color: rgba(222, 255, 250, 0.95);
+  box-shadow: 0 14px 34px rgba(15, 118, 110, 0.35);
 }
 
 .cate2-card.active .cate2-name {
-  color: var(--douyu-cate2-active-text-dark-glow-revived, rgb(79, 209, 197));
+  color: rgba(222, 255, 250, 0.95);
 }
 
 :root[data-theme="light"] .cate2-card {
-  background-color: #f4f7fd;
-  border: 1px solid var(--content-card-border-light, #e0e0e0);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-  color: var(--main-text-primary-light, #212529);
+  background: rgba(248, 250, 255, 0.9);
+  border: 1px solid rgba(203, 213, 225, 0.65);
+  box-shadow: none;
+  color: #334155;
 }
 
 :root[data-theme="light"] .cate2-card:hover {
-  background-color: var(--content-card-hover-bg-light, #f8f9fa);
-  border: 1px solid transparent;
-  box-shadow: 0 0 0 2px rgba(50, 150, 255, 0.35), 0 0 9px rgba(50, 150, 255, 0.2);
+  background: rgba(241, 245, 255, 0.96);
+  border-color: rgba(148, 163, 184, 0.7);
+  color: #1f2f4d;
 }
 
 :root[data-theme="light"] .cate2-card.active {
-  background-color: #dbe7ff;
-  border-color: #96b7ff;
-  box-shadow: 0 8px 18px rgba(67, 103, 190, 0.24);
-  color: #1f3b7a;
+  background: #dbe7ff;
+  border-color: #85a5ff;
+  box-shadow: 0 0 0 2px rgba(133, 165, 255, 0.18);
+  color: #1f3f85;
 }
 
 :root[data-theme="light"] .cate2-card:not(.active) .cate2-name {
-  color: #000000;
+  color: #31415d;
 }
 :root[data-theme="light"] .cate2-card.active .cate2-name {
-  color: #1f3b7a;
+  color: #1f3f85;
 }
 .cate2-name {
   font-size: 14px;

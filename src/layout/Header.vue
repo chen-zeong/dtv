@@ -1,6 +1,6 @@
 <template>
-  <header class="app-header">
-    <div class="search-container">
+  <header class="app-header" data-tauri-drag-region>
+    <div class="search-container" data-tauri-drag-region>
       <div class="search-box">
         <input 
           v-model="searchQuery" 
@@ -10,7 +10,7 @@
           @blur="handleBlur"
           class="search-input"
         />
-        <button class="search-button" @click="doSearch" :disabled="isLoadingSearch">
+        <button class="search-button" data-tauri-drag-region="none" @click="doSearch" :disabled="isLoadingSearch">
           <svg v-if="!isLoadingSearch" width="16" height="16" viewBox="0 0 16 16" fill="none">
             <path d="M7.333 12.667A5.333 5.333 0 1 0 7.333 2a5.333 5.333 0 0 0 0 10.667zM14 14l-4-4" 
                   stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
@@ -71,10 +71,11 @@
     </div>
 
     <div class="header-actions">
-      <button 
+        <button 
         @click="toggleTheme" 
         class="theme-btn"
         :title="effectiveTheme === 'dark' ? '切换到日间模式' : '切换到夜间模式'"
+        data-tauri-drag-region="none"
       >
         <svg v-if="effectiveTheme === 'dark'" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
