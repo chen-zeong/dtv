@@ -230,7 +230,7 @@ defineExpose({ router });
   display: flex;
   flex-direction: column;
   border-right: 1px solid var(--border-color); /* Assuming --border-color is themed */
-  padding: 10px 0 12px;
+  padding: 14px 0 0;
   transition: background-color 0.3s ease, border-color 0.3s ease;
   color: var(--secondary-text); /* Default text color, might need light mode override */
 }
@@ -594,7 +594,9 @@ defineExpose({ router });
 
 .follow-list-component {
   flex-grow: 1;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   padding: 0; /* Original padding was 0 */
 }
 

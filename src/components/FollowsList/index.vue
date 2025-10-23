@@ -93,9 +93,12 @@
         :alignTop="overlayAlignTop"
         :alignLeft="overlayAlignLeft"
         :isRefreshing="isRefreshing"
+        :is-delete-mode="overlayDeleteMode"
         @select="selectFromOverlay"
         @close="closeOverlay"
         @refresh="refreshList"
+        @toggle-remove="toggleOverlayDeleteMode"
+        @remove="handleOverlayRemove"
       >
         <template #filters>
           <FilterChips 
@@ -198,6 +201,7 @@
   
   // Overlay: floating full follow list with platform filters
   const showOverlay = ref(false);
+  const overlayDeleteMode = ref(false);
   type FilterType = 'ALL' | Platform;
   const activeFilter = ref<FilterType>('ALL');
   const openOverlay = () => { 
@@ -205,9 +209,16 @@
     overlayAlignTop.value = headerRect ? Math.round(headerRect.bottom + 8) : 72
     const rect = expandBtnRef.value?.getBoundingClientRect()
     overlayAlignLeft.value = rect ? Math.round(rect.right + 12) : 240
+    overlayDeleteMode.value = false;
     showOverlay.value = true; 
   };
-  const closeOverlay = () => { showOverlay.value = false; };
+  const closeOverlay = () => { 
+    showOverlay.value = false; 
+    overlayDeleteMode.value = false;
+  };
+  const toggleOverlayDeleteMode = () => {
+    overlayDeleteMode.value = !overlayDeleteMode.value;
+  };
   const setFilter = (f: FilterType) => { activeFilter.value = f; };
   const platformsOrder: Platform[] = [Platform.DOUYU, Platform.DOUYIN, Platform.HUYA, Platform.BILIBILI];
   const visiblePlatforms = computed(() => {
@@ -223,8 +234,13 @@
   });
 
   const selectFromOverlay = (s: FollowedStreamer) => {
+    if (overlayDeleteMode.value) return;
     emit('selectAnchor', s);
     closeOverlay();
+  };
+
+  const handleOverlayRemove = (s: FollowedStreamer) => {
+    emit('unfollow', { platform: s.platform, id: s.id });
   };
   
   // Method to determine class for the list item itself

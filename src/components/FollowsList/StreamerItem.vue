@@ -55,11 +55,13 @@
   height: 36px;
   border-radius: 8px;
   overflow: hidden;
-  background: var(--card-bg, rgba(255,255,255,0.04));
+  background: linear-gradient(135deg, rgba(126, 203, 255, 0.22), rgba(255, 255, 255, 0.1));
+  border: 1px solid rgba(148, 163, 184, 0.18);
   display: flex;
   align-items: center;
   justify-content: center;
   flex: 0 0 auto; /* 固定尺寸不参与收缩 */
+  transition: transform 0.3s ease;
 }
 .avatar-container.big {
   width: 48px;
@@ -86,17 +88,20 @@
   display: flex;
   align-items: baseline;
   gap: 8px;
+  margin-bottom: 2px;
   min-width: 0;
 }
 .nickname {
   font-weight: 700; /* 保留粗体 */
-  color: var(--primary-text, #e2e8f0);
+  color: rgba(220, 228, 242);
+  letter-spacing: 0.01em;
   font-size: 14px; /* 缩小字体 */
   max-width: 140px;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  transition: color 0.3s ease;
 }
 /* 大尺寸卡片（overlay 内使用）：使用百分比限制，保证右侧状态点空间 */
 .streamer-item-content.big .nickname { max-width: 100%; font-size: 14px; }
@@ -113,12 +118,14 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  border: 1px solid var(--border-color);
+  border: 1px solid rgba(126, 203, 255, 0.35);
   border-radius: 999px;
   padding: 4px 10px;
-  background: var(--card-bg, rgba(255,255,255,0.06));
-  color: var(--secondary-text, #a0aec0);
+  background: rgba(126, 203, 255, 0.16);
+  color: rgba(226, 232, 240, 0.9);
   font-size: 12px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease;
 }
 .platform-badge .live-indicator {
   width: 6px;
@@ -141,14 +148,31 @@
 /* 直播间标题：恢复更小字号与单行显示 */
 .secondary-row {
   font-size: 12px;
-  color: var(--secondary-text, #a0aec0);
+  color: rgba(180, 197, 222, 0.75);
+  font-weight: 500;
   max-width: 160px;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap; /* 单行 */
 }
-.streamer-item-content.big .secondary-row { max-width: 100%; font-size: 12px; }
+.streamer-item-content.big .secondary-row { max-width: 100%; font-size: 10px; }
+:root[data-theme="light"] .nickname {
+  color: #364253;
+}
+:root[data-theme="light"] .secondary-row {
+  color: rgba(109, 122, 147, 0.85);
+}
+:root[data-theme="light"] .platform-badge {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: rgba(148, 163, 184, 0.38);
+  color: rgba(71, 85, 105, 0.9);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+}
+:root[data-theme="light"] .avatar-container {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(210, 225, 255, 0.85));
+  border-color: rgba(148, 163, 184, 0.4);
+}
 </style>
 
 <script setup lang="ts">

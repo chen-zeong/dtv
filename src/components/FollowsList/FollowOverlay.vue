@@ -21,6 +21,13 @@
               </div>
               <div class="overlay-header-actions">
                 <button 
+                  class="overlay-text-btn manage-action" 
+                  :class="{ active: props.isDeleteMode }"
+                  @click="emit('toggle-remove')"
+                >
+                  <span>{{ props.isDeleteMode ? '完成' : '管理' }}</span>
+                </button>
+                <button 
                   class="overlay-text-btn refresh-action" 
                   :class="{ 'is-refreshing': isRefreshing, 'just-finished': justFinished }" 
                   :disabled="isRefreshing" 
@@ -45,8 +52,17 @@
                   v-for="s in items" 
                   :key="s.id" 
                   class="overlay-streamer-item"
-                  @click="() => emit('select', s)"
+                  :class="{ 'remove-mode': props.isDeleteMode }"
+                  @click="handleSelect(s)"
                 >
+                  <button 
+                    v-if="props.isDeleteMode" 
+                    class="overlay-remove-btn" 
+                    title="删除"
+                    @click.stop="emit('remove', s)"
+                  >
+                    ×
+                  </button>
                   <StreamerItem 
                     :streamer="s" 
                     :getAvatarSrc="getAvatarSrc" 
@@ -55,7 +71,7 @@
                     :proxyBase="proxyBase"
                     :big="false"
                     :showPlatform="false"
-                    @clickItem="() => emit('select', s)"
+                    @clickItem="() => handleSelect(s)"
                   />
                 </li>
               </ul>
@@ -81,9 +97,16 @@ const props = defineProps<{
   proxyBase?: string, 
   alignTop?: number, 
   alignLeft?: number,
-  isRefreshing?: boolean
+  isRefreshing?: boolean,
+  isDeleteMode?: boolean
 }>();
-const emit = defineEmits<{ (e: 'close'): void, (e: 'select', s: FollowedStreamer): void, (e: 'refresh'): void }>();
+const emit = defineEmits<{ 
+  (e: 'close'): void, 
+  (e: 'select', s: FollowedStreamer): void, 
+  (e: 'refresh'): void,
+  (e: 'toggle-remove'): void,
+  (e: 'remove', s: FollowedStreamer): void
+}>();
 
 // 刷新完成提示：当 isRefreshing 从 true 变为 false 时，短暂展示完成动画
 const justFinished = ref(false);
@@ -149,6 +172,12 @@ let resizeListener: ((this: Window, ev: UIEvent) => any) | null = null;
 onUnmounted(() => { if (resizeListener) window.removeEventListener('resize', resizeListener); });
 watch(() => props.items, () => computePanelMetrics(), { deep: true });
 watch(() => props.show, (v) => { if (v) computePanelMetrics(); });
+watch(() => props.isDeleteMode, () => computePanelMetrics());
+
+const handleSelect = (s: FollowedStreamer) => {
+  if (props.isDeleteMode) return;
+  emit('select', s);
+};
 </script>
 
 <style scoped>
@@ -189,7 +218,7 @@ watch(() => props.show, (v) => { if (v) computePanelMetrics(); });
 .overlay-header-actions { 
   display: flex; 
   align-items: center; 
-  gap: 4px; /* 缩小刷新与关闭按钮间距 */
+  gap: 6px;
   margin-left: auto; /* 靠右显示 */
   position: relative; /* 保持分隔线伪元素定位 */
 }
@@ -217,6 +246,25 @@ watch(() => props.show, (v) => { if (v) computePanelMetrics(); });
 }
 .overlay-text-btn:hover { background: var(--card-hover-bg, rgba(255,255,255,0.08)); border-color: var(--border-color-strong, #4b5563); }
 .overlay-text-btn:disabled { opacity: 0.6; cursor: default; }
+.manage-action.active {
+  background: rgba(220, 38, 38, 0.18);
+  border-color: rgba(248, 113, 113, 0.45);
+  color: #fca5a5;
+}
+.manage-action.active:hover {
+  background: rgba(248, 113, 113, 0.24);
+  border-color: rgba(248, 113, 113, 0.6);
+}
+.manage-action span { letter-spacing: 0.02em; }
+:root[data-theme="light"] .manage-action.active {
+  background: rgba(248, 113, 113, 0.2);
+  border-color: rgba(248, 113, 113, 0.5);
+  color: #dc2626;
+}
+:root[data-theme="light"] .manage-action.active:hover {
+  background: rgba(248, 113, 113, 0.28);
+  border-color: rgba(248, 113, 113, 0.65);
+}
 
 .refresh-action { min-width: 64px; }
 .refresh-action .refresh-spinner {
@@ -283,11 +331,37 @@ watch(() => props.show, (v) => { if (v) computePanelMetrics(); });
   will-change: transform, opacity;
   backface-visibility: hidden;
   transform: translateZ(0);
+  position: relative;
 }
 .overlay-streamer-item:hover {
   background: var(--card-hover-bg, rgba(255,255,255,0.08));
   transform: translateY(-2px);
   box-shadow: 0 8px 20px rgba(0,0,0,0.24);
+}
+.overlay-streamer-item.remove-mode {
+  cursor: default;
+  transform: none;
+  box-shadow: none;
+  background: var(--card-bg, rgba(255,255,255,0.04));
+}
+.overlay-remove-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  border: none;
+  background: transparent;
+  color: rgba(248, 113, 113, 0.82);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+  z-index: 2;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+.overlay-remove-btn:hover {
+  color: rgba(248, 113, 113, 1);
+  transform: scale(1.1);
 }
 
 .overlay-fade-enter-active,
