@@ -59,7 +59,7 @@ const CONTENT_PADDING_BOTTOM = 8;
 const GRID_INTERNAL_PADDING_BOTTOM = 18;
 
 const TARGET_CONTENT_HEIGHT_FOR_ONE_ROW = CARD_ACTUAL_HEIGHT + GRID_INTERNAL_PADDING_BOTTOM + CONTENT_PADDING_BOTTOM;
-const TARGET_CONTENT_HEIGHT_FOR_TWO_ROWS = (2 * CARD_ACTUAL_HEIGHT + GRID_VERTICAL_GAP) + GRID_INTERNAL_PADDING_BOTTOM + CONTENT_PADDING_BOTTOM;
+const TARGET_CONTENT_HEIGHT_FOR_TWO_ROWS = (2 * CARD_ACTUAL_HEIGHT + GRID_VERTICAL_GAP) + GRID_INTERNAL_PADDING_BOTTOM + CONTENT_PADDING_BOTTOM - 6;
 const EXPANDED_CONTENT_MAX_ROWS = 7;
 const TARGET_CONTENT_HEIGHT_FOR_EXPANDED_MAX_ROWS = 
     (EXPANDED_CONTENT_MAX_ROWS * CARD_ACTUAL_HEIGHT + (EXPANDED_CONTENT_MAX_ROWS - 1) * GRID_VERTICAL_GAP) 
@@ -233,7 +233,7 @@ const handleToggleInternalExpand = () => {
   width: 120px;
   height: var(--cate2-card-height, 36px);
   padding: 6px 8px;
-  border-radius: 8px;
+  border-radius: 12px;
   cursor: pointer;
   transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
   box-sizing: border-box;
@@ -242,26 +242,32 @@ const handleToggleInternalExpand = () => {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: var(--cate2-card-bg-dark, #252731);
-  border: 1px solid var(--cate2-card-border-dark, transparent);
-  color: var(--cate2-card-text-dark, #ccc);
+  background-color: #1f222d;
+  border: 1px solid rgba(125, 211, 252, 0.08);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+  color: rgba(226, 232, 240, 0.86);
 }
 
 .cate2-card:hover {
-  background-color: var(--cate2-card-hover-bg-dark, rgba(45, 48, 56, 1));
-  border: 1px solid transparent;
-  color: var(--cate2-card-text-dark-hover, #ddd);
-  box-shadow: 0 0 0 2px rgba(79, 209, 197, 0.45), 0 0 10px rgba(79, 209, 197, 0.3);
+  background-color: rgba(125, 211, 252, 0.12);
+  border-color: rgba(125, 211, 252, 0.32);
+  color: rgba(241, 245, 249, 0.95);
+  box-shadow: 0 10px 24px rgba(8, 16, 28, 0.32);
 }
 
 .cate2-card.active {
-  background-color: var(--cate2-card-bg-dark, #252731);
-  border: 1px solid transparent;
-  box-shadow: 0 0 0 2px rgba(79, 209, 197, 0.45), 0 0 10px rgba(79, 209, 197, 0.3);
+  background-color: rgba(125, 211, 252, 0.16);
+  border-color: rgba(125, 211, 252, 0.28);
+  color: var(--douyu-cate2-active-text-dark-glow-revived, rgb(79, 209, 197));
+  box-shadow: 0 0 0 1px rgba(125, 211, 252, 0.22), 0 0 12px rgba(125, 211, 252, 0.28);
+}
+
+.cate2-card.active .cate2-name {
+  color: var(--douyu-cate2-active-text-dark-glow-revived, rgb(79, 209, 197));
 }
 
 :root[data-theme="light"] .cate2-card {
-  background-color: var(--content-card-bg-light, #FFFFFF);
+  background-color: #f4f7fd;
   border: 1px solid var(--content-card-border-light, #e0e0e0);
   box-shadow: 0 1px 3px rgba(0,0,0,0.08);
   color: var(--main-text-primary-light, #212529);
@@ -274,16 +280,17 @@ const handleToggleInternalExpand = () => {
 }
 
 :root[data-theme="light"] .cate2-card.active {
-  background-color: #429cdd;
-  border-color: transparent;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.12);
+  background-color: #dbe7ff;
+  border-color: #96b7ff;
+  box-shadow: 0 8px 18px rgba(67, 103, 190, 0.24);
+  color: #1f3b7a;
 }
 
 :root[data-theme="light"] .cate2-card:not(.active) .cate2-name {
   color: #000000;
 }
 :root[data-theme="light"] .cate2-card.active .cate2-name {
-  color: #FFFFFF;
+  color: #1f3b7a;
 }
 .cate2-name {
   font-size: 14px;
@@ -298,35 +305,43 @@ const handleToggleInternalExpand = () => {
 .expand-button {
   position: absolute;
   bottom: 0;
-  left: 16px;
-  right: 16px;
-  display: flex;
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 88px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 6px 0;
+  padding: 6px 14px;
   font-size: 12px;
   height: 28px;
   box-sizing: border-box;
   cursor: pointer;
   transition: color 0.2s ease, background-color 0.3s ease, border-color 0.3s ease;
-  background: var(--douyu-cate2-expand-btn-bg-dark, #18181b);
-  color: var(--douyu-cate2-expand-btn-text-dark, rgba(255, 255, 255, 0.6));
-  border-top: 1px solid var(--douyu-cate2-expand-btn-border-dark, rgba(255, 255, 255, 0.1));
+  background: rgba(26, 29, 37, 0.92);
+  color: rgba(226, 232, 240, 0.72);
+  border: 1px solid rgba(125, 211, 252, 0.12);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(8, 16, 28, 0.32);
   z-index: 10;
 }
 
 .expand-button:hover {
-  color: var(--douyu-cate2-expand-btn-hover-text-dark, #ffffff);
+  color: rgba(248, 250, 252, 0.95);
+  background: rgba(32, 37, 48, 0.96);
+  border-color: rgba(125, 211, 252, 0.3);
 }
 
 :root[data-theme="light"] .expand-button {
-  background: var(--douyu-cate2-expand-btn-bg-light, var(--primary-bg, #ffffff));
+  background: #f4f7fd;
   color: var(--douyu-cate2-expand-btn-text-light, var(--secondary-text, #4b5563));
-  border-top: 1px solid var(--douyu-cate2-expand-btn-border-light, var(--border-color-light, #e5e7eb));
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.1);
 }
 
 :root[data-theme="light"] .expand-button:hover {
   color: var(--douyu-cate2-expand-btn-hover-text-light, var(--primary-text, #1f2937));
+  background: #e5ecfe;
 }
 
 .expand-icon {

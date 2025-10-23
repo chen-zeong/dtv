@@ -13,9 +13,10 @@
     "macOSPrivateApi": true,
     "windows": [
       {
+        "titleBarStyle": "Overlay",
+        "title": "",
         "fullscreen": false,
         "resizable": true,
-        "title": "DTV",
         "width": 1440,
         "height": 840,
         "center": true

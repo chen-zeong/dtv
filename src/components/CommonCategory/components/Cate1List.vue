@@ -51,13 +51,13 @@ defineProps<{
   font-size: 13px;
   border-radius: 20px;
   white-space: nowrap;
-  border: 1px solid transparent;
-  background: var(--cate1-item-bg-dark, rgba(255, 255, 255, 0.1));
+  border: 1px solid rgba(125, 211, 252, 0.08);
+  background-color: #1f222c;
   color: var(--cate1-item-text-dark, #e0e0e0);
 }
 
 :root[data-theme="light"] .cate1-item {
-  background-color: var(--control-bg-light, #f0f2f5);
+  background-color: #f3f5fc;
   color: var(--control-text-light, #343a40);
   border-color: var(--control-border-light, #ced4da);
 }
@@ -73,18 +73,18 @@ defineProps<{
 }
 
 .cate1-item.selected {
-  background-color: var(--cate2-card-bg-dark, rgba(31, 31, 35, 1));
-  border: 1px solid transparent;
-  box-shadow: var(--douyu-cate2-active-shadow-dark-glow-revived, 0 0 0 2px rgba(79, 209, 197, 0.45), 0 0 10px rgba(79, 209, 197, 0.3));
+  background-color: rgba(125, 211, 252, 0.16);
+  border: 1px solid rgba(125, 211, 252, 0.28);
+  box-shadow: 0 0 0 1px rgba(125, 211, 252, 0.22), 0 0 12px rgba(125, 211, 252, 0.28);
   color: var(--douyu-cate2-active-text-dark-glow-revived, rgb(79, 209, 197));
   font-weight: 500;
 }
 
 :root[data-theme="light"] .cate1-item.selected {
-  background-color: var(--douyu-cate2-active-bg-light-scheme-a, #429cdd);
-  border-color: transparent;
-  box-shadow: var(--douyu-cate2-active-shadow-light-scheme-a, 0 2px 5px rgba(0,0,0,0.12));
-  color: var(--douyu-cate2-active-text-light-scheme-a, #FFFFFF);
+  background-color: #d7e4ff;
+  border-color: #96b7ff;
+  box-shadow: 0 6px 16px rgba(67, 103, 190, 0.24);
+  color: #1f3b7a;
   font-weight: 500;
 }
 
