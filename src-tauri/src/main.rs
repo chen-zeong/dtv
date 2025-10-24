@@ -197,6 +197,7 @@ fn main() {
             platforms::bilibili::streamer_info::fetch_bilibili_streamer_info,
             platforms::bilibili::cookie::get_bilibili_cookie,
             platforms::bilibili::cookie::bootstrap_bilibili_cookie,
+            platforms::bilibili::search::search_bilibili_rooms,
             platforms::huya::search::search_huya_anchors,
         ])
         .run(tauri::generate_context!())

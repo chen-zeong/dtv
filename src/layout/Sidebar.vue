@@ -273,7 +273,7 @@ defineExpose({ router });
   box-shadow: none;
   backdrop-filter: blur(22px);
   -webkit-backdrop-filter: blur(22px);
-  transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1), height 0.45s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.28s ease, background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1), height 0.45s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.28s ease;
   pointer-events: none;
   z-index: 0;
 }
@@ -338,6 +338,8 @@ defineExpose({ router });
   --nav-accent-soft: rgba(108, 123, 255, 0.18);
   --nav-icon-bg: rgba(108, 123, 255, 0.14);
   --nav-glow-color: rgba(108, 123, 255, 0.42);
+  --nav-active-shadow-mid: rgba(108, 123, 255, 0.28);
+  --nav-active-shadow-strong: rgba(108, 123, 255, 0.26);
   position: relative;
   display: flex;
   align-items: center;
@@ -350,7 +352,7 @@ defineExpose({ router });
   background: linear-gradient(135deg, rgba(24, 26, 35, 0.78), rgba(15, 17, 25, 0.7));
   border: 1px solid rgba(255, 255, 255, 0.03);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.015);
-  transition: background 0.45s ease, box-shadow 0.45s ease, border-color 0.4s ease, color 0.3s ease;
+  transition: background 0.32s ease, box-shadow 0.32s ease, border-color 0.28s ease, color 0.2s ease;
   isolation: isolate;
 }
 
@@ -360,6 +362,8 @@ defineExpose({ router });
   --nav-accent-soft: rgba(255, 133, 50, 0.26);
   --nav-icon-bg: rgba(255, 133, 50, 0.16);
   --nav-glow-color: rgba(255, 122, 28, 0.5);
+  --nav-active-shadow-mid: rgba(255, 149, 64, 0.38);
+  --nav-active-shadow-strong: rgba(255, 122, 28, 0.34);
 }
 
 .nav-item[data-platform="douyin"] {
@@ -368,6 +372,8 @@ defineExpose({ router });
   --nav-accent-soft: rgba(124, 58, 237, 0.28);
   --nav-icon-bg: rgba(124, 58, 237, 0.18);
   --nav-glow-color: rgba(124, 58, 237, 0.52);
+  --nav-active-shadow-mid: rgba(124, 58, 237, 0.36);
+  --nav-active-shadow-strong: rgba(124, 58, 237, 0.32);
 }
 
 .nav-item[data-platform="huya"] {
@@ -376,6 +382,8 @@ defineExpose({ router });
   --nav-accent-soft: rgba(251, 191, 36, 0.28);
   --nav-icon-bg: rgba(251, 191, 36, 0.18);
   --nav-glow-color: rgba(251, 191, 36, 0.5);
+  --nav-active-shadow-mid: rgba(251, 191, 36, 0.5);
+  --nav-active-shadow-strong: rgba(251, 191, 36, 0.42);
 }
 
 .nav-item[data-platform="bilibili"] {
@@ -384,6 +392,8 @@ defineExpose({ router });
   --nav-accent-soft: rgba(255, 77, 109, 0.26);
   --nav-icon-bg: rgba(255, 77, 109, 0.18);
   --nav-glow-color: rgba(255, 77, 109, 0.52);
+  --nav-active-shadow-mid: rgba(255, 77, 109, 0.4);
+  --nav-active-shadow-strong: rgba(255, 77, 109, 0.34);
 }
 
 .nav-backdrop,
@@ -393,7 +403,7 @@ defineExpose({ router });
   border-radius: inherit;
   inset: 0;
   opacity: 0;
-  transition: opacity 0.45s ease, transform 0.45s ease;
+  transition: opacity 0.28s ease, transform 0.28s ease;
 }
 
 .nav-backdrop {
@@ -484,20 +494,13 @@ defineExpose({ router });
 .nav-item:focus-visible .nav-glow {
   opacity: 0.85;
   transform: scale(0.95);
-  animation: navGlowHover 1.6s ease-in-out infinite alternate;
+  animation: navGlowHover 1.1s ease-in-out infinite alternate;
 }
 
 .nav-item:hover .nav-icon,
 .nav-item:focus-visible .nav-icon {
   color: var(--nav-accent-secondary);
   box-shadow: inset 0 -1px 4px rgba(0, 0, 0, 0.18);
-}
-
-.nav-item.is-active {
-  color: var(--primary-text, #f8fafc);
-  border-color: rgba(255, 255, 255, 0.14);
-  background: linear-gradient(135deg, rgba(18, 21, 33, 0.78), rgba(10, 11, 18, 0.66));
-  animation: navActivate 0.65s ease;
 }
 
 .nav-item.is-active .nav-backdrop {
@@ -528,6 +531,8 @@ defineExpose({ router });
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(240, 245, 255, 0.86));
   border: 1px solid rgba(148, 163, 184, 0.18);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.24);
+  --nav-active-shadow-mid: rgba(148, 163, 184, 0.28);
+  --nav-active-shadow-strong: rgba(99, 102, 241, 0.24);
 }
 
 :root[data-theme="light"] .nav-item .nav-name {
@@ -550,14 +555,14 @@ defineExpose({ router });
 
 @keyframes navActivate {
   0% {
-    box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+    box-shadow: 0 0 0 var(--nav-active-shadow-strong);
     border-color: rgba(255, 255, 255, 0.04);
   }
   60% {
-    box-shadow: 0 26px 38px rgba(0, 0, 0, 0.38);
+    box-shadow: 0 26px 38px var(--nav-active-shadow-mid);
   }
   100% {
-    box-shadow: 0 20px 36px rgba(0, 0, 0, 0.32);
+    box-shadow: 0 20px 36px var(--nav-active-shadow-strong);
   }
 }
 

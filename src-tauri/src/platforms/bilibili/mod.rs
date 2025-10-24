@@ -8,3 +8,4 @@ pub mod streamer_info;
 pub mod auth;
 pub mod models;
 pub mod websocket;
+pub mod search;

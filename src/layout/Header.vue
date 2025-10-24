@@ -64,8 +64,16 @@
 
           </div>
         </div>
-        <div v-else-if="searchQuery.trim() && !isLoadingSearch && !searchError" class="search-no-results">
+        <div v-else-if="trimmedQuery && !isLoadingSearch && !searchError" class="search-no-results">
             无匹配结果。
+            <button
+              v-if="isPureNumeric(trimmedQuery)"
+              class="search-fallback-btn"
+              @mousedown.prevent="tryEnterRoom(trimmedQuery)"
+              @click.prevent="tryEnterRoom(trimmedQuery)"
+            >
+              尝试进入直播间 {{ trimmedQuery }}
+            </button>
         </div>
       </div>
     </div>
@@ -136,6 +144,7 @@ interface SearchResultItem {
 }
 
 const searchQuery = ref('');
+const trimmedQuery = computed(() => searchQuery.value.trim());
 const searchResults = ref<SearchResultItem[]>([]);
 const showResults = ref(false);
 const searchError = ref<string | null>(null);
@@ -230,6 +239,20 @@ onBeforeUnmount(() => {
 
 let searchTimeout: number | null = null;
 
+const isPureNumeric = (value: string): boolean => /^\d+$/.test(value);
+
+const resetSearchState = () => {
+  if (searchTimeout) {
+    clearTimeout(searchTimeout);
+    searchTimeout = null;
+  }
+  searchQuery.value = '';
+  searchResults.value = [];
+  searchError.value = null;
+  showResults.value = false;
+  isLoadingSearch.value = false;
+};
+
 const handleSearch = () => {
   if (searchTimeout) {
     clearTimeout(searchTimeout);
@@ -243,20 +266,21 @@ const handleSearch = () => {
 };
 
 const performSearchBasedOnInput = async () => {
-  const query = searchQuery.value.trim();
+  const query = trimmedQuery.value;
   if (!query) {
     searchResults.value = [];
     showResults.value = false;
     isLoadingSearch.value = false;
     return;
   }
+  searchQuery.value = query;
 
   if (currentPlatform.value === Platform.DOUYIN) {
     await performDouyinIdSearch(query);
   } else if (currentPlatform.value === Platform.HUYA) {
     await performHuyaSearch(query);
   } else if (currentPlatform.value === Platform.BILIBILI) {
-    await performBilibiliIdSearch(query);
+    await performBilibiliSearch(query);
   } else {
     await performDouyuSearch(query);
   }
@@ -274,9 +298,7 @@ const performDouyinIdSearch = async (userInputRoomId: string) => {
     });
     isLoadingSearch.value = false;
       if (douyinInfo) {
-        if (douyinInfo.error_message) {
-          searchError.value = '没有搜索到主播。';
-        } else if (douyinInfo.anchor_name) {
+        if (douyinInfo.anchor_name) {
           const isLive = douyinInfo.status === 2;
           const webId = (douyinInfo as any).web_rid ?? userInputRoomId;
           searchResults.value = [{
@@ -289,15 +311,13 @@ const performDouyinIdSearch = async (userInputRoomId: string) => {
             liveStatus: isLive,
             rawStatus: douyinInfo.status,
         }];
-      } else {
-        searchError.value = '没有搜索到主播。';
-      }
+        }
     } else {
-      searchError.value = '没有搜索到主播。';
+      searchError.value = '搜索服务暂时不可用，请稍后再试。';
     }
   } catch (e: any) {
     isLoadingSearch.value = false;
-    searchError.value = '没有搜索到主播。';
+    searchError.value = '搜索服务暂时不可用，请稍后再试。';
   }
   showResults.value = true;
 };
@@ -321,12 +341,10 @@ const performHuyaSearch = async (keyword: string) => {
         liveStatus: !!item.live_status,
       }));
       searchError.value = null;
-    } else {
-      searchError.value = '没有搜索到主播。';
     }
   } catch (e) {
     isLoadingSearch.value = false;
-    searchError.value = '没有搜索到主播。';
+    searchError.value = '搜索服务暂时不可用，请稍后再试。';
   }
   showResults.value = true;
 };
@@ -356,17 +374,13 @@ const performDouyuSearch = async (keyword: string) => {
             category: anchorInfo.cateName,
           };
         });
-      if (searchResults.value.length === 0) {
-        searchError.value = '没有搜索到主播。';
-      } else {
-        searchError.value = null;
-      }
+      searchError.value = null;
     } else {
-      searchError.value = '没有搜索到主播。';
+      searchError.value = '搜索服务暂时不可用，请稍后再试。';
     }
   } catch (e) {
     isLoadingSearch.value = false;
-    searchError.value = '没有搜索到主播。';
+    searchError.value = '搜索服务暂时不可用，请稍后再试。';
   }
   showResults.value = true;
 };
@@ -387,39 +401,45 @@ const handleBlur = () => {
   }, 300);
 };
 
-const performBilibiliIdSearch = async (userInputRoomId: string) => {
+type BilibiliSearchItem = {
+  room_id: string;
+  title: string;
+  cover: string;
+  anchor: string;
+  avatar: string;
+  watching: string;
+  area: string;
+  is_live: boolean;
+};
+
+const performBilibiliSearch = async (keyword: string) => {
   searchResults.value = [];
   searchError.value = null;
   isLoadingSearch.value = true;
   try {
-    const payloadData = { args: { room_id_str: userInputRoomId } };
-    const biliInfo = await invoke<DouyinApiStreamInfo>('fetch_bilibili_streamer_info', {
-      payload: payloadData,
+    const response = await invoke<BilibiliSearchItem[]>('search_bilibili_rooms', {
+      keyword,
+      page: 1,
     });
-    // Ensure static proxy server is running for avatar images
     await ensureProxyStarted();
-    isLoadingSearch.value = false;
-    if (biliInfo) {
-      if (biliInfo.error_message) {
-        searchError.value = '没有搜索到主播。';
-      } else {
-        const isLive = biliInfo.status === 1;
-        searchResults.value = [{
-          platform: Platform.BILIBILI,
-          roomId: userInputRoomId,
-          userName: biliInfo.anchor_name || '未知B站主播',
-          roomTitle: biliInfo.title || null,
-          avatar: proxify(biliInfo.avatar),
-          liveStatus: isLive,
-          rawStatus: biliInfo.status,
-        }];
-      }
-    } else {
-      searchError.value = '没有搜索到主播。';
+    if (Array.isArray(response) && response.length > 0) {
+      searchResults.value = response.map((item) => ({
+        platform: Platform.BILIBILI,
+        roomId: item.room_id,
+        webId: item.room_id,
+        userName: item.anchor || '未知B站主播',
+        roomTitle: item.title || null,
+        avatar: proxify(item.avatar),
+        liveStatus: item.is_live,
+        fansCount: item.watching,
+        category: item.area,
+      }));
     }
   } catch (e) {
+    searchError.value = '搜索服务暂时不可用，请稍后再试。';
+  } finally {
     isLoadingSearch.value = false;
-    searchError.value = '没有搜索到主播。';
+    showResults.value = true;
   }
 };
 
@@ -431,11 +451,19 @@ const selectAnchor = (anchor: SearchResultItem) => {
     avatarUrl: anchor.avatar,
     currentRoomId: undefined,
   });
-  searchQuery.value = '';
-  searchResults.value = [];
-  searchError.value = null;
-  showResults.value = false;
-  isLoadingSearch.value = false;
+  resetSearchState();
+};
+
+const tryEnterRoom = (roomId: string) => {
+  if (!roomId) return;
+  emit('selectAnchor', {
+    id: roomId,
+    platform: currentPlatform.value,
+    nickname: roomId,
+    avatarUrl: null,
+    currentRoomId: undefined,
+  });
+  resetSearchState();
 };
 
 </script>
@@ -669,6 +697,38 @@ const selectAnchor = (anchor: SearchResultItem) => {
 .search-error-message,
 .search-no-results {
   color: var(--h-search-message-text-color);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: stretch;
+}
+
+.search-fallback-btn {
+  width: 100%;
+  border: none;
+  border-radius: 6px;
+  padding: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--h-text-primary);
+  background: linear-gradient(135deg, rgba(30, 136, 229, 0.16), rgba(30, 82, 229, 0.28));
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.search-fallback-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(30, 82, 229, 0.25);
+}
+
+.search-fallback-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 3px 10px rgba(30, 82, 229, 0.18);
+}
+
+:root[data-theme="light"] .search-fallback-btn {
+  background: linear-gradient(135deg, rgba(64, 158, 255, 0.18), rgba(64, 118, 255, 0.3));
+  color: #1f2d3d;
 }
 
 .search-results-list {
