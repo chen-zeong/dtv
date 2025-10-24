@@ -52,7 +52,7 @@ defineProps<{
   border-radius: 20px;
   white-space: nowrap;
   border: 1px solid rgba(90, 176, 255, 0.14);
-  background: linear-gradient(165deg, rgba(22, 27, 36, 0.96), rgba(18, 22, 31, 0.92));
+  background: #1e2022;
   color: rgba(227, 236, 255, 0.82);
 }
 
@@ -64,7 +64,7 @@ defineProps<{
 }
 
 .cate1-item:hover {
-  background: linear-gradient(165deg, rgba(32, 39, 50, 0.94), rgba(24, 29, 40, 0.92));
+  background: #272a2d;
   border-color: rgba(125, 211, 252, 0.3);
   color: rgba(236, 244, 255, 0.92);
 }

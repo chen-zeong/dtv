@@ -313,15 +313,14 @@ const formatCategoryName = (name: string) => {
   display: flex; 
   align-items: center; 
   gap: 8px; 
-
-  background: linear-gradient(170deg, rgba(23, 28, 38, 0.95), rgba(17, 21, 30, 0.9));
+  background: #1e2022;
   border: 1px solid rgba(90, 176, 255, 0.12);
   box-shadow: 0 8px 22px rgba(3, 8, 20, 0.42);
   color: rgba(226, 232, 240, 0.86);
 }
 
 .cate2-card:hover {
-  background: linear-gradient(170deg, rgba(30, 37, 50, 0.95), rgba(23, 29, 41, 0.9));
+  background: #272a2d;
   border-color: rgba(125, 211, 252, 0.32);
   color: rgba(241, 245, 249, 0.95);
   box-shadow: 0 12px 26px rgba(10, 20, 38, 0.44);

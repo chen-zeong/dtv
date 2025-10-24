@@ -1,12 +1,5 @@
 <template>
     <div class="danmu-list-wrapper">
-      <div class="danmu-header">
-        <h4>弹幕列表</h4>
-        <div class="danmu-controls">
-          <!-- 保留功能但隐藏控件 -->
-          <input type="checkbox" v-model="autoScroll" id="auto-scroll-toggle" class="hidden-toggle">
-        </div>
-      </div>
       <div class="danmu-messages-area" ref="danmakuListEl" @scroll="handleScroll" @pointerdown="onPointerDown">
         <!-- Empty/Loading Placeholder -->
         <div v-if="(!renderMessages || renderMessages.length === 0)" class="empty-danmu-placeholder">
@@ -196,13 +189,16 @@
     flex-direction: column;
     position: relative;
     height: 100%;
-    width: 220px;
+    min-height: 0;
+    max-height: 100%;
+    width: 100%;
     background: linear-gradient(160deg, rgba(36, 40, 58, 0.94), rgba(20, 23, 36, 0.88));
     backdrop-filter: blur(18px);
     -webkit-backdrop-filter: blur(18px);
     color: var(--primary-text, #e5e9f5);
-    border-radius: 16px;
+    border-radius: 0 16px 16px 0;
     border: 1px solid rgba(255, 255, 255, 0.08);
+    border-left: none;
     box-shadow: 0 18px 42px rgba(7, 10, 20, 0.58);
     overflow: hidden;
     isolation: isolate;
@@ -231,45 +227,11 @@
     z-index: 1;
   }
   
-  .danmu-header {
-    padding: 12px 18px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    flex-shrink: 0;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02));
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    backdrop-filter: blur(18px);
-    -webkit-backdrop-filter: blur(18px);
-  }
-  
-  .danmu-header h4 {
-    margin: 0;
-    font-size: 1rem;
-    font-weight: 600;
-    letter-spacing: 0.05em;
-    color: rgba(236, 240, 255, 0.95);
-  }
-  
-  .danmu-controls {
-    display: flex;
-    align-items: center;
-  }
-  
-  .hidden-toggle {
-    position: absolute;
-    opacity: 0;
-    width: 0;
-    height: 0;
-    pointer-events: none;
-  }
-  
   .danmu-messages-area {
-    position: absolute;
-    top: 44px;
-    bottom: 0;
-    left: 0;
-    right: 0;
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    max-height: 100%;
     overflow-y: auto; 
     padding: 12px 14px;
     scroll-behavior: smooth;
@@ -391,7 +353,15 @@
     scrollbar-width: thin;
     scrollbar-color: rgba(102, 164, 255, 0.45) rgba(255, 255, 255, 0.04);
   }
-  
+
+  @media (max-width: 1024px) {
+    .danmu-list-wrapper {
+      width: 100%;
+      border-radius: 12px;
+      border-left: 1px solid rgba(255, 255, 255, 0.08);
+    }
+  }
+
   .connection-status-placeholder {
     position: absolute;
     top: 50%;
@@ -453,19 +423,16 @@
   
 
 :root[data-theme="light"] .danmu-list-wrapper {
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.98), rgba(241, 245, 255, 0.94));
+  background: linear-gradient(135deg, #f9fbff 0%, #eef3ff 100%);
   color: var(--primary-text-light, #1f2937);
   border: 1px solid rgba(189, 200, 224, 0.55);
+  border-left: none;
   box-shadow: 0 18px 32px rgba(15, 23, 42, 0.12);
 }
 
-:root[data-theme="light"] .danmu-header {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.85), rgba(235, 240, 255, 0.75));
-  border-bottom: 1px solid rgba(189, 200, 224, 0.55);
-}
-
-:root[data-theme="light"] .danmu-header h4 {
-  color: var(--primary-text-light, #1f2937);
+:root[data-theme="light"] .danmu-list-wrapper::before,
+:root[data-theme="light"] .danmu-list-wrapper::after {
+  content: none;
 }
 
 :root[data-theme="light"] .danmu-messages-area {
@@ -542,6 +509,12 @@
 
 :root[data-theme="light"] .connection-status-placeholder.success {
   color: rgba(46, 114, 66, 0.95);
+}
+
+@media (max-width: 1024px) {
+  :root[data-theme="light"] .danmu-list-wrapper {
+    border-left: 1px solid rgba(189, 200, 224, 0.55);
+  }
 }
   
   </style>

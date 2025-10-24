@@ -82,8 +82,10 @@ const handlePlayerReload = () => {
 <style scoped>
 .player-view {
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
-  height: 100%;
+  min-height: 0;
+  width: 100%;
   background-color: #0e0e10;
   color: white;
 }

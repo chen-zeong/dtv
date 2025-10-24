@@ -8,8 +8,11 @@
 /* 整体布局 */
 .player-page {
   display: flex;
+  flex: 1 1 auto;
   width: 100%;
   height: 100%;
+  max-height: 100vh;
+  min-height: 0;
   background: linear-gradient(135deg, #1a1b1f 0%, #2d2f39 100%);
   padding: 12px 0 12px 0;
   box-sizing: border-box;
@@ -31,18 +34,26 @@
 /* 主体布局 */
 .player-layout {
   display: flex;
+  flex: 1 1 auto;
   width: 100%;
   height: 100%;
-  gap: 12px;
+  max-height: 100%;
+  min-height: 0;
+  gap: 0;
+  padding-right: 12px;
+  overflow: hidden;
   box-sizing: border-box;
 }
 
 .player-layout .main-content {
-  flex: 1;
+  flex: 1 1 0;
   display: flex;
   flex-direction: column;
   min-width: 0;
+  min-height: 0;
   height: 100%;
+  max-height: 100%;
+  overflow: hidden;
   padding-left: 12px;
   box-sizing: border-box;
 }
@@ -51,14 +62,18 @@
 .player-container {
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
   background-color: rgba(35, 37, 46, 0.8);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border-radius: 16px;
+  border-radius: 16px 0 0 16px;
   border: 1px solid rgba(255, 255, 255, 0.08);
+  border-right: none;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
   overflow: hidden;
+  min-height: 0;
   height: 100%;
+  max-height: 100%;
   gap: 0;
   padding: 0;
 }
@@ -179,12 +194,13 @@
 .video-container {
   position: relative;
   width: 100%;
-  flex: 1 1 auto;
-  border-radius: 0 0 12px 12px;
+  flex: 1 1 0;
+  border-radius: 0 0 0 12px;
   overflow: hidden;
   background-color: #000;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-  min-height: 560px;
+  min-height: clamp(260px, 55vh, 520px);
+  max-height: 100%;
 }
 
 .video-player {
@@ -691,9 +707,16 @@
 .danmu-panel {
   width: 250px;
   height: 100%;
+  min-height: 0;
+  flex: 0 0 250px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  max-height: 100%;
   background: transparent;
-  border-radius: 16px;
-  border: none;
+  border-radius: 0 16px 16px 0;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-left: none;
   box-shadow: none;
   transition: transform 0.3s ease, box-shadow 0.3s ease, opacity 0.3s ease;
 }
@@ -957,7 +980,7 @@ html.web-fs-active .danmu-panel {
 
 /* 视频元素样式 */
 :deep(.xgplayer) {
-  border-radius: 10px;
+  border-radius: inherit;
   background: #000;
 }
 
@@ -979,17 +1002,37 @@ html.web-fs-active .danmu-panel {
   .player-layout {
     flex-direction: column;
     gap: 12px;
+    padding-right: 0;
   }
 
   .danmu-panel {
     width: 100%;
     height: 250px;
+    border-radius: 12px;
+    border-left: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .player-container {
+    border-radius: 16px;
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  :root[data-theme="light"] .player-container {
+    border-right: 1px solid var(--border-color-light, #e0e0e0);
+  }
+
+  :root[data-theme="light"] .danmu-panel {
+    border-left: 1px solid var(--border-color-light, #e0e0e0);
   }
 }
 
 @media (max-width: 768px) {
   .player-page {
     padding: 12px 0;
+  }
+
+  .player-layout {
+    padding-right: 0;
   }
 
   .player-layout .main-content {
@@ -1006,6 +1049,8 @@ html.web-fs-active .danmu-panel {
   .player-container {
     padding: 12px 0;
     gap: 0;
+    border-radius: 16px;
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
   }
 
   .video-container {
@@ -1016,6 +1061,7 @@ html.web-fs-active .danmu-panel {
   .danmu-panel {
     height: 200px;
     border-radius: 12px;
+    border-left: 1px solid rgba(255, 255, 255, 0.08);
   }
 }
 
@@ -1069,6 +1115,7 @@ html.web-fs-active .danmu-panel {
   backdrop-filter: none; /* Remove blur for light mode if desired, or adjust */
   -webkit-backdrop-filter: none;
   border: 1px solid var(--border-color-light, #e0e0e0);
+  border-right: none;
   box-shadow: var(--content-shadow-light, 0 4px 12px rgba(0, 0, 0, 0.08));
 }
 
@@ -1077,6 +1124,7 @@ html.web-fs-active .danmu-panel {
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   border: 1px solid var(--border-color-light, #e0e0e0);
+  border-left: none;
   box-shadow: var(--content-shadow-light, 0 4px 12px rgba(0, 0, 0, 0.08));
 }
 

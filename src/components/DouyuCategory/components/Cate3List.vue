@@ -72,13 +72,13 @@ const selectAll = () => {
   display: inline-flex;
   align-items: center;
   font-size: 13px;
-  background: linear-gradient(170deg, rgba(23, 28, 38, 0.95), rgba(17, 21, 30, 0.9));
+  background: #1e2022;
   border: 1px solid rgba(90, 176, 255, 0.12);
   color: rgba(226, 232, 240, 0.86);
 }
 
 .cate3-item:hover {
-  background: linear-gradient(170deg, rgba(30, 37, 50, 0.95), rgba(23, 29, 41, 0.9));
+  background: #272a2d;
   border-color: rgba(125, 211, 252, 0.32);
   color: rgba(241, 245, 249, 0.95);
   box-shadow: 0 10px 20px rgba(10, 20, 38, 0.38);

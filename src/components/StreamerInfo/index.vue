@@ -67,17 +67,18 @@
   <style scoped>
 .streamer-info {
   width: 100%;
-  padding: 20px 28px 16px;
+  padding: 24px 30px 22px;
   box-sizing: border-box;
   position: relative;
   color: var(--primary-text, rgba(244, 247, 255, 0.96));
-  background: linear-gradient(180deg, rgba(37, 40, 56, 0.94), rgba(18, 20, 32, 0.9));
+  background: linear-gradient(160deg, rgba(36, 40, 58, 0.94), rgba(20, 23, 36, 0.88));
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   overflow: hidden;
   margin-bottom: 0;
   border-bottom-left-radius: 0;
   border-bottom-right-radius: 0;
   z-index: 2;
+  flex-shrink: 0;
 }
 
 .streamer-info::before,
@@ -270,7 +271,7 @@
   bottom: 3px;
   left: var(--highlight-left);
   width: var(--highlight-width);
-  background: linear-gradient(135deg, rgba(102, 170, 255, 0.95), rgba(238, 126, 214, 0.88));
+  background: rgba(114, 169, 255, 0.92);
   border-radius: 12px;
   transition: left 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), width 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   z-index: 0;
@@ -462,16 +463,13 @@
 
   :root[data-theme="light"] .streamer-info {
     color: var(--primary-text-light, #1f2937);
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(236, 240, 252, 0.94));
+    background: linear-gradient(135deg, #f9fbff 0%, #eef3ff 100%);
     border-bottom: 1px solid rgba(189, 200, 224, 0.55);
   }
 
-  :root[data-theme="light"] .streamer-info::before {
-    background: radial-gradient(120% 90% at 0% 0%, rgba(132, 176, 255, 0.25), transparent 60%);
-  }
-
+  :root[data-theme="light"] .streamer-info::before,
   :root[data-theme="light"] .streamer-info::after {
-    background: radial-gradient(110% 70% at 100% 100%, rgba(255, 186, 226, 0.2), transparent 70%);
+    content: none;
   }
 
   :root[data-theme="light"] .streamer-name {
@@ -509,7 +507,7 @@
   }
 
   :root[data-theme="light"] .id-follow-container::before {
-    background: linear-gradient(135deg, rgba(120, 184, 255, 0.95), rgba(194, 134, 255, 0.88));
+    background: rgba(132, 192, 255, 0.92);
   }
 
   :root[data-theme="light"] .streamer-id {
