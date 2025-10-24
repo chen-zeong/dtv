@@ -104,7 +104,7 @@ pub async fn start_douyin_danmu_listener(
                 match attempt_result {
                     Ok(_) => break Ok(()),
                     Err(e) => {
-                        if attempt >= 5 {
+                        if attempt >= 2 {
                             eprintln!("[Douyin Danmaku] Listener connect/fetch failed after {} attempts: {}", attempt, e);
                             break Err(e);
                         } else {

@@ -96,20 +96,24 @@ impl BiliLiveClient {
 
     // Try to reconnect using the cached host list, and re-authenticate
     fn reconnect(&mut self) {
-        ws_debug!("[websocket] attempting reconnect...");
-        match std::panic::catch_unwind({
-            let host_list = self.host_list.clone();
-            move || connect(host_list)
-        }) {
-            Ok(new_ws) => {
-                self.ws = new_ws;
-                ws_debug!("[websocket] reconnect successful, resending auth");
-                self.send_auth();
-            }
-            Err(_) => {
-                ws_debug!("[websocket] reconnect panic; will retry on next read cycle");
+        for attempt in 1..=2 {
+            ws_debug!("[websocket] attempting reconnect (attempt {attempt}/2)...");
+            match std::panic::catch_unwind({
+                let host_list = self.host_list.clone();
+                move || connect(host_list)
+            }) {
+                Ok(new_ws) => {
+                    self.ws = new_ws;
+                    ws_debug!("[websocket] reconnect successful on attempt {attempt}, resending auth");
+                    self.send_auth();
+                    return;
+                }
+                Err(_) => {
+                    ws_debug!("[websocket] reconnect attempt {attempt} failed");
+                }
             }
         }
+        ws_debug!("[websocket] reconnect failed after 2 attempts; will retry on next read cycle");
     }
 
     // Parse one frame and collect all messages into pending queue

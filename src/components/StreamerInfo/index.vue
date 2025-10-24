@@ -71,7 +71,7 @@
   box-sizing: border-box;
   position: relative;
   color: var(--primary-text, rgba(244, 247, 255, 0.96));
-  background: linear-gradient(160deg, rgba(36, 40, 58, 0.94), rgba(20, 23, 36, 0.88));
+  background: linear-gradient(160deg, rgba(26, 28, 38, 0.95), rgba(16, 18, 27, 0.9));
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   overflow: hidden;
   margin-bottom: 0;
@@ -87,16 +87,16 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  opacity: 0.75;
+  opacity: 0.45;
   border-radius: inherit;
 }
 
 .streamer-info::before {
-  background: radial-gradient(120% 90% at 0% 0%, rgba(90, 160, 255, 0.22), transparent 60%);
+  background: radial-gradient(120% 85% at -6% -10%, rgba(92, 140, 226, 0.18), transparent 68%);
 }
 
 .streamer-info::after {
-  background: radial-gradient(110% 70% at 100% 100%, rgba(232, 118, 209, 0.18), transparent 70%);
+  background: radial-gradient(110% 65% at 105% 120%, rgba(202, 116, 210, 0.16), transparent 72%);
 }
 
 .streamer-layout {
@@ -296,7 +296,7 @@
   cursor: pointer;
   min-width: 92px;
   white-space: nowrap; 
-  color: rgba(26, 32, 46, 0.9); 
+  color: rgba(230, 235, 255, 0.92); 
   font-size: 0.82rem; 
   gap: 8px;
 }
@@ -463,13 +463,20 @@
 
   :root[data-theme="light"] .streamer-info {
     color: var(--primary-text-light, #1f2937);
-    background: linear-gradient(135deg, #f9fbff 0%, #eef3ff 100%);
-    border-bottom: 1px solid rgba(189, 200, 224, 0.55);
+    background: linear-gradient(150deg, rgba(249, 251, 255, 0.97), rgba(233, 238, 252, 0.94));
+    border-bottom: 1px solid rgba(189, 200, 224, 0.5);
   }
 
-  :root[data-theme="light"] .streamer-info::before,
+  :root[data-theme="light"] .streamer-info::before {
+    content: '';
+    background: radial-gradient(115% 80% at -8% -12%, rgba(171, 196, 255, 0.2), transparent 72%);
+    opacity: 0.35;
+  }
+
   :root[data-theme="light"] .streamer-info::after {
-    content: none;
+    content: '';
+    background: radial-gradient(110% 70% at 100% 115%, rgba(255, 190, 215, 0.16), transparent 78%);
+    opacity: 0.28;
   }
 
   :root[data-theme="light"] .streamer-name {

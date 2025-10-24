@@ -192,14 +192,14 @@
     min-height: 0;
     max-height: 100%;
     width: 100%;
-    background: linear-gradient(160deg, rgba(36, 40, 58, 0.94), rgba(20, 23, 36, 0.88));
-    backdrop-filter: blur(18px);
-    -webkit-backdrop-filter: blur(18px);
+    background: linear-gradient(165deg, rgba(28, 30, 42, 0.96), rgba(15, 17, 26, 0.9));
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
     color: var(--primary-text, #e5e9f5);
     border-radius: 0 16px 16px 0;
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-left: none;
-    box-shadow: 0 18px 42px rgba(7, 10, 20, 0.58);
+    box-shadow: 0 16px 36px rgba(7, 10, 20, 0.48);
     overflow: hidden;
     isolation: isolate;
   }
@@ -208,8 +208,8 @@
     content: '';
     position: absolute;
     inset: -30% -15% 45% -15%;
-    background: radial-gradient(115% 75% at 25% -5%, rgba(102, 164, 255, 0.35), transparent 70%);
-    opacity: 0.9;
+    background: radial-gradient(110% 70% at 18% -4%, rgba(92, 140, 226, 0.22), transparent 72%);
+    opacity: 0.45;
     pointer-events: none;
   }
 
@@ -217,8 +217,8 @@
     content: '';
     position: absolute;
     inset: 55% -25% -40% -25%;
-    background: radial-gradient(130% 70% at 80% 120%, rgba(236, 112, 214, 0.28), transparent 72%);
-    opacity: 0.85;
+    background: radial-gradient(120% 65% at 78% 118%, rgba(198, 118, 214, 0.18), transparent 75%);
+    opacity: 0.4;
     pointer-events: none;
   }
 
@@ -233,7 +233,7 @@
     min-height: 0;
     max-height: 100%;
     overflow-y: auto; 
-    padding: 12px 14px;
+    padding: 10px 12px;
     scroll-behavior: smooth;
   }
   
@@ -251,14 +251,14 @@
   
   .danmu-item {
     text-align: left;
-    padding: 8px 12px;
+    padding: 6px 10px;
     border-radius: 12px;
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.04);
     word-wrap: break-word;
     overflow-wrap: break-word;
-    margin-bottom: 12px;
-    box-shadow: 0 12px 28px rgba(8, 10, 22, 0.35);
+    margin-bottom: 8px;
+    box-shadow: 0 10px 22px rgba(8, 10, 22, 0.28);
     transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
     display: flex;
     flex-direction: column;
@@ -273,9 +273,9 @@
   }
   
   .danmu-meta-line {
-    font-size: 0.78rem;
-    color: rgba(204, 212, 236, 0.78);
-    margin-bottom: 3px;
+    font-size: 0.72rem;
+    color: rgba(204, 212, 236, 0.72);
+    margin-bottom: 2px;
     display: flex;
     align-items: center;
     flex-wrap: wrap;
@@ -283,11 +283,11 @@
   }
   
   .danmu-badge {
-    background: linear-gradient(135deg, rgba(92, 153, 255, 0.9), rgba(236, 112, 214, 0.85)); 
+    background: linear-gradient(135deg, rgba(92, 153, 255, 0.75), rgba(236, 112, 214, 0.68)); 
     color: #ffffff; 
     padding: 2px 7px;
     border-radius: 999px;
-    font-size: 0.68rem; 
+    font-size: 0.64rem; 
     margin-right: 8px;
     white-space: nowrap;
     display: inline-flex;
@@ -295,13 +295,13 @@
     height: auto;
     line-height: normal;
     flex-shrink: 0;
-    box-shadow: 0 6px 14px rgba(100, 140, 255, 0.32);
+    box-shadow: 0 6px 14px rgba(100, 140, 255, 0.24);
   }
   
   .badge-level {
     margin-left: 4px;
     font-weight: 600;
-    font-size: 0.65rem; 
+    font-size: 0.62rem; 
   }
   
   .danmu-user {
@@ -317,17 +317,17 @@
   }
   
   .danmu-content-line {
-    font-size: 0.88rem;
-    line-height: 1.45;
+    font-size: 0.8rem;
+    line-height: 1.4;
   }
-  
+
   .danmu-content {
     color: rgba(244, 246, 255, 0.94); 
     white-space: pre-wrap; 
     word-wrap: break-word;
     overflow-wrap: break-word;
-    font-size: 0.92rem; 
-    line-height: 1.5;
+    font-size: 0.84rem; 
+    line-height: 1.45;
     text-shadow: 0 1px 2px rgba(6, 9, 18, 0.6);
   }
   
@@ -396,8 +396,8 @@
     background: rgba(57, 185, 108, 0.16);
     border-left: 3px solid rgba(57, 185, 108, 0.75);
     margin-top: 4px;
-    margin-bottom: 8px;
-    box-shadow: 0 12px 24px rgba(26, 54, 39, 0.38);
+    margin-bottom: 6px;
+    box-shadow: 0 10px 20px rgba(26, 54, 39, 0.32);
   }
 
   .danmu-item.system-message .danmu-content {
@@ -423,20 +423,31 @@
   
 
 :root[data-theme="light"] .danmu-list-wrapper {
-  background: linear-gradient(135deg, #f9fbff 0%, #eef3ff 100%);
+  background: linear-gradient(150deg, rgba(249, 251, 255, 0.97), rgba(233, 238, 252, 0.94));
   color: var(--primary-text-light, #1f2937);
-  border: 1px solid rgba(189, 200, 224, 0.55);
+  border: 1px solid rgba(189, 200, 224, 0.45);
   border-left: none;
-  box-shadow: 0 18px 32px rgba(15, 23, 42, 0.12);
+  box-shadow: 0 16px 28px rgba(15, 23, 42, 0.1);
 }
 
-:root[data-theme="light"] .danmu-list-wrapper::before,
+:root[data-theme="light"] .danmu-list-wrapper::before {
+  content: '';
+  position: absolute;
+  inset: -25% -20% 55% -20%;
+  background: radial-gradient(115% 70% at 12% -6%, rgba(164, 186, 255, 0.22), transparent 76%);
+  opacity: 0.35;
+}
+
 :root[data-theme="light"] .danmu-list-wrapper::after {
-  content: none;
+  content: '';
+  position: absolute;
+  inset: 60% -20% -35% -20%;
+  background: radial-gradient(120% 65% at 82% 110%, rgba(255, 186, 210, 0.18), transparent 78%);
+  opacity: 0.3;
 }
 
 :root[data-theme="light"] .danmu-messages-area {
-  scrollbar-color: rgba(125, 155, 238, 0.6) rgba(226, 232, 250, 0.75);
+  scrollbar-color: rgba(125, 155, 238, 0.55) rgba(226, 232, 250, 0.7);
 }
 
 :root[data-theme="light"] .danmu-messages-area::-webkit-scrollbar-track {

@@ -54,13 +54,14 @@
 
 <script setup lang="ts">
 import { ref, computed, reactive, watch, nextTick, onMounted, onBeforeUnmount } from 'vue';
+import type { ComponentPublicInstance } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import type { FollowedStreamer } from '../platforms/common/types';
 import FollowList from '../components/FollowsList/index.vue';
 import douyuLogo from '../assets/douyu.webp';
 import douyinLogo from '../assets/douyin.webp';
 import huyaLogo from '../assets/huya.webp';
-import bilibiliLogo from '../assets/bilibili.png';
+import bilibiliLogo from '../assets/bilibili.webp';
 
 const emit = defineEmits(['selectAnchor', 'unfollow', 'navigate', 'reorderList']);
 const router = useRouter();
@@ -147,13 +148,16 @@ const updateHighlight = () => {
   });
 };
 
-const setNavItemRef = (key: PlatformKey, el: Element | null) => {
+const setNavItemRef = (key: PlatformKey, el: Element | ComponentPublicInstance | null) => {
   if (!el) {
     navItemRefs.delete(key);
     return;
   }
-  if (el instanceof HTMLElement) {
-    navItemRefs.set(key, el);
+
+  const element = el instanceof HTMLElement ? el : (el as ComponentPublicInstance)?.$el;
+
+  if (element instanceof HTMLElement) {
+    navItemRefs.set(key, element);
     if (key === activePlatformKey.value) {
       updateHighlight();
     }

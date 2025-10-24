@@ -16,7 +16,7 @@ export interface UnifiedRustDanmakuPayload {
 export async function getDouyuStreamConfig(roomId: string, quality: string = '原画'): Promise<{ streamUrl: string, streamType: string | undefined }> {
   let finalStreamUrl: string | null = null;
   let streamType: string | undefined = undefined;
-  const MAX_STREAM_FETCH_ATTEMPTS = 1; // Changed to 1 attempt
+  const MAX_STREAM_FETCH_ATTEMPTS = 2;
 
   for (let attempt = 1; attempt <= MAX_STREAM_FETCH_ATTEMPTS; attempt++) {
     try {

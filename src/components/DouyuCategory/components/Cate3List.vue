@@ -106,10 +106,10 @@ const selectAll = () => {
 }
 
 :root[data-theme="light"] .cate3-item.active {
-  background: #dbe7ff;
-  border-color: #85a5ff;
-  box-shadow: 0 0 0 2px rgba(133, 165, 255, 0.18);
-  color: #1f3f85;
+  background: linear-gradient(140deg, rgba(229, 236, 255, 0.96), rgba(204, 219, 255, 0.94));
+  border-color: rgba(114, 136, 255, 0.6);
+  box-shadow: 0 12px 24px rgba(108, 130, 255, 0.18), inset 0 0 0 1px rgba(255, 255, 255, 0.48);
+  color: #162a63;
 }
 
 .loading-cate3 {
