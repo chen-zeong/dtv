@@ -20,7 +20,7 @@
 | --- | --- | --- | --- |
 | 斗鱼 | ✅ | ✅ | ✅ |
 | 虎牙 | ✅ | ✅ | ✅ |
-| bilibili | ✅ | ✅ | 仅房间号 |
+| bilibili | ✅ | ✅ | ✅ |
 | 抖音 | ✅ | ✅ | 仅房间号 |
 
 ## 功能
@@ -33,13 +33,7 @@
 
 ## 软件截图
 
-<div align="center">
-  <p>日间模式</p>
-  <img src="images/iShot_light.webp" alt="日间模式" style="width: 100%; max-width: 800px; display: block; margin-left: auto; margin-right: auto;">
-</div>
 
-
-<br>
 
 <div align="center">
   <p>夜间模式</p>
@@ -50,9 +44,14 @@
 <br>
 
 <div align="center">
-  <p>收藏列表</p>
-  <img src="images/iShot_list.webp" alt="收藏列表" style="width: 100%; max-width: 800px; display: block; margin-left: auto; margin-right: auto;">
+  <p>日间模式</p>
+  <img src="images/iShot_light.webp" alt="日间模式" style="width: 100%; max-width: 800px; display: block; margin-left: auto; margin-right: auto;">
 </div>
+
+<br>
+
+
+
 
 ## 安装方式
 
