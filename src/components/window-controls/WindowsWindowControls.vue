@@ -113,6 +113,7 @@ onBeforeUnmount(async () => {
   border-radius: 0;
   overflow: hidden;
   box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.18);
+  -webkit-app-region: no-drag;
 }
 
 .win-control {
@@ -126,6 +127,7 @@ onBeforeUnmount(async () => {
   color: rgba(255, 255, 255, 0.82);
   cursor: pointer;
   transition: background-color 0.16s ease, color 0.16s ease;
+  -webkit-app-region: no-drag;
 }
 
 .win-control:focus-visible {
