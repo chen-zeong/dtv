@@ -16,8 +16,12 @@
       @fullscreen-change="handlePlayerFullscreenChange"
       @request-refresh-details="handleRefreshDetails"
       @request-player-reload="handlePlayerReload" />
-    <div v-else-if="roomId && isLoadingDetails" class="loading-details">
-      <p>正在加载主播信息 ({{ roomId }})...</p>
+    <div v-else-if="roomId && isLoadingDetails" class="loading-details loading-player">
+      <div class="spinner">
+        <span class="spinner-track"></span>
+        <span class="spinner-head"></span>
+        <span class="spinner-dot"></span>
+      </div>
     </div>
     <div v-else-if="detailsError" class="invalid-room">
       <p>错误: {{ detailsError }}</p>
@@ -218,8 +222,7 @@ onMounted(() => {
   color: var(--main-text-primary-light, #212529);
 }
 
-:root[data-theme="light"] .invalid-room p,
-:root[data-theme="light"] .loading-details p {
+:root[data-theme="light"] .invalid-room p {
   color: var(--main-text-primary-light, #212529);
 }
 

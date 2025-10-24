@@ -21,8 +21,11 @@
           <p>请从首页选择一个直播间开始观看。</p>
         </div>
         <div v-else-if="isLoadingStream" class="loading-player">
-          <div class="spinner"></div>
-          <p>加载直播流中...</p>
+          <div class="spinner">
+            <span class="spinner-track"></span>
+            <span class="spinner-head"></span>
+            <span class="spinner-dot"></span>
+          </div>
         </div>
         <div v-else-if="isOfflineError" class="offline-player">
           <!-- Display StreamerInfo if room details are available -->

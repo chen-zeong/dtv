@@ -863,8 +863,8 @@ html.web-fs-active .danmu-panel {
 /* 关闭按钮 */
 .player-close-btn {
   position: absolute;
-  top: 12px;
-  left: 12px;
+  top: 4px;
+  left: 4px;
   z-index: 100;
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(8px);
@@ -900,7 +900,7 @@ html.web-fs-active .danmu-panel {
 }
 
 /* 空播放器状态 */
-.empty-player, .loading-player, .error-player {
+.empty-player, .error-player {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -917,34 +917,159 @@ html.web-fs-active .danmu-panel {
   color: #bec0c7;
 }
 
-.empty-player .empty-icon, .loading-player .spinner, .error-player .error-icon {
+.empty-player .empty-icon,
+.error-player .error-icon {
   margin-bottom: 20px;
   color: #666;
   opacity: 0.7;
 }
 
+.loading-player {
+  --loader-size: 62px;
+  --loader-stroke: 4px;
+  --loader-track: rgba(255, 255, 255, 0.18);
+  --loader-accent: rgba(160, 200, 255, 0.9);
+  --loader-dot: rgba(206, 222, 255, 0.92);
+  --loader-glow: rgba(160, 200, 255, 0.22);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 240px;
+  background: none;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+}
+
 .loading-player .spinner {
-  width: 48px;
-  height: 48px;
-  border: 5px solid #f3f3f3;
-  border-top: 5px solid var(--accent-color-light, #007bff);
+  position: relative;
+  width: var(--loader-size);
+  height: var(--loader-size);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  transform: translateZ(0);
+}
+
+.loading-player .spinner::after {
+  content: '';
+  position: absolute;
+  inset: -12px;
   border-radius: 50%;
-  animation: spin 1s linear infinite;
+  background: radial-gradient(circle, var(--loader-glow) 0%, rgba(0, 0, 0, 0) 70%);
+  opacity: 0.35;
+  filter: blur(16px);
+  animation: spinner-ambient 2s ease-in-out infinite;
 }
 
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+.loading-player .spinner-track {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: var(--loader-stroke) solid var(--loader-track);
+  opacity: 0.9;
 }
 
-.empty-player h3, .loading-player h3, .error-player h3 {
+.loading-player .spinner-track::after {
+  content: '';
+  position: absolute;
+  inset: calc(var(--loader-stroke) * 1.9);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 45%, transparent 100%);
+}
+
+.loading-player .spinner-head {
+  position: absolute;
+  inset: calc(var(--loader-stroke) * -0.5);
+  border-radius: 50%;
+  background: conic-gradient(
+    var(--loader-accent) 0deg,
+    var(--loader-accent) 140deg,
+    rgba(255, 255, 255, 0) 140deg
+  );
+  mask: radial-gradient(farthest-side, rgba(0, 0, 0, 0) calc(100% - var(--loader-stroke) * 2.25), #000 calc(100% - var(--loader-stroke) * 1.9));
+  animation: spinner-spin 0.9s linear infinite;
+}
+
+.loading-player .spinner-dot {
+  position: absolute;
+  inset: calc(var(--loader-stroke) * 2.2);
+  border-radius: 50%;
+  animation: spinner-spin 0.9s linear infinite;
+}
+
+.loading-player .spinner-dot::before {
+  content: '';
+  position: absolute;
+  top: 0%;
+  left: 50%;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  transform: translate(-50%, -55%);
+  background: var(--loader-dot);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.18);
+  animation: spinner-dot-bloom 1.4s ease-in-out infinite;
+}
+
+.loading-player .spinner-dot::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 34px;
+  height: 3px;
+  border-radius: 999px;
+  transform: translate(-50%, -50%);
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0));
+  opacity: 0.6;
+  filter: blur(0.5px);
+}
+
+@keyframes spinner-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes spinner-dot-bloom {
+  0%, 100% {
+    transform: translate(-50%, -55%) scale(0.94);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.18);
+  }
+  50% {
+    transform: translate(-50%, -55%) scale(1.06);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.24);
+  }
+}
+
+@keyframes spinner-ambient {
+  0%, 100% {
+    opacity: 0.35;
+    transform: scale(0.96);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.02);
+  }
+}
+
+.empty-player h3,
+.error-player h3 {
   margin: 0 0 12px;
   font-size: 22px;
   font-weight: 600;
   color: #e0e0e0;
 }
 
-.empty-player p, .loading-player p, .error-player p {
+.empty-player p,
+.error-player p {
   margin: 0;
   font-size: 16px;
   opacity: 0.8;
@@ -1149,7 +1274,6 @@ html.web-fs-active .danmu-panel {
 }
 
 :root[data-theme="light"] .empty-player,
-:root[data-theme="light"] .loading-player,
 :root[data-theme="light"] .error-player,
 :root[data-theme="light"] .offline-player {
   background-color: var(--content-bg-light, #ffffff);
@@ -1161,27 +1285,34 @@ html.web-fs-active .danmu-panel {
 }
 
 :root[data-theme="light"] .empty-player .empty-icon,
-:root[data-theme="light"] .loading-player .spinner, /* Spinner is handled separately below */
 :root[data-theme="light"] .error-player .error-icon,
 :root[data-theme="light"] .offline-icon svg {
   color: var(--icon-color-light, #888888);
   opacity: 0.9;
 }
 
-:root[data-theme="light"] .loading-player .spinner {
-  border: 5px solid var(--spinner-bg-light, #dddddd);
-  border-top: 5px solid var(--accent-color-light, #007bff); /* Example: Blue for light theme */
+:root[data-theme="light"] .loading-player {
+  --loader-track: rgba(76, 102, 158, 0.22);
+  --loader-accent: rgba(70, 112, 255, 0.92);
+  --loader-dot: rgba(70, 112, 255, 0.92);
+  --loader-glow: rgba(90, 130, 255, 0.38);
+}
+
+:root[data-theme="light"] .loading-player .spinner-head {
+  filter: drop-shadow(0 0 6px var(--loader-glow));
+}
+
+:root[data-theme="light"] .loading-player .spinner-dot::before {
+  box-shadow: 0 4px 12px rgba(70, 80, 120, 0.22), 0 0 10px var(--loader-glow);
 }
 
 :root[data-theme="light"] .empty-player h3,
-:root[data-theme="light"] .loading-player h3,
 :root[data-theme="light"] .error-player h3,
 :root[data-theme="light"] .offline-player h3 {
   color: var(--primary-text-light, #333333);
 }
 
 :root[data-theme="light"] .empty-player p,
-:root[data-theme="light"] .loading-player p,
 :root[data-theme="light"] .error-player p,
 :root[data-theme="light"] .offline-player p {
   color: var(--secondary-text-light, #555555);

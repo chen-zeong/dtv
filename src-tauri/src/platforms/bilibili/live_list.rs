@@ -12,20 +12,21 @@ pub async fn fetch_bilibili_live_list(
 ) -> Result<String, String> {
     use std::time::{SystemTime, UNIX_EPOCH};
 
-    let w_webid_opt = { state.w_webid.lock().unwrap().clone() };
-    let w_webid = match w_webid_opt {
-        Some(v) => v,
-        None => {
-            // 后端兜底：如果未初始化，则尝试自动生成 w_webid，避免前端竞态导致的报错
-            match generate_bilibili_w_webid(state).await {
-                Ok(id) => {
-                    println!("[Bilibili] w_webid was missing; auto-generated: {}", id);
+    // 每次请求前都刷新一次 w_webid，避免使用过期的 ID
+    let w_webid = match generate_bilibili_w_webid(state.clone()).await {
+        Ok(id) => {
+            println!("[Bilibili] Refreshed w_webid: {}", id);
+            id
+        }
+        Err(e) => {
+            eprintln!("[Bilibili] Failed to refresh w_webid, will fallback to cached value if available: {}", e);
+            let fallback = { state.w_webid.lock().unwrap().clone() };
+            match fallback {
+                Some(id) => {
+                    println!("[Bilibili] Using cached w_webid due to refresh failure: {}", id);
                     id
                 }
-                Err(e) => {
-                    eprintln!("[Bilibili] Failed to auto-generate w_webid: {}", e);
-                    return Err(format!("w_webid 初始化失败: {}", e));
-                }
+                None => return Err(format!("w_webid 获取失败: {}", e)),
             }
         }
     };

@@ -11,7 +11,7 @@
   border-radius: 18px 18px 0 0;
   background: rgba(20, 20, 24, 0.94);
   border: 1px solid rgba(68, 70, 80, 0.35);
-  box-shadow: 0 24px 44px rgba(4, 4, 8, 0.45);
+  box-shadow: none;
   gap: 8px;
 }
 .follow-list::after {
