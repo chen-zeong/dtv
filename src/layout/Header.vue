@@ -78,11 +78,14 @@
       </div>
     </div>
 
-    <div class="header-actions">
-        <button 
+    <div class="header-actions" :class="{ 'header-actions--windows': shouldShowWindowsControls }">
+      <button 
         @click="toggleTheme" 
         class="theme-btn"
-        :class="{ 'is-animating': themeToggleAnimating }"
+        :class="{
+          'is-animating': themeToggleAnimating,
+          'theme-btn--windows': shouldShowWindowsControls
+        }"
         :title="effectiveTheme === 'dark' ? '切换到日间模式' : '切换到夜间模式'"
         data-tauri-drag-region="none"
       >
@@ -101,17 +104,21 @@
           />
         </Transition>
       </button>
+
+      <WindowsWindowControls v-if="shouldShowWindowsControls" />
     </div>
   </header>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onBeforeUnmount } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
+import { platform as detectPlatform } from '@tauri-apps/plugin-os';
 import { Platform } from '../platforms/common/types';
 import { useThemeStore } from '../stores/theme';
 import { useRoute } from 'vue-router';
 import { Sun, Moon } from 'lucide-vue-next';
+import WindowsWindowControls from '../components/window-controls/WindowsWindowControls.vue';
 
 interface DouyinApiStreamInfo {
   title?: string | null;
@@ -176,6 +183,27 @@ const proxify = (url?: string | null): string | null => {
 };
 
 const effectiveTheme = computed(() => themeStore.getEffectiveTheme());
+
+const detectedPlatform = ref<string | null>(null);
+const isWindowsPlatform = computed(() => {
+  const name = detectedPlatform.value?.toLowerCase() ?? '';
+  return name.startsWith('win');
+});
+const shouldShowWindowsControls = computed(() => isWindowsPlatform.value);
+
+onMounted(async () => {
+  try {
+    detectedPlatform.value = await detectPlatform();
+  } catch (error) {
+    console.error('[Header] Failed to detect platform', error);
+    if (typeof navigator !== 'undefined') {
+      const ua = navigator.userAgent.toLowerCase();
+      if (ua.includes('windows')) {
+        detectedPlatform.value = 'windows';
+      }
+    }
+  }
+});
 
 const currentPlatform = computed<Platform>(() => {
   const name = route.name as string | undefined;
@@ -554,6 +582,16 @@ const tryEnterRoom = (roomId: string) => {
   transform: translateY(-50%);
 }
 
+.header-actions--windows {
+  right: 0;
+  top: 0;
+  transform: none;
+  gap: 0;
+  padding-right: 0;
+  height: 32px;
+  align-items: stretch;
+}
+
 .theme-btn {
   background-color: transparent; 
   color: var(--h-text-secondary);
@@ -569,13 +607,58 @@ const tryEnterRoom = (roomId: string) => {
   height: 38px; 
 }
 
-.theme-btn:hover {
+.theme-btn--windows {
+  --win-theme-btn-color: rgba(255, 255, 255, 0.82);
+  --win-theme-btn-bg: transparent;
+  --win-theme-btn-hover-bg: rgba(255, 255, 255, 0.08);
+  --win-theme-btn-active-bg: rgba(255, 255, 255, 0.16);
+  --win-theme-btn-hover-color: #ffffff;
+  --win-theme-btn-active-color: #ffffff;
+  --win-theme-btn-divider: rgba(255, 255, 255, 0.32);
+  width: 46px;
+  height: 32px;
+  border-radius: 0;
+  padding: 0;
+  border: none;
+  background-color: var(--win-theme-btn-bg);
+  color: var(--win-theme-btn-color);
+  transition: background-color 0.16s ease, color 0.16s ease;
+  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.18);
+  position: relative;
+}
+
+.theme-btn--windows::after {
+  content: '';
+  position: absolute;
+  top: 8px;
+  right: 0;
+  width: 1px;
+  height: 16px;
+  background-color: var(--win-theme-btn-divider);
+  pointer-events: none;
+}
+
+.theme-btn--windows:hover {
+  background-color: var(--win-theme-btn-hover-bg);
+  color: var(--win-theme-btn-hover-color);
+}
+
+.theme-btn--windows:active {
+  background-color: var(--win-theme-btn-active-bg);
+  color: var(--win-theme-btn-active-color);
+}
+
+.theme-btn:not(.theme-btn--windows):hover {
   background-color: var(--h-btn-hover-bg);
   color: var(--h-text-secondary); 
 }
 
 .theme-btn.is-animating {
   transform: scale(1.08) rotate(-14deg);
+}
+
+.theme-btn--windows.is-animating {
+  transform: scale(1.05);
 }
 
 .theme-icon {
@@ -599,6 +682,20 @@ const tryEnterRoom = (roomId: string) => {
 .theme-icon-leave-from {
   opacity: 1;
   transform: scale(1) rotate(0deg);
+}
+
+:global(:root[data-theme="light"] .theme-btn--windows .theme-icon) {
+  color: rgba(17, 19, 24, 0.7);
+}
+
+:global(:root[data-theme="light"] .theme-btn--windows) {
+  --win-theme-btn-color: #111318;
+  --win-theme-btn-hover-color: #111318;
+  --win-theme-btn-active-color: #111318;
+  --win-theme-btn-hover-bg: rgba(15, 17, 20, 0.06);
+  --win-theme-btn-active-bg: rgba(15, 17, 20, 0.12);
+  --win-theme-btn-divider: rgba(18, 20, 25, 0.42);
+  box-shadow: none;
 }
 
 .search-box {
