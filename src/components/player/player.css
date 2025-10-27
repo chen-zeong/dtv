@@ -1,3 +1,11 @@
+@font-face {
+  font-family: "HarmonyOS Sans Bold";
+  src: url("../../assets/fonts/HarmonyOS_Sans_Bold.woff2") format("woff2");
+  font-display: swap;
+  font-weight: 700;
+  font-style: normal;
+}
+
 /* 全局主题变量 */
 :root {
   --player-accent: #f5f5f5;
@@ -225,6 +233,7 @@
 .player-danmu-overlay div {
   font-weight: 900;
   -webkit-text-stroke: 0.6px rgba(0, 0, 0, 0.9);
+  font-family: "HarmonyOS Sans Bold", "HarmonyOS Sans", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
 }
 
 @keyframes player-control-spin {
