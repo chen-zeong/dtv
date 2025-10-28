@@ -232,7 +232,15 @@
 .player-danmu-overlay span,
 .player-danmu-overlay div {
   font-weight: 900;
-  -webkit-text-stroke: 0.6px rgba(0, 0, 0, 0.9);
+  text-shadow:
+    1px 0 0 var(--danmu-stroke-color, #444444),
+    -1px 0 0 var(--danmu-stroke-color, #444444),
+    0 1px 0 var(--danmu-stroke-color, #444444),
+    0 -1px 0 var(--danmu-stroke-color, #444444),
+    1px 1px 0 var(--danmu-stroke-color, #444444),
+    -1px 1px 0 var(--danmu-stroke-color, #444444),
+    1px -1px 0 var(--danmu-stroke-color, #444444),
+    -1px -1px 0 var(--danmu-stroke-color, #444444);
   font-family: "HarmonyOS Sans Bold", "HarmonyOS Sans", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
 }
 

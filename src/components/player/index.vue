@@ -131,6 +131,7 @@ const { ensureProxyStarted, proxify } = useImageProxy();
 
 type DanmuUserSettings = {
   color: string;
+  strokeColor: string;
   fontSize: string;
   duration: number;
   area: number;
@@ -211,6 +212,7 @@ const loadDanmuPreferences = (): { enabled: boolean; settings: DanmuUserSettings
       enabled: typeof parsed.enabled === 'boolean' ? parsed.enabled : true,
       settings: {
         color: typeof settings.color === 'string' ? settings.color : '#ffffff',
+        strokeColor: typeof settings.strokeColor === 'string' ? settings.strokeColor : '#444444',
         fontSize: typeof settings.fontSize === 'string' ? settings.fontSize : '20px',
         duration: Number.isFinite(settings.duration) ? settings.duration : 10000,
         area: Number.isFinite(settings.area) ? sanitizeDanmuArea(settings.area) : 0.5,
@@ -313,6 +315,7 @@ class DanmuSettingsControl extends Plugin {
     disable: false,
     getSettings: (() => ({
       color: '#ffffff',
+      strokeColor: '#444444',
       fontSize: '20px',
       duration: 10000,
       area: 0.5,
@@ -330,12 +333,14 @@ class DanmuSettingsControl extends Plugin {
   private isOpen = false;
   private currentSettings: DanmuUserSettings = {
     color: '#ffffff',
+    strokeColor: '#444444',
     fontSize: '20px',
     duration: 10000,
     area: 0.5,
     mode: 'scroll',
   };
-  private colorInput: HTMLInputElement | null = null;
+  private textColorInput: HTMLInputElement | null = null;
+  private strokeColorInput: HTMLInputElement | null = null;
   private fontSizeSlider: HTMLInputElement | null = null;
   private durationSlider: HTMLInputElement | null = null;
   private areaSlider: HTMLInputElement | null = null;
@@ -348,6 +353,9 @@ class DanmuSettingsControl extends Plugin {
       ? this.config.getSettings()
       : this.currentSettings;
     this.currentSettings.area = sanitizeDanmuArea(this.currentSettings.area);
+    if (typeof this.currentSettings.strokeColor !== 'string') {
+      this.currentSettings.strokeColor = '#444444';
+    }
 
     this.createPanel();
     this.updateInputs();
@@ -413,7 +421,8 @@ class DanmuSettingsControl extends Plugin {
     (this.root as HTMLElement | null)?.classList.remove('menu-open');
     this.panel?.remove();
     this.panel = null;
-    this.colorInput = null;
+    this.textColorInput = null;
+    this.strokeColorInput = null;
     this.fontSizeSlider = null;
     this.durationSlider = null;
     this.areaSlider = null;
@@ -437,6 +446,10 @@ class DanmuSettingsControl extends Plugin {
           <div class="settings-row settings-row-color">
             <span class="settings-label">颜色</span>
             <input class="danmu-setting-color" type="color" value="${this.currentSettings.color}">
+          </div>
+          <div class="settings-row settings-row-color">
+            <span class="settings-label">描边</span>
+            <input class="danmu-setting-stroke-color" type="color" value="${this.currentSettings.strokeColor}">
           </div>
           <div class="settings-row">
             <label>字体 <span class="settings-value font-size-value">${this.currentSettings.fontSize}</span></label>
@@ -465,15 +478,21 @@ class DanmuSettingsControl extends Plugin {
       event.stopPropagation();
     });
 
-    this.colorInput = this.panel.querySelector<HTMLInputElement>('.danmu-setting-color');
+    this.textColorInput = this.panel.querySelector<HTMLInputElement>('.danmu-setting-color');
+    this.strokeColorInput = this.panel.querySelector<HTMLInputElement>('.danmu-setting-stroke-color');
     this.fontSizeSlider = this.panel.querySelector<HTMLInputElement>('.danmu-setting-font-range');
     this.durationSlider = this.panel.querySelector<HTMLInputElement>('.danmu-setting-duration-range');
     this.areaSlider = this.panel.querySelector<HTMLInputElement>('.danmu-setting-area-range');
 
-    this.colorInput?.addEventListener('input', (event) => {
+    this.textColorInput?.addEventListener('input', (event) => {
       const value = (event.target as HTMLInputElement).value;
       this.currentSettings.color = value;
       this.emitChange({ color: value });
+    });
+    this.strokeColorInput?.addEventListener('input', (event) => {
+      const value = (event.target as HTMLInputElement).value;
+      this.currentSettings.strokeColor = value;
+      this.emitChange({ strokeColor: value });
     });
 
     const handleRange = (el: HTMLInputElement | null, key: keyof DanmuUserSettings, transform: (value: string) => unknown, displaySelector: string, formatter: (value: number) => string) => {
@@ -581,8 +600,11 @@ class DanmuSettingsControl extends Plugin {
     if (!this.panel) {
       return;
     }
-    if (this.colorInput) {
-      this.colorInput.value = this.currentSettings.color;
+    if (this.textColorInput) {
+      this.textColorInput.value = this.currentSettings.color;
+    }
+    if (this.strokeColorInput) {
+      this.strokeColorInput.value = this.currentSettings.strokeColor;
     }
     if (this.fontSizeSlider) {
       const numericFont = parseInt(this.currentSettings.fontSize, 10);
@@ -653,10 +675,16 @@ class DanmuSettingsControl extends Plugin {
     if (typeof normalized.area === 'number') {
       normalized.area = sanitizeDanmuArea(normalized.area);
     }
+    if (typeof normalized.strokeColor !== 'undefined' && typeof normalized.strokeColor !== 'string') {
+      delete (normalized as any).strokeColor;
+    }
     this.currentSettings = {
       ...this.currentSettings,
       ...normalized,
     };
+    if (typeof this.currentSettings.strokeColor !== 'string') {
+      this.currentSettings.strokeColor = '#444444';
+    }
     this.updateInputs();
   }
 }
@@ -1157,6 +1185,7 @@ const isFullScreen = ref(false); // True if EITHER native player OR web fullscre
 const isDanmuEnabled = ref(true);
 const danmuSettings = reactive<DanmuUserSettings>({
   color: '#ffffff',
+  strokeColor: '#444444',
   fontSize: '20px',
   duration: 10000,
   area: 0.5,
@@ -1280,6 +1309,7 @@ function createDanmuOverlay(player: Player | null) {
   }
 
   overlayHost.innerHTML = '';
+  overlayHost.style.setProperty('--danmu-stroke-color', danmuSettings.strokeColor);
 
   try {
     const overlay = new DanmuJs({
@@ -1335,6 +1365,12 @@ function applyDanmuOverlayPreferences(overlay: DanmuOverlayInstance | null) {
     overlay.setOpacity?.(isDanmuEnabled.value ? 1 : 0);
   } catch (error) {
     // Non-critical
+  }
+  try {
+    const host = playerInstance.value?.root?.querySelector('.player-danmu-overlay') as HTMLElement | null;
+    host?.style.setProperty('--danmu-stroke-color', danmuSettings.strokeColor);
+  } catch (error) {
+    console.warn('[Player] Failed to apply danmu stroke color:', error);
   }
 }
 
@@ -1522,6 +1558,7 @@ async function mountXgPlayer(
     index: 4.2,
     getSettings: () => ({
       color: danmuSettings.color,
+      strokeColor: danmuSettings.strokeColor,
       fontSize: danmuSettings.fontSize,
       duration: danmuSettings.duration,
       area: danmuSettings.area,
@@ -1530,6 +1567,9 @@ async function mountXgPlayer(
     onChange: (partial: Partial<DanmuUserSettings>) => {
       if (partial.color) {
         danmuSettings.color = partial.color;
+      }
+      if (partial.strokeColor) {
+        danmuSettings.strokeColor = partial.strokeColor;
       }
       if (partial.fontSize) {
         danmuSettings.fontSize = partial.fontSize;
@@ -1804,6 +1844,7 @@ async function startCurrentDanmakuListener(platform: StreamingPlatform, roomId: 
         style: {
           color: danmuSettings.color,
           fontSize: danmuSettings.fontSize,
+          '--danmu-stroke-color': danmuSettings.strokeColor,
         },
       }),
     };
@@ -1967,6 +2008,7 @@ watch(refreshControlPlugin, (plugin) => {
 
 const getDanmuSettingsSnapshot = (): DanmuUserSettings => ({
   color: danmuSettings.color,
+  strokeColor: danmuSettings.strokeColor,
   fontSize: danmuSettings.fontSize,
   duration: danmuSettings.duration,
   area: sanitizeDanmuArea(danmuSettings.area),
@@ -2004,6 +2046,7 @@ watch(danmuSettingsPlugin, (plugin) => {
   }
   plugin.setSettings({
     color: danmuSettings.color,
+    strokeColor: danmuSettings.strokeColor,
     fontSize: danmuSettings.fontSize,
     duration: danmuSettings.duration,
     area: sanitizeDanmuArea(danmuSettings.area),
@@ -2013,6 +2056,12 @@ watch(danmuSettingsPlugin, (plugin) => {
 
 watch(() => danmuSettings.color, (color) => {
   danmuSettingsPlugin.value?.setSettings({ color });
+  persistCurrentDanmuPreferences();
+});
+
+watch(() => danmuSettings.strokeColor, (strokeColor) => {
+  danmuSettingsPlugin.value?.setSettings({ strokeColor });
+  applyDanmuOverlayPreferences(danmuInstance.value);
   persistCurrentDanmuPreferences();
 });
 
