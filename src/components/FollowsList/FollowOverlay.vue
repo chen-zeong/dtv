@@ -4,8 +4,9 @@
       <div v-if="show" class="follow-overlay-backdrop" @click.self="emit('close')">
         <transition name="overlay-pop">
           <div 
+            ref="panelRef"
             class="follow-overlay-panel" 
-            :style="{ top: `${panelTop}px`, left: `${(alignLeft ?? 240)}px`, height: `${panelHeight}px` }"
+            :style="{ top: `${panelTop}px`, left: `${panelLeft}px`, height: `${panelHeight}px` }"
           >
             <!-- 将关闭按钮移动到面板右上角 -->
             <button class="overlay-close-btn" title="关闭" @click="emit('close')">
@@ -121,37 +122,63 @@ watch(() => props.isRefreshing, (newVal, oldVal) => {
 const PANEL_MIN = 220;
 const PANEL_MAX_MARGIN = 120; // 留出顶部/底部边距
 const DEFAULT_CARD_H = 76; // 估算：48头像 + 24内边距 + 2边框
+const DEFAULT_CARD_W = 200;
 const LIST_PAD_TOP = 6;
 const LIST_PAD_BOTTOM = 6;
 const panelHeight = ref<number>(400);
 const panelTop = ref<number>(64);
+const panelLeft = ref<number>(props.alignLeft ?? 240);
 const headerHeight = ref<number>(56);
 const headerRef = ref<HTMLElement | null>(null);
 const listEl = ref<HTMLElement | null>(null);
+const panelRef = ref<HTMLElement | null>(null);
 const shouldScroll = ref<boolean>(false);
 
 function clamp(n: number, min: number, max: number) { return Math.max(min, Math.min(max, n)); }
+function updatePanelLeft() {
+  if (typeof window === 'undefined') return;
+  nextTick(() => {
+    const requestedLeft = props.alignLeft ?? 240;
+    if (!panelRef.value) {
+      panelLeft.value = Math.max(16, Math.min(requestedLeft, window.innerWidth - 320));
+      return;
+    }
+    const panelWidth = panelRef.value.getBoundingClientRect().width;
+    const maxLeft = Math.max(16, window.innerWidth - panelWidth - 16);
+    panelLeft.value = Math.max(16, Math.min(requestedLeft, maxLeft));
+  });
+}
 function computePanelMetrics() {
   nextTick(() => {
     // 测量 header 实际高度
     headerHeight.value = Math.ceil(headerRef.value?.getBoundingClientRect().height || 56);
     // 测量首个卡片高度
     let cardH = DEFAULT_CARD_H;
+    let cardW = DEFAULT_CARD_W;
     const firstItem = listEl.value?.querySelector('.overlay-streamer-item') as HTMLElement | null;
     if (firstItem) {
-      cardH = Math.ceil(firstItem.getBoundingClientRect().height);
+      const firstRect = firstItem.getBoundingClientRect();
+      cardH = Math.ceil(firstRect.height || DEFAULT_CARD_H);
+      cardW = Math.ceil(firstRect.width || DEFAULT_CARD_W);
     }
     // 读取 grid gap（如果可用）
     let gapPx = 14;
+    let listWidth = 0;
     if (listEl.value) {
       const cs = window.getComputedStyle(listEl.value);
-      const gapStr = (cs as any).gap || cs.rowGap;
+      const gapStr = (cs as any).gap || cs.columnGap || cs.rowGap;
       const parsed = parseFloat(gapStr || '');
       if (!isNaN(parsed)) gapPx = Math.round(parsed);
+      listWidth = Math.ceil(listEl.value.getBoundingClientRect().width || 0);
     }
     const count = Array.isArray(props.items) ? props.items.length : 0;
-    const columns = 5;
-    const rows = Math.max(1, Math.ceil(count / columns));
+    let columns = count > 0 ? Math.floor((listWidth + gapPx) / (cardW + gapPx)) : 1;
+    if (!Number.isFinite(columns) || columns < 1) {
+      columns = Math.max(1, Math.min(count || 1, Math.ceil(Math.sqrt(count || 1))));
+    } else {
+      columns = Math.max(1, Math.min(count || 1, columns));
+    }
+    const rows = Math.max(1, columns > 0 ? Math.ceil(count / columns) : count);
     const contentHeight = rows * cardH + (rows - 1) * gapPx + LIST_PAD_TOP + LIST_PAD_BOTTOM;
     const desired = headerHeight.value + contentHeight + 8 + 10; // overlay-content padding: 上8 下10
     const maxH = (typeof window !== 'undefined') ? (window.innerHeight - PANEL_MAX_MARGIN) : desired;
@@ -159,6 +186,7 @@ function computePanelMetrics() {
     shouldScroll.value = desired > maxH;
     const vh = (typeof window !== 'undefined') ? window.innerHeight : panelHeight.value;
     panelTop.value = Math.max(16, Math.round((vh - panelHeight.value) / 2));
+    updatePanelLeft();
   });
 }
 
@@ -173,6 +201,7 @@ onUnmounted(() => { if (resizeListener) window.removeEventListener('resize', res
 watch(() => props.items, () => computePanelMetrics(), { deep: true });
 watch(() => props.show, (v) => { if (v) computePanelMetrics(); });
 watch(() => props.isDeleteMode, () => computePanelMetrics());
+watch(() => props.alignLeft, () => updatePanelLeft());
 
 const handleSelect = (s: FollowedStreamer) => {
   if (props.isDeleteMode) return;
@@ -190,7 +219,7 @@ const handleSelect = (s: FollowedStreamer) => {
 }
 .follow-overlay-panel {
   position: fixed;
-  width: min(1160px, 94vw);
+  width: min(1160px, calc(100vw - 32px));
   border-radius: 14px;
   background: var(--primary-bg);
   color: var(--primary-text);
@@ -312,7 +341,7 @@ const handleSelect = (s: FollowedStreamer) => {
 
 .overlay-streamers-list {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 14px;
   list-style: none;
   margin: 0;

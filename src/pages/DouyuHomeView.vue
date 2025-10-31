@@ -141,7 +141,7 @@ onMounted(() => {
   flex-direction: column;
   overflow-x: hidden; /* Prevent horizontal scrolling */
   background: #18181b;
-  min-width: 1200px; /* Minimum window width */
+  min-width: 0; /* Allow layout to shrink on high zoom levels */
 }
 
 .category-section {
