@@ -3,6 +3,7 @@
     <button
       type="button"
       class="win-control win-control--minimize"
+      @mousedown="preventWindowDrag"
       @click="handleMinimize"
       aria-label="最小化窗口"
       data-tauri-drag-region="none"
@@ -14,6 +15,7 @@
     <button
       type="button"
       class="win-control win-control--maximize"
+      @mousedown="preventWindowDrag"
       @click="handleMaximize"
       :aria-label="isMaximized ? '还原窗口' : '最大化窗口'"
       data-tauri-drag-region="none"
@@ -29,6 +31,7 @@
     <button
       type="button"
       class="win-control win-control--close"
+      @mousedown="preventWindowDrag"
       @click="handleClose"
       aria-label="关闭窗口"
       data-tauri-drag-region="none"
@@ -49,6 +52,10 @@ const currentWindow = getCurrentWindow();
 const isMaximized = ref(false);
 let unlistenResize: UnlistenFn | null = null;
 
+const preventWindowDrag = (event: MouseEvent | PointerEvent) => {
+  event.stopPropagation();
+};
+
 const syncMaximizedState = async () => {
   try {
     isMaximized.value = await currentWindow.isMaximized();
@@ -57,7 +64,11 @@ const syncMaximizedState = async () => {
   }
 };
 
-const handleMinimize = async () => {
+const handleMinimize = async (event?: MouseEvent) => {
+  if (event) {
+    preventWindowDrag(event);
+    event.preventDefault();
+  }
   try {
     await currentWindow.minimize();
   } catch (error) {
@@ -65,7 +76,11 @@ const handleMinimize = async () => {
   }
 };
 
-const handleMaximize = async () => {
+const handleMaximize = async (event?: MouseEvent) => {
+  if (event) {
+    preventWindowDrag(event);
+    event.preventDefault();
+  }
   try {
     if (isMaximized.value) {
       await currentWindow.unmaximize();
@@ -78,7 +93,11 @@ const handleMaximize = async () => {
   }
 };
 
-const handleClose = async () => {
+const handleClose = async (event?: MouseEvent) => {
+  if (event) {
+    preventWindowDrag(event);
+    event.preventDefault();
+  }
   try {
     await currentWindow.close();
   } catch (error) {
