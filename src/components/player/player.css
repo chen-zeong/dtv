@@ -840,6 +840,21 @@ html.web-fs-active .danmu-panel {
 .player-page:has(:deep(.xgplayer-is-cssfullscreen)) .player-layout,
 .player-page:has(:deep(.xgplayer-is-fullscreen)) .player-layout {
   gap: 0 !important;
+  padding-right: 0 !important;
+}
+
+.web-fs-active .player-layout {
+  padding-right: 0 !important;
+}
+
+.player-page.web-fs .player-layout .main-content,
+.player-page:has(:deep(.xgplayer-is-cssfullscreen)) .player-layout .main-content,
+.player-page:has(:deep(.xgplayer-is-fullscreen)) .player-layout .main-content {
+  padding-left: 0 !important;
+}
+
+.web-fs-active .player-layout .main-content {
+  padding-left: 0 !important;
 }
 
 .player-page.web-fs .player-container,
