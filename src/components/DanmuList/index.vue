@@ -196,7 +196,7 @@
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
     color: var(--primary-text, #e5e9f5);
-    font-family: "HarmonyOS Sans Bold", "HarmonyOS Sans", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+    font-family: var(--danmu-font-family, "HarmonyOS Sans Bold", "HarmonyOS Sans", "PingFang SC", "Helvetica Neue", Arial, sans-serif);
     border-radius: 0 16px 16px 0;
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-left: none;

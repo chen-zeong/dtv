@@ -6,6 +6,14 @@
   font-style: normal;
 }
 
+@font-face {
+  font-family: "HarmonyOS Sans Regular";
+  src: url("../../assets/fonts/HarmonyOS_Sans_Regular.ttf") format("truetype");
+  font-display: swap;
+  font-weight: 400;
+  font-style: normal;
+}
+
 /* 全局主题变量 */
 :root {
   --player-accent: #f5f5f5;
@@ -241,7 +249,7 @@
     -1px 1px 0 var(--danmu-stroke-color, #444444),
     1px -1px 0 var(--danmu-stroke-color, #444444),
     -1px -1px 0 var(--danmu-stroke-color, #444444);
-  font-family: "HarmonyOS Sans Bold", "HarmonyOS Sans", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--danmu-font-family, "HarmonyOS Sans Bold", "HarmonyOS Sans", "PingFang SC", "Helvetica Neue", Arial, sans-serif);
 }
 
 @keyframes player-control-spin {

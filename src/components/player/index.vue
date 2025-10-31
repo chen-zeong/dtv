@@ -141,6 +141,8 @@ type DanmuUserSettings = {
 const DANMU_PREFERENCES_STORAGE_KEY = 'dtv_danmu_preferences_v1';
 const DANMU_AREA_OPTIONS = [0.25, 0.5, 0.75] as const;
 const PLAYER_VOLUME_STORAGE_KEY = 'dtv_player_volume_v1';
+const DEFAULT_DANMU_FONT_FAMILY = '"HarmonyOS Sans Bold", "HarmonyOS Sans", "PingFang SC", "Helvetica Neue", Arial, sans-serif';
+const WINDOWS_DANMU_FONT_FAMILY = '"HarmonyOS Sans Regular", "HarmonyOS Sans", "Microsoft YaHei", "Segoe UI", sans-serif';
 
 const sanitizeDanmuArea = (value: number): number => {
   return DANMU_AREA_OPTIONS.reduce((prev, curr) => Math.abs(curr - value) < Math.abs(prev - value) ? curr : prev, DANMU_AREA_OPTIONS[0]);
@@ -1201,6 +1203,21 @@ if (storedDanmuPreferences) {
 // OS specific states
 const osName = ref<string>('');
 
+function applyDanmuFontFamilyForOS(os: string) {
+  if (typeof document === 'undefined') {
+    return;
+  }
+  const root = document.documentElement;
+  if (!root) {
+    return;
+  }
+  if (/windows|win32/i.test(os)) {
+    root.style.setProperty('--danmu-font-family', WINDOWS_DANMU_FONT_FAMILY);
+  } else {
+    root.style.setProperty('--danmu-font-family', DEFAULT_DANMU_FONT_FAMILY);
+  }
+}
+
 // 画质切换相关
 const qualityOptions = ['原画', '高清', '标清'] as const;
 
@@ -1714,8 +1731,14 @@ async function initializePlayerAndStream(
   streamError.value = null;
   isOfflineError.value = false;
 
-  // Detect OS (synchronous call)
-  osName.value = platform();
+  // Detect OS and adjust danmu font family per platform
+  try {
+    osName.value = platform();
+  } catch (error) {
+    console.warn('[Player] Failed to detect platform for danmu font selection:', error);
+    osName.value = '';
+  }
+  applyDanmuFontFamilyForOS(osName.value);
 
   if (!isRefresh) {
     danmakuMessages.value = [];
