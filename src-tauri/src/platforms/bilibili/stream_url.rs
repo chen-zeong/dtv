@@ -268,7 +268,7 @@ pub async fn get_bilibili_live_stream_url_with_quality(
 
     // 收集所有可用的播放地址（包含不同 host）
     let mut variants: Vec<StreamVariant> = Vec::new();
-    let mut final_url_ts: Option<String> = None;
+    let mut hls_candidates: Vec<String> = Vec::new();
     let mut final_url_flv: Option<String> = None;
     if let Some(streams) = playurl2.get("stream").and_then(|v| v.as_array()) {
         for stream_item in streams {
@@ -299,19 +299,29 @@ pub async fn get_bilibili_live_stream_url_with_quality(
                                     let composed = format!("{}{}{}", host, base_url, extra);
                                     if !composed.is_empty() {
                                         // 记录到 variants
+                                        let protocol_name =
+                                            protocol.clone().unwrap_or_else(|| "".to_string());
                                         variants.push(StreamVariant {
                                             url: composed.clone(),
                                             format: Some(format_name.to_string()),
                                             desc: selected_desc.clone(),
                                             qn: selected_qn,
-                                            protocol: protocol.clone(),
+                                            protocol: if protocol_name.is_empty() {
+                                                None
+                                            } else {
+                                                Some(protocol_name.clone())
+                                            },
                                         });
-                                        // 优先选择第一个 TS(M3U8) 地址作为默认播放地址
-                                        if final_url_ts.is_none() && format_name == "ts" {
-                                            final_url_ts = Some(composed.clone());
+                                        let is_hls_format = matches!(
+                                            format_name,
+                                            "ts" | "fmp4" | "mp4" | "m4s" | "m3u8"
+                                        );
+                                        let is_hls_protocol = protocol_name.contains("hls");
+                                        if is_hls_format || is_hls_protocol {
+                                            hls_candidates.push(composed.clone());
                                         }
                                         if format_name == "flv" && final_url_flv.is_none() {
-                                            // 放宽为选择第一个可用的 FLV 地址
+                                            // 记录第一个可用的 FLV 地址，优先使用
                                             final_url_flv = Some(composed.clone());
                                         }
                                     }
@@ -324,7 +334,36 @@ pub async fn get_bilibili_live_stream_url_with_quality(
         }
     }
 
-    if final_url_ts.is_none() && final_url_flv.is_none() {
+    let mut final_url_hls: Option<String> = None;
+    for candidate in hls_candidates.iter().take(4) {
+        match client.get(candidate).send().await {
+            Ok(resp) => {
+                if resp.status().is_success() {
+                    eprintln!(
+                        "[Bilibili] Verified HLS candidate for room {} -> {}",
+                        room_id, candidate
+                    );
+                    final_url_hls = Some(candidate.clone());
+                    break;
+                } else {
+                    eprintln!(
+                        "[Bilibili] HLS candidate returned status {} for room {} -> {}",
+                        resp.status(),
+                        room_id,
+                        candidate
+                    );
+                }
+            }
+            Err(err) => {
+                eprintln!(
+                    "[Bilibili] Failed to probe HLS candidate for room {} -> {} ({})",
+                    room_id, candidate, err
+                );
+            }
+        }
+    }
+
+    if final_url_hls.is_none() && final_url_flv.is_none() {
         return Ok(crate::platforms::common::LiveStreamInfo {
             title: init_json["data"]["title"].as_str().map(|s| s.to_string()),
             anchor_name: init_json["data"]["uname"].as_str().map(|s| s.to_string()),
@@ -339,56 +378,101 @@ pub async fn get_bilibili_live_stream_url_with_quality(
         });
     }
 
-    // 改为优先选择 FLV 地址（不使用 HLS）
-    if final_url_flv.is_none() {
+    enum SelectedStream {
+        Flv(String),
+        Hls(String),
+    }
+
+    let selected_stream = if let Some(flv_url) = final_url_flv {
+        eprintln!(
+            "[Bilibili] Selected FLV stream for room {}",
+            room_id
+        );
+        SelectedStream::Flv(flv_url)
+    } else if let Some(hls_url) = final_url_hls {
+        eprintln!(
+            "[Bilibili] FLV unavailable, falling back to HLS stream for room {}",
+            room_id
+        );
+        SelectedStream::Hls(hls_url)
+    } else {
+        // 理论上不会触发，上面已经做了判空
         return Ok(crate::platforms::common::LiveStreamInfo {
             title: init_json["data"]["title"].as_str().map(|s| s.to_string()),
             anchor_name: init_json["data"]["uname"].as_str().map(|s| s.to_string()),
             avatar: None,
             stream_url: None,
             status: Some(2),
-            error_message: Some("未找到可用的 FLV 地址（拒绝使用 HLS）".to_string()),
+            error_message: Some("未找到可用的直播流地址".to_string()),
             upstream_url: None,
             available_streams: Some(variants),
             normalized_room_id: None,
             web_rid: None,
         });
-    }
+    };
 
-    let real_url = final_url_flv.clone().unwrap();
+    match selected_stream {
+        SelectedStream::Flv(real_url) => {
+            // FLV：写入到 Store 并启动代理
+            let proxied_url = {
+                {
+                    let mut current_url_in_store = stream_url_store.url.lock().unwrap();
+                    *current_url_in_store = real_url.clone();
+                }
+                match start_proxy(app_handle, proxy_server_handle, stream_url_store).await {
+                    Ok(proxy) => Some(proxy),
+                    Err(e) => {
+                        eprintln!("[Bilibili] Failed to start proxy: {}", e);
+                        None
+                    }
+                }
+            };
 
-    // FLV：写入到 Store 并启动代理（不再返回 HLS）
-    let proxied_url = {
-        // 先更新 Store，再释放锁，最后启动代理，避免借用冲突
-        {
-            let mut current_url_in_store = stream_url_store.url.lock().unwrap();
-            *current_url_in_store = real_url.clone();
-        } // 作用域结束，释放 MutexGuard
-        match start_proxy(app_handle, proxy_server_handle, stream_url_store).await {
-            Ok(proxy) => Some(proxy),
-            Err(e) => {
-                eprintln!("[Bilibili] Failed to start proxy: {}", e);
+            let final_error_message = if proxied_url.is_none() {
+                Some("代理启动失败".to_string())
+            } else {
                 None
-            }
+            };
+
+            Ok(crate::platforms::common::LiveStreamInfo {
+                title: init_json["data"]["title"].as_str().map(|s| s.to_string()),
+                anchor_name: init_json["data"]["uname"].as_str().map(|s| s.to_string()),
+                avatar: None,
+                stream_url: proxied_url,
+                status: Some(if final_error_message.is_some() { 2 } else { 1 }),
+                error_message: final_error_message,
+                upstream_url: Some(real_url),
+                available_streams: Some(variants),
+                normalized_room_id: None,
+                web_rid: None,
+            })
         }
-    };
+        SelectedStream::Hls(real_url) => {
+            // HLS：无需本地代理，若存在旧的 FLV 代理则关闭并清空存储
+            {
+                let handle_to_stop = { proxy_server_handle.0.lock().unwrap().take() };
+                if let Some(handle) = handle_to_stop {
+                    handle.stop(false).await;
+                    eprintln!("[Bilibili] Stopped existing FLV proxy before using HLS stream");
+                }
+            }
+            {
+                let mut current_url_in_store = stream_url_store.url.lock().unwrap();
+                *current_url_in_store = String::new();
+            }
 
-    let final_error_message = if proxied_url.is_none() {
-        Some("代理启动失败".to_string())
-    } else {
-        None
-    };
-
-    Ok(crate::platforms::common::LiveStreamInfo {
-        title: init_json["data"]["title"].as_str().map(|s| s.to_string()),
-        anchor_name: init_json["data"]["uname"].as_str().map(|s| s.to_string()),
-        avatar: None,
-        stream_url: proxied_url,
-        status: Some(if final_error_message.is_some() { 2 } else { 1 }),
-        error_message: final_error_message,
-        upstream_url: Some(real_url),
-        available_streams: Some(variants),
-        normalized_room_id: None,
-        web_rid: None,
-    })
+            Ok(crate::platforms::common::LiveStreamInfo {
+                title: init_json["data"]["title"].as_str().map(|s| s.to_string()),
+                anchor_name: init_json["data"]["uname"].as_str().map(|s| s.to_string()),
+                avatar: None,
+                stream_url: Some(real_url.clone()),
+                status: Some(1),
+                error_message: None,
+                upstream_url: Some(real_url),
+                available_streams: Some(variants),
+                normalized_room_id: None,
+                web_rid: None,
+            })
+        }
+    }
 }

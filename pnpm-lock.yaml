@@ -44,6 +44,9 @@ importers:
       xgplayer-flv:
         specifier: ^3.0.23
         version: 3.0.23(core-js@3.46.0)(xgplayer@3.0.23(core-js@3.46.0))
+      xgplayer-hls.js:
+        specifier: ^3.0.23
+        version: 3.0.23(core-js@3.46.0)(xgplayer@3.0.23(core-js@3.46.0))
     devDependencies:
       '@tauri-apps/cli':
         specifier: ^2.7.0
@@ -545,6 +548,10 @@ packages:
   de-indent@1.0.2:
     resolution: {integrity: sha512-e/1zu3xH5MQryN2zdVaF0OrdNLUbvWxzMbi+iNA6Bky7l1RoP8a2fIbRocyHclXt/arDrrR6lL3TqFD9pMQTsg==}
 
+  deepmerge@2.0.1:
+    resolution: {integrity: sha512-VIPwiMJqJ13ZQfaCsIFnp5Me9tnjURiaIFxfz7EH0Ci0dTSQpZtSLrqOicXqEd/z2r+z+Klk9GzmnRsgpgbOsQ==}
+    engines: {node: '>=0.10.0'}
+
   delegate@3.2.0:
     resolution: {integrity: sha512-IofjkYBZaZivn0V8nnsMJGBr4jVLxHDheKSW88PyxS5QC4Vo9ZbZVvhzlSxY87fVq3STR6r+4cGepyHkcWOQSw==}
 
@@ -603,6 +610,9 @@ packages:
   he@1.2.0:
     resolution: {integrity: sha512-F/1DnUGPopORZi0ni+CvrCgHQ5FyEAHRLSApuYWMmrbSwoN2Mn/7k+Gl38gJnR7yyDZk6WLXwiGod1JOWNDKGw==}
     hasBin: true
+
+  hls.js@1.6.14:
+    resolution: {integrity: sha512-CSpT2aXsv71HST8C5ETeVo+6YybqCpHBiYrCRQSn3U5QUZuLTSsvtq/bj+zuvjLVADeKxoebzo16OkH8m1+65Q==}
 
   lucide-vue-next@0.546.0:
     resolution: {integrity: sha512-Ra4lNbm0m9uSb82ZBMCUg3c2xQ4qaU9b87fAFvFPoLC0/u7JxG5FJjhUFqfNfofk1xdZiDpF6EnCbaxTHXzLcw==}
@@ -753,6 +763,12 @@ packages:
     peerDependencies:
       core-js: '>=3.12.1'
       xgplayer: '>=3.0.1'
+
+  xgplayer-hls.js@3.0.23:
+    resolution: {integrity: sha512-oJR9m4+Bcjzdl4irpUszByt8xP/irCzFpV3Q/bePp8WG5uBnPHa8ApMNkau/EuggvsrS71Tnp4DMfxOZxeVLGQ==}
+    peerDependencies:
+      core-js: '>=3.12.1'
+      xgplayer: '>=3.0.13'
 
   xgplayer-streaming-shared@3.0.23:
     resolution: {integrity: sha512-j14MKqjSpEisd97hAV8ykg+txSkECZ3Z6AtCxZnRT4Jj0G5QRZAObAA1IIHv7wPN4tjNdtGm9odHiQOpsYYXuw==}
@@ -1135,6 +1151,8 @@ snapshots:
 
   de-indent@1.0.2: {}
 
+  deepmerge@2.0.1: {}
+
   delegate@3.2.0: {}
 
   downloadjs@1.4.7: {}
@@ -1216,6 +1234,8 @@ snapshots:
     optional: true
 
   he@1.2.0: {}
+
+  hls.js@1.6.14: {}
 
   lucide-vue-next@0.546.0(vue@3.5.18(typescript@5.6.3)):
     dependencies:
@@ -1341,6 +1361,14 @@ snapshots:
       xgplayer: 3.0.23(core-js@3.46.0)
       xgplayer-streaming-shared: 3.0.23(core-js@3.46.0)
       xgplayer-transmuxer: 3.0.23(core-js@3.46.0)
+
+  xgplayer-hls.js@3.0.23(core-js@3.46.0)(xgplayer@3.0.23(core-js@3.46.0)):
+    dependencies:
+      core-js: 3.46.0
+      deepmerge: 2.0.1
+      event-emitter: 0.3.5
+      hls.js: 1.6.14
+      xgplayer: 3.0.23(core-js@3.46.0)
 
   xgplayer-streaming-shared@3.0.23(core-js@3.46.0):
     dependencies:

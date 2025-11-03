@@ -13,6 +13,8 @@ export interface UnifiedRustDanmakuPayload {
   fans_club_level: number;
 }
 
+let douyuProxyActive = false;
+
 export async function getDouyuStreamConfig(roomId: string, quality: string = '原画'): Promise<{ streamUrl: string, streamType: string | undefined }> {
   let finalStreamUrl: string | null = null;
   let streamType: string | undefined = undefined;
@@ -65,6 +67,7 @@ export async function getDouyuStreamConfig(roomId: string, quality: string = '�
   try {
     await invoke('set_stream_url_cmd', { url: finalStreamUrl });
     const proxyUrl = await invoke<string>('start_proxy');
+    douyuProxyActive = true;
     return { streamUrl: proxyUrl, streamType };
   } catch (e: any) {
     throw new Error(`设置斗鱼代理失败: ${e.message}`);
@@ -144,9 +147,14 @@ export async function stopDouyuDanmaku(roomId: string, currentUnlistenFn: (() =>
 }
 
 export async function stopDouyuProxy(): Promise<void> {
+  if (!douyuProxyActive) {
+    return;
+  }
   try {
     await invoke('stop_proxy');
+    douyuProxyActive = false;
   } catch (e) {
     console.error('[DouyuPlayerHelper] Error stopping proxy server:', e);
+    douyuProxyActive = false;
   }
 }

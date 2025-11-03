@@ -6,6 +6,8 @@ import { v4 as uuidv4 } from 'uuid';
 
 export interface HuyaUnifiedEntry { quality: string; bitRate: number; url: string; }
 
+let huyaProxyActive = false;
+
 export async function getHuyaStreamConfig(roomId: string, quality: string = '原画'): Promise<{ streamUrl: string, streamType: string | undefined }> {
   console.log('[HuyaPlayerHelper] getHuyaStreamConfig called with roomId:', roomId, 'quality:', quality);
   try {
@@ -43,6 +45,7 @@ export async function startHuyaProxyFromUrl(directFlvUrl: string): Promise<{ str
     // 再启动代理，返回带有 /live.flv 的本地地址
     const localProxyUrl = await invoke<string>('start_proxy');
     console.log('[HuyaPlayerHelper] Proxy started for Huya:', localProxyUrl, 'from', directFlvUrl);
+    huyaProxyActive = true;
     return { streamUrl: localProxyUrl, streamType: 'flv' };
   } catch (error) {
     console.error('[HuyaPlayerHelper] Error starting Huya proxy:', error);
@@ -51,12 +54,16 @@ export async function startHuyaProxyFromUrl(directFlvUrl: string): Promise<{ str
 }
 
 export async function stopHuyaProxy(): Promise<void> {
+  if (!huyaProxyActive) {
+    return;
+  }
   try {
     await invoke('stop_proxy');
     console.log('[HuyaPlayerHelper] Proxy stopped successfully');
   } catch (error) {
     console.error('[HuyaPlayerHelper] Error stopping proxy:', error);
-    throw error;
+  } finally {
+    huyaProxyActive = false;
   }
 }
 

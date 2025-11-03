@@ -54,8 +54,57 @@ export async function getBilibiliStreamConfig(
     });
   }
 
-  // 强制使用 FLV 播放类型（不使用 HLS）
-  let streamType: string | undefined = 'flv';
+  let streamType: string | undefined;
+  const streamUrlLower = result.stream_url.toLowerCase();
+
+  if (
+    streamUrlLower.startsWith('http://127.0.0.1') ||
+    streamUrlLower.includes('/live.flv') ||
+    streamUrlLower.includes('.flv')
+  ) {
+    streamType = 'flv';
+  } else if (streamUrlLower.includes('.m3u8')) {
+    streamType = 'hls';
+  }
+
+  if (!streamType && result.available_streams && Array.isArray(result.available_streams)) {
+    const matchedVariant = (result.available_streams as StreamVariant[]).find((variant) => {
+      if (!variant?.url) {
+        return false;
+      }
+      const formatLower = variant.format?.toLowerCase() ?? '';
+      const protocolLower = variant.protocol?.toLowerCase() ?? '';
+      const isSameAsPrimary =
+        variant.url === result.stream_url || variant.url === result.upstream_url;
+      const isHlsCandidate =
+        formatLower === 'ts' ||
+        formatLower === 'fmp4' ||
+        formatLower === 'mp4' ||
+        formatLower === 'm4s' ||
+        protocolLower.includes('hls');
+      return isSameAsPrimary && isHlsCandidate;
+    });
+    if (matchedVariant) {
+      streamType = 'hls';
+    }
+  }
+
+  if (!streamType && result.upstream_url) {
+    const upstreamLower = result.upstream_url.toLowerCase();
+    if (upstreamLower.includes('.m3u8')) {
+      streamType = 'hls';
+    } else if (
+      upstreamLower.startsWith('http://127.0.0.1') ||
+      upstreamLower.includes('/live.flv') ||
+      upstreamLower.includes('.flv')
+    ) {
+      streamType = 'flv';
+    }
+  }
+
+  if (!streamType) {
+    streamType = 'flv';
+  }
 
   return { streamUrl: result.stream_url, streamType };
 }

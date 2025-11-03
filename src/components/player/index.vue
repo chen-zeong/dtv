@@ -104,6 +104,7 @@
 import { ref, reactive, onMounted, watch, onUnmounted, shallowRef, nextTick } from 'vue';
 import Player from 'xgplayer';
 import FlvPlugin from 'xgplayer-flv';
+import HlsPlugin from 'xgplayer-hls.js';
 import DanmuJs from 'danmu.js';
 import 'xgplayer/dist/index.min.css';
 import Plugin, { POSITIONS } from 'xgplayer/es/plugin/plugin.js';
@@ -1483,6 +1484,7 @@ async function mountXgPlayer(
   streamUrl: string,
   platformCode: StreamingPlatform,
   roomId: string,
+  streamType?: string | null,
 ) {
   await nextTick();
 
@@ -1493,7 +1495,10 @@ async function mountXgPlayer(
 
   playerContainerRef.value.innerHTML = '';
 
-  const player = new Player({
+  const playbackType = streamType === 'hls' ? 'hls' : 'flv';
+  const isHlsPlayback = playbackType === 'hls';
+
+  const playerOptions: Record<string, any> = {
     el: playerContainerRef.value,
     url: streamUrl,
     isLive: true,
@@ -1528,8 +1533,39 @@ async function mountXgPlayer(
       pipIcon: ICONS.pictureInPicture2,
       pipIconExit: ICONS.pictureInPicture2,
     },
-    plugins: [FlvPlugin],
-    flv: {
+  };
+
+  if (isHlsPlayback) {
+    const hlsFetchOptions: RequestInit = {
+      referrer: 'https://live.bilibili.com/',
+      referrerPolicy: 'no-referrer-when-downgrade',
+      credentials: 'omit',
+      mode: 'cors',
+    };
+
+    playerOptions.plugins = [HlsPlugin];
+    playerOptions.useHlsPlugin = true;
+    playerOptions.hls = {
+      isLive: true,
+      retryCount: 3,
+      retryDelay: 2000,
+      enableWorker: true,
+      withCredentials: false,
+      lowLatencyMode: false,
+      fetchOptions: hlsFetchOptions,
+      xhrSetup: (xhr: XMLHttpRequest) => {
+        try {
+          xhr.withCredentials = false;
+          xhr.setRequestHeader('Referer', 'https://live.bilibili.com/');
+          xhr.setRequestHeader('Origin', 'https://live.bilibili.com');
+        } catch (headerError) {
+          console.warn('[Player] Failed to attach Bilibili HLS headers:', headerError);
+        }
+      },
+    };
+  } else {
+    playerOptions.plugins = [FlvPlugin];
+    playerOptions.flv = {
       isLive: true,
       cors: true,
       autoCleanupSourceBuffer: true,
@@ -1538,8 +1574,10 @@ async function mountXgPlayer(
       lazyLoad: true,
       lazyLoadMaxDuration: 30,
       deferLoadAfterSourceOpen: true,
-    },
-  });
+    };
+  }
+
+  const player = new Player(playerOptions);
 
   playerInstance.value = player;
   const storedPlayerVolume = loadStoredVolume();
@@ -1807,7 +1845,7 @@ async function initializePlayerAndStream(
     }
 
     isLoadingStream.value = false;
-    await mountXgPlayer(streamConfig.streamUrl, pPlatform, pRoomId);
+    await mountXgPlayer(streamConfig.streamUrl, pPlatform, pRoomId, streamConfig.streamType);
   } catch (error: any) {
     console.error(`[Player] Error initializing stream for ${pPlatform} room ${pRoomId}:`, error);
     destroyPlayerInstance();

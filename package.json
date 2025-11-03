@@ -21,7 +21,8 @@
     "vue": "^3.5.13",
     "vue-router": "^4.5.1",
     "xgplayer": "^3.0.23",
-    "xgplayer-flv": "^3.0.23"
+    "xgplayer-flv": "^3.0.23",
+    "xgplayer-hls.js": "^3.0.23"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.7.0",
