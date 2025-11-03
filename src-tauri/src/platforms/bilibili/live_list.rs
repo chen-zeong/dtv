@@ -23,7 +23,10 @@ pub async fn fetch_bilibili_live_list(
             let fallback = { state.w_webid.lock().unwrap().clone() };
             match fallback {
                 Some(id) => {
-                    println!("[Bilibili] Using cached w_webid due to refresh failure: {}", id);
+                    println!(
+                        "[Bilibili] Using cached w_webid due to refresh failure: {}",
+                        id
+                    );
                     id
                 }
                 None => return Err(format!("w_webid 获取失败: {}", e)),

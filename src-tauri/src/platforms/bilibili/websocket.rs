@@ -104,7 +104,9 @@ impl BiliLiveClient {
             }) {
                 Ok(new_ws) => {
                     self.ws = new_ws;
-                    ws_debug!("[websocket] reconnect successful on attempt {attempt}, resending auth");
+                    ws_debug!(
+                        "[websocket] reconnect successful on attempt {attempt}, resending auth"
+                    );
                     self.send_auth();
                     return;
                 }

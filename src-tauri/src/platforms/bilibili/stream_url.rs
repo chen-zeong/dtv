@@ -230,10 +230,6 @@ pub async fn get_bilibili_live_stream_url_with_quality(
         quality, selected_qn, selected_desc
     );
 
-    // 2) Second request with selected qn (if any)
-    let playinfo2 = request_playinfo(&client, &room_id, selected_qn).await?;
-    let playurl2 = playinfo2["data"]["playurl_info"]["playurl"].clone();
-
     // Determine live status from room_init
     let room_init_url = format!(
         "https://api.live.bilibili.com/room/v1/Room/room_init?id={}",
@@ -266,41 +262,52 @@ pub async fn get_bilibili_live_stream_url_with_quality(
         });
     }
 
-    // 收集所有可用的播放地址（包含不同 host）
-    let mut variants: Vec<StreamVariant> = Vec::new();
-    let mut hls_candidates: Vec<String> = Vec::new();
-    let mut final_url_flv: Option<String> = None;
-    if let Some(streams) = playurl2.get("stream").and_then(|v| v.as_array()) {
-        for stream_item in streams {
-            let protocol = stream_item
-                .get("protocol_name")
-                .and_then(|v| v.as_str())
-                .map(|s| s.to_string());
-            if let Some(formats) = stream_item.get("format").and_then(|v| v.as_array()) {
-                for format_item in formats {
-                    let format_name = format_item
-                        .get("format_name")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or("");
-                    if let Some(codecs) = format_item.get("codec").and_then(|v| v.as_array()) {
-                        for codec_item in codecs {
-                            let base_url = codec_item
-                                .get("base_url")
-                                .and_then(|v| v.as_str())
-                                .unwrap_or("");
-                            if let Some(url_infos) =
-                                codec_item.get("url_info").and_then(|v| v.as_array())
-                            {
-                                for ui in url_infos {
-                                    let host =
-                                        ui.get("host").and_then(|v| v.as_str()).unwrap_or("");
-                                    let extra =
-                                        ui.get("extra").and_then(|v| v.as_str()).unwrap_or("");
-                                    let composed = format!("{}{}{}", host, base_url, extra);
-                                    if !composed.is_empty() {
-                                        // 记录到 variants
-                                        let protocol_name =
-                                            protocol.clone().unwrap_or_else(|| "".to_string());
+    enum SelectedStream {
+        Flv(String),
+        Hls(String),
+    }
+
+    fn parse_stream_variants(
+        playurl: &Value,
+        selected_desc: &Option<String>,
+        selected_qn: Option<i32>,
+    ) -> (Vec<StreamVariant>, Option<String>, Vec<String>) {
+        let mut variants: Vec<StreamVariant> = Vec::new();
+        let mut hls_candidates: Vec<String> = Vec::new();
+        let mut flv_candidate: Option<String> = None;
+
+        if let Some(streams) = playurl.get("stream").and_then(|v| v.as_array()) {
+            for stream_item in streams {
+                let protocol_name = stream_item
+                    .get("protocol_name")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string();
+                if let Some(formats) = stream_item.get("format").and_then(|v| v.as_array()) {
+                    for format_item in formats {
+                        let format_name = format_item
+                            .get("format_name")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("");
+                        if let Some(codecs) = format_item.get("codec").and_then(|v| v.as_array()) {
+                            for codec_item in codecs {
+                                let base_url = codec_item
+                                    .get("base_url")
+                                    .and_then(|v| v.as_str())
+                                    .unwrap_or("");
+                                if let Some(url_infos) =
+                                    codec_item.get("url_info").and_then(|v| v.as_array())
+                                {
+                                    for ui in url_infos {
+                                        let host =
+                                            ui.get("host").and_then(|v| v.as_str()).unwrap_or("");
+                                        let extra =
+                                            ui.get("extra").and_then(|v| v.as_str()).unwrap_or("");
+                                        let composed = format!("{}{}{}", host, base_url, extra);
+                                        if composed.is_empty() {
+                                            continue;
+                                        }
+
                                         variants.push(StreamVariant {
                                             url: composed.clone(),
                                             format: Some(format_name.to_string()),
@@ -312,6 +319,7 @@ pub async fn get_bilibili_live_stream_url_with_quality(
                                                 Some(protocol_name.clone())
                                             },
                                         });
+
                                         let is_hls_format = matches!(
                                             format_name,
                                             "ts" | "fmp4" | "mp4" | "m4s" | "m3u8"
@@ -320,9 +328,8 @@ pub async fn get_bilibili_live_stream_url_with_quality(
                                         if is_hls_format || is_hls_protocol {
                                             hls_candidates.push(composed.clone());
                                         }
-                                        if format_name == "flv" && final_url_flv.is_none() {
-                                            // 记录第一个可用的 FLV 地址，优先使用
-                                            final_url_flv = Some(composed.clone());
+                                        if format_name == "flv" && flv_candidate.is_none() {
+                                            flv_candidate = Some(composed.clone());
                                         }
                                     }
                                 }
@@ -332,83 +339,151 @@ pub async fn get_bilibili_live_stream_url_with_quality(
                 }
             }
         }
+
+        (variants, flv_candidate, hls_candidates)
     }
 
-    let mut final_url_hls: Option<String> = None;
-    for candidate in hls_candidates.iter().take(4) {
-        match client.get(candidate).send().await {
-            Ok(resp) => {
-                if resp.status().is_success() {
+    async fn verify_hls_candidates(
+        client: &reqwest::Client,
+        room_id: &str,
+        candidates: &[String],
+    ) -> Option<String> {
+        for candidate in candidates.iter().take(4) {
+            match client.get(candidate).send().await {
+                Ok(resp) => {
+                    if resp.status().is_success() {
+                        eprintln!(
+                            "[Bilibili] Verified HLS candidate for room {} -> {}",
+                            room_id, candidate
+                        );
+                        return Some(candidate.clone());
+                    } else {
+                        eprintln!(
+                            "[Bilibili] HLS candidate returned status {} for room {} -> {}",
+                            resp.status(),
+                            room_id,
+                            candidate
+                        );
+                    }
+                }
+                Err(err) => {
                     eprintln!(
-                        "[Bilibili] Verified HLS candidate for room {} -> {}",
-                        room_id, candidate
-                    );
-                    final_url_hls = Some(candidate.clone());
-                    break;
-                } else {
-                    eprintln!(
-                        "[Bilibili] HLS candidate returned status {} for room {} -> {}",
-                        resp.status(),
-                        room_id,
-                        candidate
+                        "[Bilibili] Failed to probe HLS candidate for room {} -> {} ({})",
+                        room_id, candidate, err
                     );
                 }
             }
-            Err(err) => {
+        }
+        None
+    }
+
+    const MAX_HLS_RETRY: usize = 3;
+    let mut selected_stream: Option<SelectedStream> = None;
+    let mut variants_for_response: Vec<StreamVariant> = Vec::new();
+    let mut fallback_hls_url: Option<String> = None;
+    let mut fallback_variants: Option<Vec<StreamVariant>> = None;
+
+    for attempt in 0..=MAX_HLS_RETRY {
+        let attempt_display = attempt + 1;
+        let playinfo_attempt = request_playinfo(&client, &room_id, selected_qn).await?;
+        let playurl_attempt = playinfo_attempt["data"]["playurl_info"]["playurl"].clone();
+        let (variants, flv_candidate, hls_candidates) =
+            parse_stream_variants(&playurl_attempt, &selected_desc, selected_qn);
+
+        variants_for_response = variants.clone();
+
+        if let Some(flv_url) = flv_candidate {
+            eprintln!(
+                "[Bilibili] Attempt {} obtained FLV stream for room {}, stop retrying",
+                attempt_display, room_id
+            );
+            selected_stream = Some(SelectedStream::Flv(flv_url));
+            break;
+        }
+
+        if hls_candidates.is_empty() {
+            eprintln!(
+                "[Bilibili] Attempt {} returned no HLS candidates for room {}",
+                attempt_display, room_id
+            );
+            if attempt == MAX_HLS_RETRY {
+                break;
+            }
+            continue;
+        }
+
+        let (preferred_candidates, other_candidates): (Vec<String>, Vec<String>) = hls_candidates
+            .into_iter()
+            .partition(|url| url.contains("d1--cn"));
+
+        if let Some(url) = verify_hls_candidates(&client, &room_id, &preferred_candidates).await {
+            eprintln!(
+                "[Bilibili] Selected HLS stream containing 'd1--cn' on attempt {} for room {}",
+                attempt_display, room_id
+            );
+            selected_stream = Some(SelectedStream::Hls(url));
+            break;
+        }
+
+        if fallback_hls_url.is_none() {
+            if let Some(url) = verify_hls_candidates(&client, &room_id, &other_candidates).await {
+                fallback_hls_url = Some(url.clone());
+                fallback_variants = Some(variants.clone());
+            }
+        }
+
+        if attempt == MAX_HLS_RETRY {
+            if let Some(url) = fallback_hls_url.clone() {
                 eprintln!(
-                    "[Bilibili] Failed to probe HLS candidate for room {} -> {} ({})",
-                    room_id, candidate, err
+                    "[Bilibili] Using non 'd1--cn' HLS stream after {} attempts for room {}",
+                    attempt_display, room_id
                 );
+                selected_stream = Some(SelectedStream::Hls(url));
+                if let Some(fallback) = fallback_variants.clone() {
+                    variants_for_response = fallback;
+                }
+            } else if let Some(url) =
+                verify_hls_candidates(&client, &room_id, &other_candidates).await
+            {
+                eprintln!(
+                    "[Bilibili] Final attempt picked non 'd1--cn' HLS stream for room {}",
+                    room_id
+                );
+                selected_stream = Some(SelectedStream::Hls(url));
+                variants_for_response = variants.clone();
             }
         }
     }
 
-    if final_url_hls.is_none() && final_url_flv.is_none() {
-        return Ok(crate::platforms::common::LiveStreamInfo {
-            title: init_json["data"]["title"].as_str().map(|s| s.to_string()),
-            anchor_name: init_json["data"]["uname"].as_str().map(|s| s.to_string()),
-            avatar: None,
-            stream_url: None,
-            status: Some(2),
-            error_message: Some(format!("未从播放信息中获取到M3U8或FLV地址")),
-            upstream_url: None,
-            available_streams: Some(variants),
-            normalized_room_id: None,
-            web_rid: None,
-        });
+    if selected_stream.is_none() {
+        if let Some(url) = fallback_hls_url.clone() {
+            eprintln!(
+                "[Bilibili] Falling back to cached non 'd1--cn' HLS stream for room {}",
+                room_id
+            );
+            selected_stream = Some(SelectedStream::Hls(url));
+            if let Some(fallback) = fallback_variants.clone() {
+                variants_for_response = fallback;
+            }
+        }
     }
 
-    enum SelectedStream {
-        Flv(String),
-        Hls(String),
-    }
-
-    let selected_stream = if let Some(flv_url) = final_url_flv {
-        eprintln!(
-            "[Bilibili] Selected FLV stream for room {}",
-            room_id
-        );
-        SelectedStream::Flv(flv_url)
-    } else if let Some(hls_url) = final_url_hls {
-        eprintln!(
-            "[Bilibili] FLV unavailable, falling back to HLS stream for room {}",
-            room_id
-        );
-        SelectedStream::Hls(hls_url)
-    } else {
-        // 理论上不会触发，上面已经做了判空
-        return Ok(crate::platforms::common::LiveStreamInfo {
-            title: init_json["data"]["title"].as_str().map(|s| s.to_string()),
-            anchor_name: init_json["data"]["uname"].as_str().map(|s| s.to_string()),
-            avatar: None,
-            stream_url: None,
-            status: Some(2),
-            error_message: Some("未找到可用的直播流地址".to_string()),
-            upstream_url: None,
-            available_streams: Some(variants),
-            normalized_room_id: None,
-            web_rid: None,
-        });
+    let selected_stream = match selected_stream {
+        Some(stream) => stream,
+        None => {
+            return Ok(crate::platforms::common::LiveStreamInfo {
+                title: init_json["data"]["title"].as_str().map(|s| s.to_string()),
+                anchor_name: init_json["data"]["uname"].as_str().map(|s| s.to_string()),
+                avatar: None,
+                stream_url: None,
+                status: Some(2),
+                error_message: Some("未找到可用的直播流地址".to_string()),
+                upstream_url: None,
+                available_streams: Some(variants_for_response),
+                normalized_room_id: None,
+                web_rid: None,
+            });
+        }
     };
 
     match selected_stream {
@@ -442,7 +517,7 @@ pub async fn get_bilibili_live_stream_url_with_quality(
                 status: Some(if final_error_message.is_some() { 2 } else { 1 }),
                 error_message: final_error_message,
                 upstream_url: Some(real_url),
-                available_streams: Some(variants),
+                available_streams: Some(variants_for_response.clone()),
                 normalized_room_id: None,
                 web_rid: None,
             })
@@ -469,7 +544,7 @@ pub async fn get_bilibili_live_stream_url_with_quality(
                 status: Some(1),
                 error_message: None,
                 upstream_url: Some(real_url),
-                available_streams: Some(variants),
+                available_streams: Some(variants_for_response),
                 normalized_room_id: None,
                 web_rid: None,
             })
