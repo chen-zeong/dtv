@@ -49,7 +49,7 @@
     </div>
     
     <Transition name="folder-content">
-      <div v-if="folder.expanded && folderItems.length > 0" class="folder-content">
+      <div v-if="folder.expanded && folderItems.length > 0" class="folder-content" :class="{ 'disable-pointer': globalDragging }">
         <ul class="folder-streamers-list">
           <li
             v-for="streamer in folderItems"
@@ -57,7 +57,9 @@
             class="folder-streamer-item"
             :class="getStreamerItemClass(streamer)"
             @click.stop="handleClick(streamer)"
-            @mousedown.stop="(e) => handleFolderStreamerDragStart(streamer, e)"
+            @mousedown.stop="(e) => handleFolderStreamerMouseDown(streamer, e)"
+            @mouseup.stop="handleFolderStreamerMouseUp"
+            @mouseleave="handleFolderStreamerMouseUp"
           >
             <StreamerItem 
               :streamer="streamer"
@@ -90,6 +92,7 @@ const props = defineProps<{
   isDragging?: boolean;
   isDragOver?: boolean;
   canAcceptDrop?: boolean;
+  globalDragging?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -104,12 +107,20 @@ const emit = defineEmits<{
 }>();
 
 const folderItems = computed(() => {
-  return props.folder.streamerIds
-    .map((key: string) => {
-      const [platform, id] = key.split(':');
-      return props.allStreamers.find((s: FollowedStreamer) => s.platform === platform && s.id === id);
-    })
-    .filter((s): s is FollowedStreamer => s !== undefined);
+  const seen = new Set<string>();
+  const result: FollowedStreamer[] = [];
+  for (const key of props.folder.streamerIds) {
+    const [platform, id] = (key || '').split(':');
+    const platformKey = (platform || '').toUpperCase();
+    const dedupKey = `${platformKey}:${id}`;
+    if (seen.has(dedupKey)) continue;
+    const found = props.allStreamers.find((s: FollowedStreamer) => String(s.platform).toUpperCase() === platformKey && s.id === id);
+    if (found) {
+      seen.add(dedupKey);
+      result.push(found);
+    }
+  }
+  return result;
 });
 
 const toggleExpand = () => {
@@ -127,6 +138,11 @@ const handleContextMenu = (e: MouseEvent) => {
 };
 
 const handleClick = (streamer: FollowedStreamer) => {
+  // 若已进入长按拖动，阻止点击进入观看
+  if (longPressTriggered) {
+    longPressTriggered = false;
+    return;
+  }
   emit('selectAnchor', streamer);
 };
 
@@ -142,8 +158,30 @@ const handleMouseLeave = () => {
   }
 };
 
-const handleFolderStreamerDragStart = (streamer: FollowedStreamer, event: MouseEvent) => {
-  emit('streamerDragStart', streamer, event);
+// 长按触发拖动，避免单击立即进入拖动
+const LONG_PRESS_MS = 250;
+let longPressTimer: number | null = null;
+let longPressTriggered = false;
+
+const clearLongPress = () => {
+  if (longPressTimer !== null) {
+    clearTimeout(longPressTimer);
+    longPressTimer = null;
+  }
+};
+
+const handleFolderStreamerMouseDown = (streamer: FollowedStreamer, event: MouseEvent) => {
+  if (props.globalDragging) return;
+  longPressTriggered = false;
+  clearLongPress();
+  longPressTimer = window.setTimeout(() => {
+    longPressTriggered = true;
+    emit('streamerDragStart', streamer, event);
+  }, LONG_PRESS_MS);
+};
+
+const handleFolderStreamerMouseUp = () => {
+  clearLongPress();
 };
 
 const getStreamerItemClass = (streamer: FollowedStreamer) => {

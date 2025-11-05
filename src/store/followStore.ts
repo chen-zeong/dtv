@@ -18,6 +18,11 @@ interface FollowState {
   followedStreamers: FollowedStreamer[];
   folders: FollowFolder[];
   listOrder: FollowListItem[]; // 混合列表，包含文件夹和主播的顺序
+  _snapshot?: {
+    followedStreamers: FollowedStreamer[];
+    folders: FollowFolder[];
+    listOrder: FollowListItem[];
+  } | null;
 }
 
 export const useFollowStore = defineStore('follow', {
@@ -25,6 +30,7 @@ export const useFollowStore = defineStore('follow', {
     followedStreamers: [], // Initialize with an empty array or load from localStorage
     folders: [],
     listOrder: [], // 混合列表顺序
+    _snapshot: null,
   }),
   getters: {
     isFollowed: (state: FollowState) => (platform: Platform, id: string): boolean => {
@@ -35,6 +41,30 @@ export const useFollowStore = defineStore('follow', {
     }
   },
   actions: {
+    // 事务：用于拖拽等需要一致性保障的操作
+    beginTransaction() {
+      this._snapshot = {
+        followedStreamers: JSON.parse(JSON.stringify(this.followedStreamers)),
+        folders: JSON.parse(JSON.stringify(this.folders)),
+        listOrder: JSON.parse(JSON.stringify(this.listOrder)),
+      };
+    },
+    commitTransaction() {
+      this._snapshot = null;
+      this._saveFollows();
+      this._saveFolders();
+      this._saveListOrder();
+    },
+    rollbackTransaction() {
+      if (!this._snapshot) return;
+      this.followedStreamers = this._snapshot.followedStreamers;
+      this.folders = this._snapshot.folders;
+      this.listOrder = this._snapshot.listOrder;
+      this._snapshot = null;
+      this._saveFollows();
+      this._saveFolders();
+      this._saveListOrder();
+    },
     // Action to load followed streamers, e.g., from localStorage
     loadFollowedStreamers() {
       const storedFollows = localStorage.getItem('followedStreamers');
@@ -270,15 +300,37 @@ export const useFollowStore = defineStore('follow', {
     
     // 将主播移入文件夹
     moveStreamerToFolder(streamerKey: string, folderId: string) {
-      const folder = this.folders.find(f => f.id === folderId);
-      if (!folder || folder.streamerIds.includes(streamerKey)) return;
-      
-      folder.streamerIds.push(streamerKey);
+      // 规范化 key（平台转大写字符串，id 原样）
+      const [rawPlatform, rawId] = streamerKey.split(':');
+      const normKey = `${String(rawPlatform || '').toUpperCase()}:${rawId}`;
+      const targetFolder = this.folders.find(f => f.id === folderId);
+      if (!targetFolder) return;
+
+      // 全局唯一：先从其它文件夹中移除该主播，避免交叉管理导致的覆盖/消失
+      this.folders.forEach(f => {
+        if (f.id !== folderId) {
+          f.streamerIds = f.streamerIds.filter(id => {
+            const [p, i] = (id || '').split(':');
+            const nk = `${String(p || '').toUpperCase()}:${i}`;
+            return nk !== normKey;
+          });
+        }
+      });
+
+      // 目标文件夹合并去重（集合语义）
+      const nextIdsSet = new Set<string>();
+      for (const id of targetFolder.streamerIds) {
+        const [p, i] = (id || '').split(':');
+        const canon = `${String(p || '').toUpperCase()}:${i}`;
+        nextIdsSet.add(canon);
+      }
+      nextIdsSet.add(normKey);
+      targetFolder.streamerIds = Array.from(nextIdsSet);
       // 从主列表中移除该项
       this.listOrder = this.listOrder.filter(item => {
         if (item.type === 'streamer') {
-          const key = `${item.data.platform}:${item.data.id}`;
-          return key !== streamerKey;
+          const key = `${String(item.data.platform).toUpperCase()}:${item.data.id}`;
+          return key !== normKey;
         }
         return true;
       });
@@ -288,17 +340,28 @@ export const useFollowStore = defineStore('follow', {
     
     // 将主播从文件夹移出
     removeStreamerFromFolder(streamerKey: string, folderId: string) {
+      const [rawPlatform, rawId] = streamerKey.split(':');
+      const normKey = `${String(rawPlatform || '').toUpperCase()}:${rawId}`;
       const folder = this.folders.find(f => f.id === folderId);
       if (!folder) return;
       
-      folder.streamerIds = folder.streamerIds.filter(id => id !== streamerKey);
+      folder.streamerIds = folder.streamerIds.filter(id => {
+        const [p, i] = (id || '').split(':');
+        const nk = `${String(p || '').toUpperCase()}:${i}`;
+        return nk !== normKey;
+      });
       // 将主播添加回主列表（在文件夹后面）
       const folderIndex = this.listOrder.findIndex(item => item.type === 'folder' && item.data.id === folderId);
       if (folderIndex !== -1) {
-        const [platform, id] = streamerKey.split(':');
-        const streamer = this.followedStreamers.find(s => s.platform === platform as Platform && s.id === id);
+        const platformUpper = String(rawPlatform || '').toUpperCase();
+        const id = rawId;
+        const streamer = this.followedStreamers.find(s => String(s.platform).toUpperCase() === platformUpper && s.id === id);
         if (streamer) {
-          this.listOrder.splice(folderIndex + 1, 0, { type: 'streamer', data: streamer });
+          // 若已存在于主列表则不重复插入
+          const existsInList = this.listOrder.some(item => item.type === 'streamer' && String(item.data.platform).toUpperCase() === String(streamer.platform).toUpperCase() && item.data.id === streamer.id);
+          if (!existsInList) {
+            this.listOrder.splice(folderIndex + 1, 0, { type: 'streamer', data: streamer });
+          }
         }
       }
       this._saveFolders();
