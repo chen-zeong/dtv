@@ -71,13 +71,6 @@ const showRenameDialog = ref(false);
 const renameValue = ref('');
 const renameInputRef = ref<HTMLInputElement | null>(null);
 
-watch(() => props.show, (newVal: boolean) => {
-  if (!newVal) {
-    showRenameDialog.value = false;
-    renameValue.value = '';
-  }
-});
-
 const close = () => {
   emit('close');
 };

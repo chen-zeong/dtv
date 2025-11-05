@@ -4,9 +4,9 @@
   "version": "2.3.3",
   "identifier": "com.dtv.app",
   "build": {
-    "beforeDevCommand": "pnpm run dev",
+    "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:2896",
-    "beforeBuildCommand": "pnpm run build",
+    "beforeBuildCommand": "npm run build",
     "frontendDist": "../dist"
   },
   "app": {
