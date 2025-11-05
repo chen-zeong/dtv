@@ -48,7 +48,14 @@
       </svg>
     </div>
     
-    <Transition name="folder-content">
+    <Transition
+      @before-enter="handleFolderBeforeEnter"
+      @enter="handleFolderEnter"
+      @after-enter="handleFolderAfterEnter"
+      @before-leave="handleFolderBeforeLeave"
+      @leave="handleFolderLeave"
+      @after-leave="handleFolderAfterLeave"
+    >
       <div v-if="folder.expanded && folderItems.length > 0" class="folder-content" :class="{ 'disable-pointer': globalDragging }">
         <ul class="folder-streamers-list">
           <li
@@ -191,6 +198,58 @@ const getStreamerItemClass = (streamer: FollowedStreamer) => {
     'status-offline': streamer.liveStatus === 'OFFLINE' || !streamer.liveStatus || streamer.liveStatus === 'UNKNOWN',
   };
 };
+
+const TRANSITION_DURATION = 220;
+const TRANSITION_EASING = 'cubic-bezier(0.4, 0, 0.2, 1)';
+
+const applyTransition = (el: HTMLElement) => {
+  el.style.transition = `height ${TRANSITION_DURATION}ms ${TRANSITION_EASING}, opacity ${TRANSITION_DURATION}ms ${TRANSITION_EASING}`;
+};
+
+const clearTransition = (el: HTMLElement) => {
+  el.style.transition = '';
+  el.style.height = '';
+  el.style.opacity = '';
+  el.style.overflow = '';
+};
+
+const handleFolderBeforeEnter = (el: Element) => {
+  const element = el as HTMLElement;
+  element.style.height = '0px';
+  element.style.opacity = '0';
+  element.style.overflow = 'hidden';
+};
+
+const handleFolderEnter = (el: Element) => {
+  const element = el as HTMLElement;
+  applyTransition(element);
+  void element.offsetHeight;
+  element.style.height = `${element.scrollHeight}px`;
+  element.style.opacity = '1';
+};
+
+const handleFolderAfterEnter = (el: Element) => {
+  clearTransition(el as HTMLElement);
+};
+
+const handleFolderBeforeLeave = (el: Element) => {
+  const element = el as HTMLElement;
+  element.style.height = `${element.scrollHeight}px`;
+  element.style.opacity = '1';
+  element.style.overflow = 'hidden';
+};
+
+const handleFolderLeave = (el: Element) => {
+  const element = el as HTMLElement;
+  applyTransition(element);
+  void element.offsetHeight;
+  element.style.height = '0px';
+  element.style.opacity = '0';
+};
+
+const handleFolderAfterLeave = (el: Element) => {
+  clearTransition(el as HTMLElement);
+};
 </script>
 
 <style scoped>
@@ -311,18 +370,6 @@ const getStreamerItemClass = (streamer: FollowedStreamer) => {
   background: rgba(16, 185, 129, 0.12);
 }
 
-.folder-content-enter-active,
-.folder-content-leave-active {
-  transition: opacity 0.2s ease, max-height 0.3s ease;
-  overflow: hidden;
-}
-
-.folder-content-enter-from,
-.folder-content-leave-to {
-  opacity: 0;
-  max-height: 0;
-}
-
 :root[data-theme="light"] .folder-item {
   background: #f4f7fd;
   border-color: rgba(209, 217, 234, 0.7);
@@ -369,4 +416,3 @@ const getStreamerItemClass = (streamer: FollowedStreamer) => {
   box-shadow: 0 0 0 2px rgba(114, 147, 255, 0.3);
 }
 </style>
-

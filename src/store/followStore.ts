@@ -229,9 +229,9 @@ export const useFollowStore = defineStore('follow', {
         streamerIds: [],
         expanded: true,
       };
-      this.folders.push(folder);
-      // 添加到列表末尾
-      this.listOrder.push({ type: 'folder', data: folder });
+      this.folders.unshift(folder);
+      // 添加到列表顶部
+      this.listOrder.unshift({ type: 'folder', data: folder });
       this._saveFolders();
       this._saveListOrder();
       return id;
