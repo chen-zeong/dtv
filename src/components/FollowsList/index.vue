@@ -35,12 +35,26 @@
               </svg>
             </span>
           </button>
+          <!-- 新建文件夹 -->
+          <button 
+            class="action-btn create-folder-btn"
+            @click="createNewFolder"
+            title="新建文件夹"
+          >
+            <span class="icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                <line x1="12" y1="11" x2="12" y2="17"></line>
+                <line x1="9" y1="14" x2="15" y2="14"></line>
+              </svg>
+            </span>
+          </button>
         </div>
 
       </div>
       
       <div class="list-content" ref="listRef">
-        <div v-if="streamers.length === 0" class="empty-state">
+        <div v-if="listItems.length === 0" class="empty-state">
           <div class="empty-image">
             <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather feather-heart">
               <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
@@ -57,30 +71,66 @@
           class="streamers-list"
         >
           <li
-            v-for="(streamer, index) in streamers"
-            :key="streamer.id"
-            class="streamer-item"
-            :class="[
-              getStreamerItemClass(streamer),
-              { 
-                'is-dragging': isDragging && draggedIndex === index,
-                'just-added': justAddedIds.includes(streamer.id)
-              }
-            ]"
+            v-for="(item, index) in listItems"
+            :key="item.type === 'folder' ? `folder_${item.data.id}` : `${item.data.platform}:${item.data.id}`"
+            class="list-item-wrapper"
+            :class="{ 
+              'is-dragging': isDragging && draggedIndex === index,
+              'is-folder': item.type === 'folder',
+              'is-streamer': item.type === 'streamer'
+            }"
             @mousedown="handleMouseDown($event, index)"
-            @click="handleClick($event, streamer)"
           >
-            <StreamerItem 
-              :streamer="streamer"
-              :getAvatarSrc="getAvatarSrc"
-              :handleImgError="handleImgError"
-              :getLiveIndicatorClass="getLiveIndicatorClass"
-              :proxyBase="proxyBase"
-              @clickItem="(s) => emit('selectAnchor', s)"
+            <!-- 文件夹项 -->
+            <FolderItem
+              v-if="item.type === 'folder'"
+              :folder="item.data"
+              :all-streamers="props.followedAnchors"
+              :get-avatar-src="getAvatarSrc"
+              :handle-img-error="handleImgError"
+              :get-live-indicator-class="getLiveIndicatorClass"
+              :proxy-base="proxyBase"
+              :is-dragging="isDragging && draggedIndex === index"
+              @select-anchor="(s) => emit('selectAnchor', s)"
+              @toggle-expand="handleToggleFolderExpand"
+              @drag-start="(id, e) => handleFolderDragStart(id, index, e)"
+              @context-menu="(id, e) => handleFolderContextMenu(id, e)"
             />
+            
+            <!-- 主播项 -->
+            <div
+              v-else
+              class="streamer-item"
+              :class="[
+                getStreamerItemClass(item.data),
+                { 
+                  'just-added': justAddedIds.includes(item.data.id)
+                }
+              ]"
+              @click="handleClick($event, item.data)"
+            >
+              <StreamerItem 
+                :streamer="item.data"
+                :getAvatarSrc="getAvatarSrc"
+                :handleImgError="handleImgError"
+                :getLiveIndicatorClass="getLiveIndicatorClass"
+                :proxyBase="proxyBase"
+                @clickItem="(s) => emit('selectAnchor', s)"
+              />
+            </div>
           </li>
         </TransitionGroup>
       </div>
+      
+      <!-- 文件夹右键菜单 -->
+      <FolderContextMenu
+        :show="contextMenu.show"
+        :position="contextMenu.position"
+        :folder-name="contextMenu.folderName"
+        @close="contextMenu.show = false"
+        @rename="handleFolderRename"
+        @delete="handleFolderDelete"
+      />
 
       <!-- 悬浮关注列表：使用组件 FollowOverlay -->
       <FollowOverlay 
@@ -124,11 +174,16 @@
   import StreamerItem from './StreamerItem.vue';
   import FollowOverlay from './FollowOverlay.vue';
   import FilterChips from './FilterChips.vue';
+  import FolderItem from './FolderItem.vue';
+  import FolderContextMenu from './FolderContextMenu.vue';
   import { useImageProxy } from './useProxy';
+  import { useFollowStore, type FollowListItem } from '../../store/followStore';
 
   const expandBtnRef = ref<HTMLButtonElement | null>(null)
   const overlayAlignTop = ref<number>(64)
   const overlayAlignLeft = ref<number>(240)
+  
+  const followStore = useFollowStore();
   
   // Updated DouyinRoomInfo to match the Rust struct DouyinFollowListRoomInfo
   // interface DouyinRoomInfo { // This will be the type for `data` from invoke
@@ -142,6 +197,14 @@
     (e: 'unfollow', payload: { platform: Platform, id: string }): void; // Ensure Platform type is used here if not already
     (e: 'reorderList', newList: FollowedStreamer[]): void;
   }>();
+  
+  // 右键菜单状态
+  const contextMenu = ref({
+    show: false,
+    position: { x: 0, y: 0 },
+    folderId: '',
+    folderName: '',
+  });
   
   const isRefreshing = ref(false);
   // 新增：刷新完成后显示打勾图标 1 秒
@@ -196,9 +259,113 @@
   }
   const MIN_ANIMATION_DURATION = 1500;
   
-
   const streamers = computed(() => props.followedAnchors);
   
+  // 列表项：使用 store 的 listOrder，如果为空则使用 followedAnchors
+  const listItems = computed((): FollowListItem[] => {
+    if (followStore.listOrder.length > 0) {
+      // 同步更新 listOrder 中的 streamer 数据，并确保文件夹数据是最新的
+      return followStore.listOrder.map(item => {
+        if (item.type === 'streamer') {
+          const streamer = props.followedAnchors.find(s => 
+            s.platform === item.data.platform && s.id === item.data.id
+          );
+          if (streamer) {
+            return { type: 'streamer' as const, data: streamer };
+          }
+        } else if (item.type === 'folder') {
+          // 确保文件夹数据是最新的（从 folders 数组中获取最新的文件夹对象）
+          const latestFolder = followStore.folders.find(f => f.id === item.data.id);
+          if (latestFolder) {
+            return { type: 'folder' as const, data: latestFolder };
+          }
+        }
+        return item;
+      }).filter(item => {
+        // 如果是主播项但找不到对应的主播，则过滤掉
+        if (item.type === 'streamer') {
+          return props.followedAnchors.some(s => 
+            s.platform === item.data.platform && s.id === item.data.id
+          );
+        }
+        // 如果是文件夹项但找不到对应的文件夹，则过滤掉
+        if (item.type === 'folder') {
+          return followStore.folders.some(f => f.id === item.data.id);
+        }
+        return true;
+      });
+    } else {
+      // 如果没有 listOrder，则初始化为所有主播
+      return props.followedAnchors.map(s => ({ type: 'streamer' as const, data: s }));
+    }
+  });
+
+  // 自定义文件夹
+  const createNewFolder = () => {
+    const name = `新文件夹 ${followStore.folders.length + 1}`;
+    followStore.createFolder(name);
+  };
+  
+  // 文件夹展开/折叠
+  const handleToggleFolderExpand = (folderId: string) => {
+    followStore.toggleFolderExpanded(folderId);
+  };
+  
+  // 文件夹右键菜单
+  const handleFolderContextMenu = (folderId: string, event: MouseEvent) => {
+    const folder = followStore.folders.find(f => f.id === folderId);
+    if (folder) {
+      contextMenu.value = {
+        show: true,
+        position: { x: event.clientX, y: event.clientY },
+        folderId,
+        folderName: folder.name,
+      };
+    }
+  };
+  
+  // 文件夹重命名
+  const handleFolderRename = (newName: string) => {
+    if (!contextMenu.value.folderId) return;
+    
+    const trimmedName = newName.trim();
+    if (!trimmedName) {
+      console.warn('Folder name cannot be empty');
+      return;
+    }
+    
+    followStore.renameFolder(contextMenu.value.folderId, trimmedName);
+    // 更新 contextMenu 中的文件夹名称，以便下次打开时显示新名称
+    const folder = followStore.folders.find((f) => f.id === contextMenu.value.folderId);
+    if (folder) {
+      contextMenu.value.folderName = folder.name;
+    }
+    contextMenu.value.show = false;
+  };
+  
+  // 文件夹删除
+  const handleFolderDelete = () => {
+    followStore.deleteFolder(contextMenu.value.folderId);
+    contextMenu.value.show = false;
+  };
+  
+  // 文件夹拖动开始
+  const handleFolderDragStart = (_folderId: string, index: number, event: MouseEvent) => {
+    // 文件夹拖动逻辑与主播拖动类似
+    isDragging.value = true;
+    draggedIndex.value = index;
+    draggedItemType.value = 'folder';
+    startY.value = event.clientY;
+    currentY.value = event.clientY;
+    
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    
+    event.preventDefault();
+  };
+  
+  const draggedItemType = ref<'folder' | 'streamer' | null>(null);
+
   // Overlay: floating full follow list with platform filters
   const showOverlay = ref(false);
   const overlayDeleteMode = ref(false);
@@ -293,8 +460,15 @@
   const handleMouseDown = (e: MouseEvent, index: number) => {
     if (e.button !== 0) return;
     
+    const item = listItems.value[index];
+    if (item.type === 'folder') {
+      // 文件夹拖动由 FolderItem 组件处理
+      return;
+    }
+    
     isDragging.value = true;
     draggedIndex.value = index;
+    draggedItemType.value = 'streamer';
     startY.value = e.clientY;
     currentY.value = e.clientY; 
     
@@ -335,11 +509,21 @@
     }
   
     if (targetIndex !== draggedIndex.value) {
-      const reorderedStreamers = [...streamers.value];
-      const [removed] = reorderedStreamers.splice(draggedIndex.value, 1);
-      reorderedStreamers.splice(targetIndex, 0, removed);
+      // 重新排序列表项（包括文件夹和主播）
+      const reorderedItems = [...listItems.value];
+      const [removed] = reorderedItems.splice(draggedIndex.value, 1);
+      reorderedItems.splice(targetIndex, 0, removed);
       
-      emit('reorderList', reorderedStreamers);
+      // 更新 store
+      followStore.updateListOrder(reorderedItems);
+      
+      // 为了向后兼容，也发送旧的事件（仅主播列表）
+      if (draggedItemType.value === 'streamer') {
+        const streamerList = reorderedItems
+          .filter(item => item.type === 'streamer')
+          .map(item => item.data);
+        emit('reorderList', streamerList);
+      }
       
       draggedIndex.value = targetIndex;
       startY.value = e.clientY - (targetIndex - draggedIndex.value) * itemHeight;
@@ -351,6 +535,7 @@
     
     isDragging.value = false;
     draggedIndex.value = -1;
+    draggedItemType.value = null;
     
     document.removeEventListener('mousemove', handleMouseMove);
     document.removeEventListener('mouseup', handleMouseUp);
@@ -507,6 +692,11 @@
   };
   
   onMounted(async () => {
+    // 加载 store 数据
+    if (!followStore.listOrder.length && props.followedAnchors.length > 0) {
+      followStore.initializeListOrder();
+    }
+    
     // 在初次渲染前，若包含 B 站主播则先启动静态代理，避免头像首次以原始地址加载导致 403
     const hasBili = props.followedAnchors.some(s => s.platform === Platform.BILIBILI);
     if (hasBili) {

@@ -195,6 +195,15 @@
   flex-direction: column;
   gap: 8px;
 }
+
+.list-item-wrapper {
+  position: relative;
+}
+
+.list-item-wrapper.is-dragging {
+  opacity: 0.85;
+  transform: scale(1.01);
+}
 .streamer-item {
   position: relative;
   display: flex;
