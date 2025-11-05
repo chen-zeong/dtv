@@ -1,9 +1,17 @@
 <template>
   <div 
     class="folder-item"
-    :class="{ 'is-dragging': isDragging, 'is-expanded': folder.expanded }"
+    :data-folder-id="folder.id"
+    :class="{ 
+      'is-dragging': isDragging, 
+      'is-expanded': folder.expanded,
+      'is-drag-over': isDragOver,
+      'can-accept-drop': canAcceptDrop
+    }"
     @mousedown="handleMouseDown"
     @contextmenu.prevent="handleContextMenu"
+    @mouseenter="handleMouseEnter"
+    @mouseleave="handleMouseLeave"
   >
     <div class="folder-header" @click="toggleExpand">
       <svg 
@@ -49,6 +57,7 @@
             class="folder-streamer-item"
             :class="getStreamerItemClass(streamer)"
             @click.stop="handleClick(streamer)"
+            @mousedown.stop="(e) => handleFolderStreamerDragStart(streamer, e)"
           >
             <StreamerItem 
               :streamer="streamer"
@@ -79,6 +88,8 @@ const props = defineProps<{
   getLiveIndicatorClass: (s: FollowedStreamer) => string;
   proxyBase?: string;
   isDragging?: boolean;
+  isDragOver?: boolean;
+  canAcceptDrop?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -86,6 +97,10 @@ const emit = defineEmits<{
   (e: 'toggleExpand', folderId: string): void;
   (e: 'dragStart', folderId: string, event: MouseEvent): void;
   (e: 'contextMenu', folderId: string, event: MouseEvent): void;
+  (e: 'dragOver', folderId: string): void;
+  (e: 'dragLeave'): void;
+  (e: 'drop', folderId: string): void;
+  (e: 'streamerDragStart', streamer: FollowedStreamer, event: MouseEvent): void;
 }>();
 
 const folderItems = computed(() => {
@@ -115,6 +130,22 @@ const handleClick = (streamer: FollowedStreamer) => {
   emit('selectAnchor', streamer);
 };
 
+const handleMouseEnter = () => {
+  if (props.canAcceptDrop) {
+    emit('dragOver', props.folder.id);
+  }
+};
+
+const handleMouseLeave = () => {
+  if (props.canAcceptDrop) {
+    emit('dragLeave');
+  }
+};
+
+const handleFolderStreamerDragStart = (streamer: FollowedStreamer, event: MouseEvent) => {
+  emit('streamerDragStart', streamer, event);
+};
+
 const getStreamerItemClass = (streamer: FollowedStreamer) => {
   return {
     'status-live': streamer.liveStatus === 'LIVE',
@@ -138,6 +169,17 @@ const getStreamerItemClass = (streamer: FollowedStreamer) => {
 .folder-item.is-dragging {
   opacity: 0.85;
   transform: scale(1.01);
+}
+
+.folder-item.can-accept-drop {
+  cursor: pointer;
+}
+
+.folder-item.is-drag-over {
+  border-color: rgba(125, 211, 252, 0.6);
+  background: rgba(125, 211, 252, 0.15);
+  box-shadow: 0 0 0 2px rgba(125, 211, 252, 0.3);
+  transform: translateY(-2px);
 }
 
 .folder-header {
@@ -281,6 +323,12 @@ const getStreamerItemClass = (streamer: FollowedStreamer) => {
 :root[data-theme="light"] .folder-streamer-item.status-live {
   background: rgba(34, 197, 94, 0.18);
   border-color: rgba(34, 197, 94, 0.4);
+}
+
+:root[data-theme="light"] .folder-item.is-drag-over {
+  border-color: rgba(114, 147, 255, 0.6);
+  background: rgba(114, 147, 255, 0.15);
+  box-shadow: 0 0 0 2px rgba(114, 147, 255, 0.3);
 }
 </style>
 

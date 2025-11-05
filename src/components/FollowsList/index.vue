@@ -91,10 +91,16 @@
               :get-live-indicator-class="getLiveIndicatorClass"
               :proxy-base="proxyBase"
               :is-dragging="isDragging && draggedIndex === index"
+              :is-drag-over="dragOverFolderId === item.data.id"
+              :can-accept-drop="draggedStreamerKey !== null"
               @select-anchor="(s) => emit('selectAnchor', s)"
               @toggle-expand="handleToggleFolderExpand"
               @drag-start="(id, e) => handleFolderDragStart(id, index, e)"
               @context-menu="(id, e) => handleFolderContextMenu(id, e)"
+              @drag-over="handleFolderDragOver"
+              @drag-leave="handleFolderDragLeave"
+              @drop="handleFolderDrop"
+              @streamer-drag-start="handleFolderStreamerDragStart"
             />
             
             <!-- 主播项 -->
@@ -223,6 +229,10 @@
   const currentY = ref(0);
   const justAddedIds = ref<string[]>([]);
   const animationTimeout = ref<number | null>(null);
+  
+  // 拖拽到文件夹相关状态
+  const dragOverFolderId = ref<string | null>(null); // 当前悬停的文件夹ID
+  const draggedStreamerKey = ref<string | null>(null); // 正在拖拽的主播键值
 
   // 并发与延迟设置：降低启动时对后端的压力，优先让分类/主播列表完成首屏加载
   const FOLLOW_REFRESH_CONCURRENCY = 4; // 可根据机器性能与后端并发能力调整
@@ -466,6 +476,10 @@
       return;
     }
     
+    // 记录正在拖拽的主播键值
+    const streamer = item.data;
+    draggedStreamerKey.value = `${streamer.platform}:${streamer.id}`;
+    
     isDragging.value = true;
     draggedIndex.value = index;
     draggedItemType.value = 'streamer';
@@ -482,6 +496,25 @@
     if (!isDragging.value || draggedIndex.value === -1) return;
     
     currentY.value = e.clientY;
+    
+    // 如果正在拖拽主播项，检查是否悬停在文件夹上
+    if (draggedItemType.value === 'streamer' && draggedStreamerKey.value) {
+      const element = document.elementFromPoint(e.clientX, e.clientY);
+      const folderElement = element?.closest('.folder-item');
+      if (folderElement) {
+        const folderId = folderElement.getAttribute('data-folder-id');
+        if (folderId) {
+          // 检查该主播是否已经在文件夹中
+          const folder = followStore.folders.find(f => f.id === folderId);
+          if (folder && !folder.streamerIds.includes(draggedStreamerKey.value)) {
+            dragOverFolderId.value = folderId;
+            return; // 悬停在文件夹上，不进行排序
+          }
+        }
+      }
+      dragOverFolderId.value = null;
+    }
+    
     const container = listRef.value?.querySelector('.streamers-list');
     if (!container) return;
     
@@ -533,12 +566,92 @@
   const handleMouseUp = () => {
     if (!isDragging.value) return;
     
+    // 如果正在拖拽主播项且悬停在文件夹上，将主播移入文件夹
+    if (draggedItemType.value === 'streamer' && draggedStreamerKey.value && dragOverFolderId.value) {
+      followStore.moveStreamerToFolder(draggedStreamerKey.value, dragOverFolderId.value);
+    }
+    
     isDragging.value = false;
     draggedIndex.value = -1;
     draggedItemType.value = null;
+    dragOverFolderId.value = null;
+    draggedStreamerKey.value = null;
     
     document.removeEventListener('mousemove', handleMouseMove);
     document.removeEventListener('mouseup', handleMouseUp);
+  };
+  
+  // 文件夹拖拽悬停处理
+  const handleFolderDragOver = (folderId: string) => {
+    if (draggedItemType.value === 'streamer' && draggedStreamerKey.value) {
+      const folder = followStore.folders.find(f => f.id === folderId);
+      if (folder && !folder.streamerIds.includes(draggedStreamerKey.value)) {
+        dragOverFolderId.value = folderId;
+      }
+    }
+  };
+  
+  // 文件夹拖拽离开处理
+  const handleFolderDragLeave = () => {
+    dragOverFolderId.value = null;
+  };
+  
+  // 文件夹拖放处理
+  const handleFolderDrop = (folderId: string) => {
+    if (draggedItemType.value === 'streamer' && draggedStreamerKey.value) {
+      followStore.moveStreamerToFolder(draggedStreamerKey.value, folderId);
+      // 重置拖拽状态
+      isDragging.value = false;
+      draggedIndex.value = -1;
+      draggedItemType.value = null;
+      dragOverFolderId.value = null;
+      draggedStreamerKey.value = null;
+    }
+  };
+  
+  // 从文件夹中拖出主播
+  const handleFolderStreamerDragStart = (streamer: FollowedStreamer, event: MouseEvent) => {
+    if (event.button !== 0) return;
+    
+    // 记录正在拖拽的主播键值
+    draggedStreamerKey.value = `${streamer.platform}:${streamer.id}`;
+    
+    // 找到该主播所在的文件夹
+    const streamerKey = draggedStreamerKey.value;
+    const folder = streamerKey ? followStore.folders.find((f) => 
+      f.streamerIds.includes(streamerKey)
+    ) : null;
+    
+    if (folder) {
+      // 从文件夹中移除
+      followStore.removeStreamerFromFolder(draggedStreamerKey.value, folder.id);
+    }
+    
+    // 开始拖拽排序
+    isDragging.value = true;
+    draggedItemType.value = 'streamer';
+    startY.value = event.clientY;
+    currentY.value = event.clientY;
+    
+    // 找到该主播在主列表中的新位置
+    const newIndex = listItems.value.findIndex(item => {
+      if (item.type === 'streamer') {
+        return `${item.data.platform}:${item.data.id}` === draggedStreamerKey.value;
+      }
+      return false;
+    });
+    
+    if (newIndex !== -1) {
+      draggedIndex.value = newIndex;
+    } else {
+      draggedIndex.value = listItems.value.length;
+    }
+    
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    
+    event.preventDefault();
+    event.stopPropagation();
   };
   
   const clearAnimationTimeout = () => {
