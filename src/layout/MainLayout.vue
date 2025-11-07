@@ -1,7 +1,7 @@
 <template>
   <div class="app">
     <Sidebar 
-      v-show="!isPlayerFullscreen"
+      v-show="!shouldHidePlayerChrome"
       :followedAnchors="followedStreamersFromStore" 
       @selectAnchor="handleStreamerSelect"
       @unfollow="handleUnfollowStore"
@@ -9,7 +9,7 @@
     />
     <div class="main-content">
       <Header 
-        v-show="!isPlayerFullscreen"
+        v-show="!shouldHidePlayerChrome"
         @select-anchor="handleStreamerSelect"
         @follow="handleFollowStore"
         @unfollow="handleUnfollowStore"
@@ -31,8 +31,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
+import { getCurrentWindow } from '@tauri-apps/api/window'
+import type { UnlistenFn } from '@tauri-apps/api/event'
 import Sidebar from './Sidebar.vue'
 import Header from './Header.vue'
 import { useFollowStore } from '../store/followStore'
@@ -45,6 +47,49 @@ const followStore = useFollowStore()
 const followedStreamersFromStore = computed(() => followStore.getFollowedStreamers)
 
 const isPlayerFullscreen = ref(false)
+const isWindowMaximized = ref(false)
+const currentWindow = typeof window !== 'undefined' ? getCurrentWindow() : null
+let unlistenResize: UnlistenFn | null = null
+
+const syncWindowMaximizedState = async () => {
+  if (!currentWindow) return
+  try {
+    isWindowMaximized.value = await currentWindow.isMaximized()
+  } catch (error) {
+    console.error('[MainLayout] Failed to query maximized state', error)
+  }
+}
+
+onMounted(async () => {
+  if (!currentWindow) return
+  await syncWindowMaximizedState()
+  try {
+    unlistenResize = await currentWindow.onResized(syncWindowMaximizedState)
+  } catch (error) {
+    console.error('[MainLayout] Failed to listen for resize events', error)
+  }
+})
+
+onBeforeUnmount(async () => {
+  if (unlistenResize) {
+    await unlistenResize()
+    unlistenResize = null
+  }
+})
+
+const isPlayerRoute = computed(() => {
+  const name = router.currentRoute.value.name
+  return (
+    name === 'douyuPlayer' ||
+    name === 'douyinPlayer' ||
+    name === 'huyaPlayer' ||
+    name === 'bilibiliPlayer'
+  )
+})
+
+const shouldHidePlayerChrome = computed(() => {
+  return isPlayerRoute.value && (isPlayerFullscreen.value || isWindowMaximized.value)
+})
 
 const handleStreamerSelect = (streamer: FollowedStreamer) => {
   let routeName = '';

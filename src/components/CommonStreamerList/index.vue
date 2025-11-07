@@ -131,6 +131,7 @@ const loadInitialRooms = () => selectedComposable.value.loadInitialRooms();
 const loadMoreRooms = () => selectedComposable.value.loadMoreRooms();
 
 let observer: IntersectionObserver | null = null;
+let resizeRaf: number | null = null;
 
 const setupIntersectionObserver = () => {
   if (observer) observer.disconnect();
@@ -146,12 +147,50 @@ const setupIntersectionObserver = () => {
   if (sentinelRef.value) observer.observe(sentinelRef.value);
 };
 
+const maybeEnsureContentFillsViewport = () => {
+  const rootEl = scrollComponentRef.value;
+  if (!rootEl || !hasMore.value || isLoading.value || isLoadingMore.value) return;
+  const needsMore = rootEl.scrollHeight - rootEl.clientHeight <= 8;
+  if (needsMore) {
+    loadMoreRooms();
+  }
+};
+
+const scheduleEnsureContentFill = () => {
+  if (typeof window === 'undefined') return;
+  if (resizeRaf) {
+    cancelAnimationFrame(resizeRaf);
+    resizeRaf = null;
+  }
+  resizeRaf = window.requestAnimationFrame(() => {
+    resizeRaf = null;
+    nextTick(() => maybeEnsureContentFillsViewport());
+  });
+};
+
+const handleWindowResize = () => {
+  scheduleEnsureContentFill();
+};
+
 onMounted(() => {
-  nextTick(() => setupIntersectionObserver());
+  if (typeof window !== 'undefined') {
+    window.addEventListener('resize', handleWindowResize);
+  }
+  nextTick(() => {
+    setupIntersectionObserver();
+    scheduleEnsureContentFill();
+  });
 });
 
 onBeforeUnmount(() => {
   if (observer) observer.disconnect();
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('resize', handleWindowResize);
+  }
+  if (resizeRaf) {
+    cancelAnimationFrame(resizeRaf);
+    resizeRaf = null;
+  }
 });
 
 watch(() => props.selectedCategory, (newCategory, _oldCategory) => {
@@ -177,8 +216,15 @@ watch(() => props.selectedCategory, (newCategory, _oldCategory) => {
   }
   nextTick(() => {
     if (scrollComponentRef.value && sentinelRef.value) setupIntersectionObserver();
+    scheduleEnsureContentFill();
   });
 }, { immediate: true, deep: true });
+
+watch([rooms, isLoading, isLoadingMore], () => {
+  if (!isLoading.value && !isLoadingMore.value) {
+    scheduleEnsureContentFill();
+  }
+});
 
 const goToPlayer = (roomId: string) => {
   if (!roomId) return;
