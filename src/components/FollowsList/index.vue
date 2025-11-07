@@ -22,19 +22,6 @@
             <span class="refresh-spinner-inline" aria-hidden="true"></span>
             <span class="progress-label">{{ progressCurrent }}/{{ progressTotal }}</span>
           </span>
-          <!-- 展开悬浮关注列表按钮 -->
-          <button 
-            ref="expandBtnRef"
-            @click="openOverlay" 
-            class="action-btn expand-btn"
-            title="展开关注列表"
-          >
-            <span class="icon">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M4 6h16v2H4V6zm0 5h16v2H4v-2zm0 5h16v2H4v-2z"/>
-              </svg>
-            </span>
-          </button>
           <!-- 新建文件夹 -->
           <button 
             class="action-btn create-folder-btn"
@@ -46,6 +33,19 @@
                 <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
                 <line x1="12" y1="11" x2="12" y2="17"></line>
                 <line x1="9" y1="14" x2="15" y2="14"></line>
+              </svg>
+            </span>
+          </button>
+          <!-- 展开悬浮关注列表按钮 -->
+          <button 
+            ref="expandBtnRef"
+            @click="openOverlay" 
+            class="action-btn expand-btn"
+            title="展开关注列表"
+          >
+            <span class="icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M4 6h16v2H4V6zm0 5h16v2H4v-2zm0 5h16v2H4v-2z"/>
               </svg>
             </span>
           </button>
