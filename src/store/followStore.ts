@@ -14,6 +14,8 @@ export type FollowListItem =
   | { type: 'folder'; data: FollowFolder }
   | { type: 'streamer'; data: FollowedStreamer };
 
+type FollowStreamerItem = Extract<FollowListItem, { type: 'streamer' }>;
+
 interface FollowState {
   followedStreamers: FollowedStreamer[];
   folders: FollowFolder[];
@@ -273,13 +275,13 @@ export const useFollowStore = defineStore('follow', {
       const folderIndex = this.listOrder.findIndex(item => item.type === 'folder' && item.data.id === folderId);
       if (folderIndex !== -1) {
         // 在文件夹位置插入其包含的主播项
-        const streamerItems: FollowListItem[] = folder.streamerIds
+        const streamerItems: FollowStreamerItem[] = folder.streamerIds
           .map(key => {
             const [platform, id] = key.split(':');
             const streamer = this.followedStreamers.find(s => s.platform === platform as Platform && s.id === id);
-            return streamer ? { type: 'streamer' as const, data: streamer } : null;
+            return streamer ? ({ type: 'streamer' as const, data: streamer } as FollowStreamerItem) : null;
           })
-          .filter((item): item is FollowListItem => item !== null);
+          .filter((item): item is FollowStreamerItem => item !== null);
         
         this.listOrder.splice(folderIndex, 1, ...streamerItems);
       }

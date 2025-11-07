@@ -53,7 +53,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, nextTick } from 'vue';
+import { ref, nextTick } from 'vue';
 
 const props = defineProps<{
   show: boolean;
@@ -321,4 +321,3 @@ const cancelRename = () => {
   border-color: rgba(114, 147, 255, 0.6);
 }
 </style>
-
