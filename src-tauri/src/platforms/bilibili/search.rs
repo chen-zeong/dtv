@@ -198,14 +198,14 @@ pub async fn search_bilibili_rooms(
     }
 
     let mut result = Vec::new();
-    if let Some(live_rooms) = payload
+    if let Some(live_users) = payload
         .get("data")
         .and_then(|v| v.get("result"))
-        .and_then(|v| v.get("live_room"))
+        .and_then(|v| v.get("live_user"))
         .and_then(|v| v.as_array())
     {
-        result.reserve(live_rooms.len());
-        for entry in live_rooms {
+        result.reserve(live_users.len());
+        for entry in live_users {
             let room_id = entry
                 .get("roomid")
                 .and_then(|v| v.as_i64())
@@ -221,8 +221,8 @@ pub async fn search_bilibili_rooms(
             let anchor = entry
                 .get("uname")
                 .and_then(|v| v.as_str())
-                .unwrap_or("")
-                .to_string();
+                .map(strip_em_tags)
+                .unwrap_or_default();
             let watching = entry
                 .get("online")
                 .map(|v| match v {
