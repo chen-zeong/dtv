@@ -1508,7 +1508,8 @@ async function mountXgPlayer(
     width: '100%',
     height: '100%',
     videoFillMode: 'contain',
-    closeVideoClick: false,
+    closeVideoClick: true,
+    closeVideoTouch: true,
     keyShortcut: true,
     volume: false as unknown as number,
     pip: {
