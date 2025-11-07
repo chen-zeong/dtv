@@ -15,7 +15,11 @@ export interface UnifiedRustDanmakuPayload {
 
 let douyuProxyActive = false;
 
-export async function getDouyuStreamConfig(roomId: string, quality: string = '原画'): Promise<{ streamUrl: string, streamType: string | undefined }> {
+export async function getDouyuStreamConfig(
+  roomId: string,
+  quality: string = '原画',
+  line?: string | null,
+): Promise<{ streamUrl: string, streamType: string | undefined }> {
   let finalStreamUrl: string | null = null;
   let streamType: string | undefined = undefined;
   const MAX_STREAM_FETCH_ATTEMPTS = 2;
@@ -24,7 +28,8 @@ export async function getDouyuStreamConfig(roomId: string, quality: string = '�
     try {
       const streamUrl = await invoke<string>('get_stream_url_with_quality_cmd', {
         roomId: roomId,
-        quality: quality
+        quality: quality,
+        line: line ?? null,
       });
       
       if (streamUrl) {

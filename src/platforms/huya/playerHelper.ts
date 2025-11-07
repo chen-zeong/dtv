@@ -8,10 +8,14 @@ export interface HuyaUnifiedEntry { quality: string; bitRate: number; url: strin
 
 let huyaProxyActive = false;
 
-export async function getHuyaStreamConfig(roomId: string, quality: string = '原画'): Promise<{ streamUrl: string, streamType: string | undefined }> {
+export async function getHuyaStreamConfig(
+  roomId: string,
+  quality: string = '原画',
+  line?: string | null,
+): Promise<{ streamUrl: string, streamType: string | undefined }> {
   console.log('[HuyaPlayerHelper] getHuyaStreamConfig called with roomId:', roomId, 'quality:', quality);
   try {
-    const result = await invoke<any>('get_huya_unified_cmd', { roomId: roomId, quality });
+    const result = await invoke<any>('get_huya_unified_cmd', { roomId: roomId, quality, line: line ?? null });
     console.log('[HuyaPlayerHelper] getHuyaStreamConfig got result:', result);
     
     if (result && result.flv_tx_urls && Array.isArray(result.flv_tx_urls)) {  

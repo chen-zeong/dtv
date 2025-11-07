@@ -35,7 +35,7 @@ pub struct DouyuDanmakuHandles(Arc<Mutex<HashMap<String, oneshot::Sender<()>>>>)
 #[tauri::command]
 async fn get_stream_url_cmd(room_id: String) -> Result<String, String> {
     // Call the actual function to fetch the stream URL from the new location
-    platforms::douyu::get_stream_url(&room_id)
+    platforms::douyu::get_stream_url(&room_id, None)
         .await
         .map_err(|e| {
             eprintln!(
@@ -51,8 +51,9 @@ async fn get_stream_url_cmd(room_id: String) -> Result<String, String> {
 async fn get_stream_url_with_quality_cmd(
     room_id: String,
     quality: String,
+    line: Option<String>,
 ) -> Result<String, String> {
-    platforms::douyu::get_stream_url_with_quality(&room_id, &quality)
+    platforms::douyu::get_stream_url_with_quality(&room_id, &quality, line.as_deref())
         .await
         .map_err(|e| {
             eprintln!(

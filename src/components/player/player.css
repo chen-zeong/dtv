@@ -263,6 +263,7 @@
 
 .xgplayer-refresh-control,
 .xgplayer-quality-control,
+.xgplayer-line-control,
 .xgplayer-danmu-toggle,
 .xgplayer-danmu-settings,
 .xgplayer-volume-control {
@@ -281,22 +282,26 @@
 
 .xgplayer-refresh-control:hover,
 .xgplayer-quality-control:hover,
+.xgplayer-line-control:hover,
 .xgplayer-danmu-toggle:hover,
 .xgplayer-danmu-settings:hover,
 .xgplayer-volume-control:hover {
   color: #ffffff;
 }
 
-.xgplayer-quality-control.menu-open .quality-caret {
+.xgplayer-quality-control.menu-open .quality-caret,
+.xgplayer-line-control.menu-open .line-caret {
   transform: rotate(180deg);
 }
 
-.xgplayer-quality-control .quality-caret {
+.xgplayer-quality-control .quality-caret,
+.xgplayer-line-control .line-caret {
   transition: transform 0.2s ease;
 }
 
 .xgplayer-refresh-control svg,
 .xgplayer-quality-control svg,
+.xgplayer-line-control svg,
 .xgplayer-danmu-toggle svg,
 .xgplayer-danmu-settings svg,
 .xgplayer-volume-control svg {
@@ -314,13 +319,15 @@
   stroke: var(--player-accent);
 }
 
-.xgplayer-quality-control.is-switching {
+.xgplayer-quality-control.is-switching,
+.xgplayer-line-control.is-switching {
   opacity: 0.6;
   cursor: wait;
   pointer-events: none;
 }
 
-.xgplayer-quality-control.is-switching::after {
+.xgplayer-quality-control.is-switching::after,
+.xgplayer-line-control.is-switching::after {
   content: '';
   width: 12px;
   height: 12px;
@@ -331,7 +338,8 @@
   animation: player-control-spin 0.9s linear infinite;
 }
 
-.xgplayer-quality-control.is-switching .quality-caret {
+.xgplayer-quality-control.is-switching .quality-caret,
+.xgplayer-line-control.is-switching .line-caret {
   display: none;
 }
 
@@ -467,7 +475,8 @@
 }
 
 .xgplayer-danmu-settings.menu-open,
-.xgplayer-quality-control.menu-open {
+.xgplayer-quality-control.menu-open,
+.xgplayer-line-control.menu-open {
   color: #ffffff;
 }
 
@@ -484,7 +493,8 @@
   color: #ffffff;
 }
 
-.xgplayer-quality-dropdown {
+.xgplayer-quality-dropdown,
+.xgplayer-line-dropdown {
   position: absolute;
   bottom: 44px;
   right: 0;
@@ -508,7 +518,8 @@
   will-change: opacity, transform;
 }
 
-.xgplayer-quality-dropdown.show {
+.xgplayer-quality-dropdown.show,
+.xgplayer-line-dropdown.show {
   opacity: 1;
   transform: translateY(0);
   pointer-events: auto;

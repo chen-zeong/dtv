@@ -101,7 +101,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, watch, onUnmounted, shallowRef, nextTick } from 'vue';
+import { ref, reactive, onMounted, watch, onUnmounted, shallowRef, nextTick, computed } from 'vue';
 import Player from 'xgplayer';
 import FlvPlugin from 'xgplayer-flv';
 import HlsPlugin from 'xgplayer-hls.js';
@@ -1137,6 +1137,271 @@ class QualityControl extends Plugin {
   }
 }
 
+class LineControl extends Plugin {
+  static override pluginName = 'lineControl';
+  static override defaultConfig = {
+    position: POSITIONS.CONTROLS_RIGHT,
+    index: 5.2,
+    disable: false,
+    options: [] as LineOption[],
+    getCurrentKey: (() => '') as () => string,
+    getCurrentLabel: (() => '线路') as () => string,
+    onSelect: (async (_value: string) => {}) as (value: string) => Promise<void> | void,
+  };
+
+  private dropdown: HTMLElement | null = null;
+  private handleToggle: ((event: Event) => void) | null = null;
+  private handleDocumentClick: ((event: MouseEvent) => void) | null = null;
+  private handleHoverEnter: ((event: Event) => void) | null = null;
+  private handleHoverLeave: ((event: Event) => void) | null = null;
+  private hoverCloseTimer: ReturnType<typeof setTimeout> | null = null;
+  private isSwitching = false;
+
+  override afterCreate() {
+    if (this.config.disable) {
+      this.updateVisibility();
+      return;
+    }
+
+    this.createDropdown();
+    this.updateLabel(this.getCurrentLabel());
+    this.updateVisibility();
+
+    this.handleToggle = (event: Event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (this.isSwitching) {
+        return;
+      }
+      this.toggleDropdown();
+    };
+    this.bind(['click', 'touchend'], this.handleToggle);
+
+    if (typeof document !== 'undefined') {
+      this.handleDocumentClick = (event: MouseEvent) => {
+        if (!this.root.contains(event.target as Node)) {
+          this.hideDropdown();
+        }
+      };
+      document.addEventListener('click', this.handleDocumentClick);
+    }
+
+    this.handleHoverEnter = () => {
+      if (this.hoverCloseTimer) {
+        clearTimeout(this.hoverCloseTimer);
+        this.hoverCloseTimer = null;
+      }
+      if (!this.isSwitching) {
+        this.openDropdown();
+      }
+    };
+    this.handleHoverLeave = () => {
+      if (this.hoverCloseTimer) {
+        clearTimeout(this.hoverCloseTimer);
+      }
+      this.hoverCloseTimer = setTimeout(() => {
+        this.hoverCloseTimer = null;
+        this.hideDropdown();
+      }, 220);
+    };
+    this.bind('mouseenter', this.handleHoverEnter);
+    this.bind('mouseleave', this.handleHoverLeave);
+  }
+
+  override destroy() {
+    if (this.handleToggle) {
+      this.unbind(['click', 'touchend'], this.handleToggle);
+      this.handleToggle = null;
+    }
+    if (this.handleDocumentClick) {
+      document.removeEventListener('click', this.handleDocumentClick);
+      this.handleDocumentClick = null;
+    }
+    if (this.handleHoverEnter) {
+      this.unbind('mouseenter', this.handleHoverEnter);
+      this.handleHoverEnter = null;
+    }
+    if (this.handleHoverLeave) {
+      this.unbind('mouseleave', this.handleHoverLeave);
+      this.handleHoverLeave = null;
+    }
+    if (this.hoverCloseTimer) {
+      clearTimeout(this.hoverCloseTimer);
+      this.hoverCloseTimer = null;
+    }
+    if (this.dropdown) {
+      this.dropdown.remove();
+      this.dropdown = null;
+    }
+    this.setSwitching(false);
+  }
+
+  override render() {
+    if (this.config.disable) {
+      return '';
+    }
+    const current = this.getCurrentLabel();
+    return `<xg-icon class="xgplayer-line-control" title="">
+      <span class="line-label">${current || '线路'}</span>
+      <svg class="line-caret" width="10" height="10" viewBox="0 0 10 10" fill="none">
+        <path d="M2.5 3.5L5 6l2.5-2.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </xg-icon>`;
+  }
+
+  updateLabel(label: string) {
+    const textEl = this.find('.line-label') as HTMLElement | null;
+    if (textEl) {
+      textEl.textContent = label || '线路';
+    }
+    this.updateActiveState(this.getCurrentKey());
+  }
+
+  setOptions(options: LineOption[]) {
+    this.config.options = Array.isArray(options) ? [...options] : [];
+    this.populateDropdown();
+    this.updateVisibility();
+  }
+
+  setSwitching(isSwitching: boolean) {
+    this.isSwitching = isSwitching;
+    this.applySwitchingState();
+    if (isSwitching) {
+      this.hideDropdown();
+    }
+  }
+
+  private getCurrentKey() {
+    return typeof this.config.getCurrentKey === 'function'
+      ? this.config.getCurrentKey()
+      : '';
+  }
+
+  private getCurrentLabel() {
+    return typeof this.config.getCurrentLabel === 'function'
+      ? this.config.getCurrentLabel()
+      : '线路';
+  }
+
+  private createDropdown() {
+    this.dropdown = document.createElement('div');
+    this.dropdown.className = 'xgplayer-line-dropdown';
+    this.root.appendChild(this.dropdown);
+    this.populateDropdown();
+  }
+
+  private populateDropdown() {
+    if (!this.dropdown) {
+      return;
+    }
+    this.dropdown.innerHTML = '';
+    const options: LineOption[] = Array.isArray(this.config.options) ? this.config.options : [];
+    options.forEach((option) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'xgplayer-quality-item';
+      btn.dataset.lineKey = option.key;
+      btn.innerHTML = `
+        <span class="quality-name">${option.label}</span>
+        <svg class="quality-check" width="12" height="12" viewBox="0 0 12 12" fill="none">
+          <path d="M3 6.5l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      `;
+      btn.addEventListener('click', (event) => {
+        event.stopPropagation();
+        event.preventDefault();
+        if (this.isSwitching) {
+          return;
+        }
+        let actionResult: Promise<void> | void;
+        try {
+          const callback = this.config.onSelect;
+          actionResult = typeof callback === 'function' ? callback(option.key) : undefined;
+        } catch (error) {
+          console.error('[LineControl] onSelect error:', error);
+          actionResult = undefined;
+        }
+        Promise.resolve(actionResult).finally(() => {
+          this.hideDropdown();
+          this.updateLabel(this.getCurrentLabel());
+        });
+      });
+      this.dropdown!.appendChild(btn);
+    });
+    this.updateActiveState(this.getCurrentKey());
+    this.applySwitchingState();
+  }
+
+  private toggleDropdown() {
+    if (this.isSwitching) {
+      return;
+    }
+    if (this.dropdown?.classList.contains('show')) {
+      this.hideDropdown();
+    } else {
+      this.openDropdown();
+    }
+  }
+
+  private openDropdown() {
+    if (this.isSwitching || !this.dropdown) {
+      return;
+    }
+    if (this.hoverCloseTimer) {
+      clearTimeout(this.hoverCloseTimer);
+      this.hoverCloseTimer = null;
+    }
+    this.dropdown.classList.add('show');
+    this.root.classList.add('menu-open');
+    this.updateActiveState(this.getCurrentKey());
+  }
+
+  private hideDropdown() {
+    if (this.hoverCloseTimer) {
+      clearTimeout(this.hoverCloseTimer);
+      this.hoverCloseTimer = null;
+    }
+    if (this.dropdown) {
+      this.dropdown.classList.remove('show');
+    }
+    this.root.classList.remove('menu-open');
+  }
+
+  private updateActiveState(currentKey: string) {
+    if (!this.dropdown) {
+      return;
+    }
+    const items = this.dropdown.querySelectorAll<HTMLButtonElement>('.xgplayer-quality-item');
+    items.forEach((item) => {
+      const key = item.dataset.lineKey ?? '';
+      item.classList.toggle('active', key === currentKey);
+    });
+  }
+
+  private applySwitchingState() {
+    const root = this.root as HTMLElement | null;
+    if (root) {
+      root.classList.toggle('is-switching', this.isSwitching);
+    }
+    if (this.dropdown) {
+      this.dropdown.classList.toggle('disabled', this.isSwitching);
+      const buttons = this.dropdown.querySelectorAll<HTMLButtonElement>('.xgplayer-quality-item');
+      buttons.forEach((button) => {
+        button.disabled = this.isSwitching;
+      });
+    }
+  }
+
+  private updateVisibility() {
+    const root = this.root as HTMLElement | null;
+    if (!root) {
+      return;
+    }
+    const options: LineOption[] = Array.isArray(this.config.options) ? this.config.options : [];
+    root.style.display = options.length === 0 ? 'none' : '';
+  }
+}
+
 const props = defineProps<{
   roomId: string | null;
   platform: StreamingPlatform;
@@ -1163,6 +1428,7 @@ const playerContainerRef = ref<HTMLDivElement | null>(null);
 const playerInstance = shallowRef<Player | null>(null);
 const refreshControlPlugin = shallowRef<RefreshControl | null>(null);
 const qualityControlPlugin = shallowRef<QualityControl | null>(null);
+const lineControlPlugin = shallowRef<LineControl | null>(null);
 const danmuTogglePlugin = shallowRef<DanmuToggleControl | null>(null);
 const danmuSettingsPlugin = shallowRef<DanmuSettingsControl | null>(null);
 const volumeControlPlugin = shallowRef<VolumeControl | null>(null);
@@ -1222,6 +1488,32 @@ function applyDanmuFontFamilyForOS(os: string) {
 // 画质切换相关
 const qualityOptions = ['原画', '高清', '标清'] as const;
 
+interface LineOption {
+  key: string;
+  label: string;
+}
+
+const lineOptionsByPlatform: Partial<Record<StreamingPlatform, LineOption[]>> = {
+  [StreamingPlatform.DOUYU]: [
+    { key: 'ws-h5', label: '主线路' },
+    { key: 'tct-h5', label: '线路5' },
+    { key: 'ali-h5', label: '线路6' },
+    { key: 'hs-h5', label: '线路13' },
+  ],
+  [StreamingPlatform.HUYA]: [
+    { key: 'tx', label: '腾讯线路' },
+    { key: 'al', label: '阿里线路' },
+    { key: 'hs', label: '字节线路' },
+  ],
+};
+
+const getLineOptionsForPlatform = (platform?: StreamingPlatform | null): LineOption[] => {
+  if (!platform) {
+    return [];
+  }
+  return lineOptionsByPlatform[platform] ?? [];
+};
+
 const resolveStoredQuality = (platform?: StreamingPlatform | null): string => {
   if (!platform) {
     return '原画';
@@ -1243,6 +1535,59 @@ const resolveStoredQuality = (platform?: StreamingPlatform | null): string => {
 const currentQuality = ref<string>(resolveStoredQuality(props.platform));
 const isQualitySwitching = ref(false);
 const isRefreshingStream = ref(false);
+const isLineSwitching = ref(false);
+
+const resolveStoredLine = (platform?: StreamingPlatform | null): string | null => {
+  const options = getLineOptionsForPlatform(platform);
+  if (!options.length) {
+    return null;
+  }
+  if (typeof window === 'undefined' || !platform) {
+    return options[0]?.key ?? null;
+  }
+  try {
+    const saved = window.localStorage.getItem(`${platform}_preferred_line`);
+    if (saved && options.some((opt) => opt.key === saved)) {
+      return saved;
+    }
+  } catch (error) {
+    console.warn('[Player] Failed to read stored line preference:', error);
+  }
+  return options[0]?.key ?? null;
+};
+
+const currentLine = ref<string | null>(resolveStoredLine(props.platform));
+const lineOptions = computed(() => getLineOptionsForPlatform(props.platform));
+
+const persistLinePreference = (platform?: StreamingPlatform | null, lineKey?: string | null) => {
+  if (!platform || !lineKey || typeof window === 'undefined') {
+    return;
+  }
+  try {
+    window.localStorage.setItem(`${platform}_preferred_line`, lineKey);
+  } catch (error) {
+    console.warn('[Player] Failed to persist line preference:', error);
+  }
+};
+
+const resolveCurrentLineFor = (platform: StreamingPlatform): string | null => {
+  const options = getLineOptionsForPlatform(platform);
+  if (!options.length) {
+    return null;
+  }
+  if (currentLine.value && options.some((option) => option.key === currentLine.value)) {
+    return currentLine.value;
+  }
+  return options[0]?.key ?? null;
+};
+
+const getLineLabel = (key?: string | null): string => {
+  if (!key) {
+    return '线路';
+  }
+  const option = lineOptions.value.find((item) => item.key === key);
+  return option?.label ?? '线路';
+};
 
 function resetFullscreenState() {
   isInNativePlayerFullscreen.value = false;
@@ -1285,6 +1630,7 @@ function destroyPlayerInstance() {
 
   refreshControlPlugin.value = null;
   qualityControlPlugin.value = null;
+  lineControlPlugin.value = null;
   danmuTogglePlugin.value = null;
   danmuSettingsPlugin.value = null;
   volumeControlPlugin.value = null;
@@ -1587,6 +1933,8 @@ async function mountXgPlayer(
     player.muted = storedPlayerVolume === 0 ? true : player.muted;
   }
 
+  const lineOptionsForPlatform = lineOptions.value.map((option) => ({ ...option }));
+
   refreshControlPlugin.value = player.registerPlugin(RefreshControl, {
     position: POSITIONS.CONTROLS_LEFT,
     index: 2,
@@ -1656,6 +2004,23 @@ async function mountXgPlayer(
   }) as QualityControl;
   qualityControlPlugin.value?.setOptions([...qualityOptions]);
   qualityControlPlugin.value?.updateLabel(currentQuality.value);
+
+  lineControlPlugin.value = player.registerPlugin(LineControl, {
+    position: POSITIONS.CONTROLS_RIGHT,
+    index: 5.2,
+    disable: lineOptionsForPlatform.length === 0,
+    options: lineOptionsForPlatform,
+    getCurrentKey: () => currentLine.value ?? '',
+    getCurrentLabel: () => getLineLabel(currentLine.value),
+    onSelect: async (optionKey: string) => {
+      if (optionKey === currentLine.value) {
+        return;
+      }
+      await switchLine(optionKey);
+    },
+  }) as LineControl;
+  lineControlPlugin.value?.setOptions(lineOptionsForPlatform);
+  lineControlPlugin.value?.updateLabel(getLineLabel(currentLine.value));
 
   arrangeControlClusters(player);
 
@@ -1809,6 +2174,8 @@ async function initializePlayerAndStream(
 
   destroyPlayerInstance();
 
+  const effectiveLine = resolveCurrentLineFor(pPlatform);
+
   try {
     let streamConfig: { streamUrl: string; streamType: string | undefined };
 
@@ -1819,7 +2186,7 @@ async function initializePlayerAndStream(
         isLoadingStream.value = false;
         return;
       }
-      streamConfig = await getDouyuStreamConfig(pRoomId, currentQuality.value);
+      streamConfig = await getDouyuStreamConfig(pRoomId, currentQuality.value, effectiveLine);
     } else if (pPlatform === StreamingPlatform.DOUYIN) {
       const douyinConfig = await fetchAndPrepareDouyinStreamConfig(pRoomId, currentQuality.value);
       playerTitle.value = douyinConfig.title;
@@ -1838,7 +2205,7 @@ async function initializePlayerAndStream(
 
       streamConfig = { streamUrl: douyinConfig.streamUrl, streamType: douyinConfig.streamType };
     } else if (pPlatform === StreamingPlatform.HUYA) {
-      streamConfig = await getHuyaStreamConfig(pRoomId, currentQuality.value);
+      streamConfig = await getHuyaStreamConfig(pRoomId, currentQuality.value, effectiveLine);
     } else if (pPlatform === StreamingPlatform.BILIBILI) {
       streamConfig = await getBilibiliStreamConfig(pRoomId, currentQuality.value, props.cookie || undefined);
     } else {
@@ -1859,7 +2226,7 @@ async function initializePlayerAndStream(
 
       try {
         if (pPlatform === StreamingPlatform.HUYA) {
-          const result: any = await invoke('get_huya_unified_cmd', { roomId: pRoomId, quality: currentQuality.value });
+          const result: any = await invoke('get_huya_unified_cmd', { roomId: pRoomId, quality: currentQuality.value, line: effectiveLine ?? null });
           await ensureProxyStarted();
           playerTitle.value = result?.title ?? props.title;
           playerAnchorName.value = result?.nick ?? props.anchorName;
@@ -2024,12 +2391,50 @@ const switchQuality = async (quality: string) => {
   }
 };
 
+const switchLine = async (lineKey: string) => {
+  if (isLineSwitching.value) {
+    return;
+  }
+  const options = lineOptions.value;
+  if (!options.length) {
+    return;
+  }
+  if (!options.some((option) => option.key === lineKey)) {
+    return;
+  }
+  if (!props.roomId || props.platform == null) {
+    emit('request-player-reload');
+    return;
+  }
+  if (currentLine.value === lineKey) {
+    return;
+  }
+
+  isLineSwitching.value = true;
+  const previousLine = currentLine.value;
+
+  try {
+    currentLine.value = lineKey;
+    persistLinePreference(props.platform, lineKey);
+    await reloadCurrentStream('line');
+    console.log(`[Player] 线路切换完成: ${lineKey}`);
+  } catch (error) {
+    console.error('[Player] 线路切换失败:', error);
+    currentLine.value = previousLine ?? null;
+    if (previousLine) {
+      persistLinePreference(props.platform, previousLine);
+    }
+  } finally {
+    isLineSwitching.value = false;
+  }
+};
+
 // 初始化画质偏好
 const initializeQualityPreference = () => {
   currentQuality.value = resolveStoredQuality(props.platform);
 };
 
-async function reloadCurrentStream(trigger: 'refresh' | 'quality' = 'refresh') {
+async function reloadCurrentStream(trigger: 'refresh' | 'quality' | 'line' = 'refresh') {
   if (isLoadingStream.value) {
     return;
   }
@@ -2057,6 +2462,9 @@ async function reloadCurrentStream(trigger: 'refresh' | 'quality' = 'refresh') {
   }
   if (trigger === 'quality') {
     qualityControlPlugin.value?.updateLabel(currentQuality.value);
+  }
+  if (trigger === 'line') {
+    lineControlPlugin.value?.updateLabel(getLineLabel(currentLine.value));
   }
 }
 
@@ -2090,6 +2498,50 @@ watch(isQualitySwitching, (isSwitching) => {
 
 watch(qualityControlPlugin, (plugin) => {
   plugin?.setSwitching(isQualitySwitching.value);
+});
+
+watch(isLineSwitching, (isSwitching) => {
+  lineControlPlugin.value?.setSwitching(isSwitching);
+});
+
+watch(lineControlPlugin, (plugin) => {
+  if (!plugin) {
+    return;
+  }
+  plugin.setOptions(lineOptions.value);
+  plugin.updateLabel(getLineLabel(currentLine.value));
+  plugin.setSwitching(isLineSwitching.value);
+});
+
+watch(
+  () => props.platform,
+  (platform, previous) => {
+    if (platform !== previous) {
+      currentLine.value = resolveStoredLine(platform);
+      isLineSwitching.value = false;
+    }
+  },
+);
+
+watch(
+  lineOptions,
+  (options) => {
+    if (!options.length) {
+      currentLine.value = null;
+    } else if (!options.some((option) => option.key === currentLine.value)) {
+      currentLine.value = options[0]?.key ?? null;
+    }
+    lineControlPlugin.value?.setOptions(options);
+    lineControlPlugin.value?.updateLabel(getLineLabel(currentLine.value));
+  },
+  { immediate: true },
+);
+
+watch(currentLine, (line) => {
+  if (line) {
+    persistLinePreference(props.platform, line);
+  }
+  lineControlPlugin.value?.updateLabel(getLineLabel(line));
 });
 
 watch(isDanmuEnabled, (enabled) => {

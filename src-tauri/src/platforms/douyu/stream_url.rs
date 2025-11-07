@@ -49,6 +49,22 @@ struct DouYu {
     client: Client,
 }
 
+const DEFAULT_DOUYU_CDN: &str = "ws-h5";
+
+fn normalize_douyu_cdn(input: Option<&str>) -> &'static str {
+    match input
+        .map(|s| s.trim().to_ascii_lowercase())
+        .filter(|s| !s.is_empty())
+        .as_deref()
+    {
+        Some("ws-h5") => "ws-h5",
+        Some("tct-h5") => "tct-h5",
+        Some("ali-h5") => "ali-h5",
+        Some("hs-h5") => "hs-h5",
+        _ => DEFAULT_DOUYU_CDN,
+    }
+}
+
 impl DouYu {
     async fn new(rid: &str) -> Result<Self, Box<dyn std::error::Error>> {
         // 迁移到 reqwest：禁用系统代理、限制重定向、设置默认 UA/语言等头部
@@ -296,16 +312,17 @@ impl DouYu {
         })
     }
 
-    pub async fn get_real_url(&self) -> Result<String, Box<dyn std::error::Error>> {
-        let result = self.get_pc_js("ws-h5", 0).await?;
+    pub async fn get_real_url(&self, cdn: &str) -> Result<String, Box<dyn std::error::Error>> {
+        let result = self.get_pc_js(cdn, 0).await?;
         Ok(result.url)
     }
 
     pub async fn get_real_url_with_quality(
         &self,
         quality: &str,
+        cdn: &str,
     ) -> Result<String, Box<dyn std::error::Error>> {
-        let base_result = self.get_pc_js("ws-h5", 0).await?;
+        let base_result = self.get_pc_js(cdn, 0).await?;
         let target_rate =
             Self::resolve_rate_for_quality(quality, &base_result.variants).unwrap_or(0);
         println!(
@@ -315,7 +332,7 @@ impl DouYu {
         if target_rate == 0 || target_rate == base_result.requested_rate {
             return Ok(base_result.url);
         }
-        let target_result = self.get_pc_js("ws-h5", target_rate).await?;
+        let target_result = self.get_pc_js(cdn, target_rate).await?;
         Ok(target_result.url)
     }
 
@@ -463,17 +480,23 @@ impl DouYu {
     }
 }
 
-pub async fn get_stream_url(room_id: &str) -> Result<String, Box<dyn std::error::Error>> {
+pub async fn get_stream_url(
+    room_id: &str,
+    cdn: Option<&str>,
+) -> Result<String, Box<dyn std::error::Error>> {
     let douyu = DouYu::new(room_id).await?;
-    let url = douyu.get_real_url().await?;
+    let cdn_key = normalize_douyu_cdn(cdn);
+    let url = douyu.get_real_url(cdn_key).await?;
     Ok(url)
 }
 
 pub async fn get_stream_url_with_quality(
     room_id: &str,
     quality: &str,
+    cdn: Option<&str>,
 ) -> Result<String, Box<dyn std::error::Error>> {
     let douyu = DouYu::new(room_id).await?;
-    let url = douyu.get_real_url_with_quality(quality).await?;
+    let cdn_key = normalize_douyu_cdn(cdn);
+    let url = douyu.get_real_url_with_quality(quality, cdn_key).await?;
     Ok(url)
 }

@@ -173,6 +173,7 @@ struct RoomDetail {
 #[derive(Clone, Debug)]
 struct WebStreamCandidate {
     base_flv: String,
+    cdn: String,
 }
 
 #[derive(Clone, Debug)]
@@ -318,6 +319,11 @@ async fn fetch_web_stream_data(
 
     let mut candidates: Vec<WebStreamCandidate> = Vec::new();
     for item in stream_items {
+        let cdn = item
+            .get("sCdnType")
+            .and_then(|v| v.as_str())
+            .unwrap_or_default()
+            .to_string();
         let flv_url = item
             .get("sFlvUrl")
             .and_then(|v| v.as_str())
@@ -349,7 +355,7 @@ async fn fetch_web_stream_data(
         };
 
         let base_flv = format!("{}/{}.{}?{}", flv_url, stream_name, flv_suffix, anti_params);
-        candidates.push(WebStreamCandidate { base_flv });
+        candidates.push(WebStreamCandidate { base_flv, cdn });
     }
 
     let candidates = prioritize_candidates(candidates);
@@ -374,6 +380,12 @@ fn cdn_priority(cdn: &str) -> usize {
 
 fn is_flv_url(url: &str) -> bool {
     url.to_ascii_lowercase().contains(".flv")
+}
+
+fn normalize_huya_line(input: Option<&str>) -> Option<String> {
+    input
+        .map(|s| s.trim().to_ascii_lowercase())
+        .filter(|s| matches!(s.as_str(), "tx" | "al" | "hs"))
 }
 
 fn prioritize_candidates(candidates: Vec<WebStreamCandidate>) -> Vec<WebStreamCandidate> {
@@ -433,21 +445,39 @@ fn resolve_ratio(quality: Option<&str>) -> Option<i32> {
     None
 }
 
-fn pick_stream_url(candidates: &[WebStreamCandidate], ratio: Option<i32>) -> Option<String> {
-    let candidate = candidates.first()?;
+fn pick_stream_url(
+    candidates: &[WebStreamCandidate],
+    ratio: Option<i32>,
+    preferred_cdn: Option<&str>,
+) -> Option<(String, usize)> {
+    if candidates.is_empty() {
+        return None;
+    }
+
+    let preferred_index = preferred_cdn.and_then(|target| {
+        candidates
+            .iter()
+            .position(|c| c.cdn.eq_ignore_ascii_case(target))
+    });
+
+    let candidate_index = preferred_index.unwrap_or(0);
+    let candidate = candidates.get(candidate_index)?;
     if let Some(r) = ratio {
         if is_flv_url(&candidate.base_flv) {
-            Some(format!("{}&ratio={}", candidate.base_flv, r))
+            Some((
+                format!("{}&ratio={}", candidate.base_flv, r),
+                candidate_index,
+            ))
         } else {
-            Some(candidate.base_flv.clone())
+            Some((candidate.base_flv.clone(), candidate_index))
         }
     } else {
-        Some(candidate.base_flv.clone())
+        Some((candidate.base_flv.clone(), candidate_index))
     }
 }
 
-fn build_flv_tx_urls(candidates: &[WebStreamCandidate]) -> Vec<HuyaUnifiedStreamEntry> {
-    let Some(base) = candidates.first() else {
+fn build_flv_tx_urls(candidate: Option<&WebStreamCandidate>) -> Vec<HuyaUnifiedStreamEntry> {
+    let Some(base) = candidate else {
         return Vec::new();
     };
 
@@ -478,6 +508,7 @@ fn build_flv_tx_urls(candidates: &[WebStreamCandidate]) -> Vec<HuyaUnifiedStream
 pub async fn get_huya_unified_cmd(
     room_id: String,
     quality: Option<String>,
+    line: Option<String>,
 ) -> Result<HuyaUnifiedResponse, String> {
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(10))
@@ -494,14 +525,34 @@ pub async fn get_huya_unified_cmd(
         .map_err(|e| e.to_string())?;
 
     let ratio = resolve_ratio(quality.as_deref());
-    let selected = pick_stream_url(&web_stream.candidates, ratio);
-    let tx_entries = build_flv_tx_urls(&web_stream.candidates);
+    let preferred_line = normalize_huya_line(line.as_deref());
+    let selection = pick_stream_url(&web_stream.candidates, ratio, preferred_line.as_deref());
+    let (selected_url, selected_index) = match selection {
+        Some(value) => value,
+        None => {
+            return Ok(HuyaUnifiedResponse {
+                title: detail.title.clone(),
+                nick: detail.nick.clone(),
+                avatar: detail.avatar180.clone(),
+                introduction: None,
+                profileRoom: None,
+                is_live: detail.status || web_stream.is_live,
+                flv_tx_urls: Vec::new(),
+                selected_url: None,
+            });
+        }
+    };
+    let tx_entries = build_flv_tx_urls(web_stream.candidates.get(selected_index));
     let is_live = detail.status || web_stream.is_live;
     println!(
-        "[Huya] requested quality: {:?}, resolved ratio: {:?}, selected url present: {}",
+        "[Huya] requested quality: {:?}, resolved ratio: {:?}, preferred line: {:?}, selected line: {:?}",
         quality,
         ratio,
-        selected.is_some()
+        preferred_line,
+        web_stream
+            .candidates
+            .get(selected_index)
+            .map(|c| c.cdn.clone())
     );
 
     Ok(HuyaUnifiedResponse {
@@ -512,7 +563,7 @@ pub async fn get_huya_unified_cmd(
         profileRoom: None,
         is_live,
         flv_tx_urls: tx_entries,
-        selected_url: selected,
+        selected_url: Some(selected_url),
     })
 }
 #[allow(dead_code)]
