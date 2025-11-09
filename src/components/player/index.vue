@@ -129,6 +129,7 @@ import { useImageProxy } from '../FollowsList/useProxy';
 
 // Ensure image proxy helpers are available in this component
 const { ensureProxyStarted, proxify } = useImageProxy();
+const keepAwakeActive = ref(false);
 
 type DanmuUserSettings = {
   color: string;
@@ -1589,6 +1590,31 @@ const getLineLabel = (key?: string | null): string => {
   return option?.label ?? '线路';
 };
 
+const acquireBackgroundPlaybackLock = async () => {
+  if (keepAwakeActive.value) {
+    return;
+  }
+  try {
+    await invoke('begin_background_playback');
+    keepAwakeActive.value = true;
+  } catch (error) {
+    console.warn('[Player] Failed to begin background playback keep-awake:', error);
+  }
+};
+
+const releaseBackgroundPlaybackLock = async () => {
+  if (!keepAwakeActive.value) {
+    return;
+  }
+  try {
+    await invoke('end_background_playback');
+  } catch (error) {
+    console.warn('[Player] Failed to end background playback keep-awake:', error);
+  } finally {
+    keepAwakeActive.value = false;
+  }
+};
+
 function resetFullscreenState() {
   isInNativePlayerFullscreen.value = false;
   isInWebFullscreen.value = false;
@@ -1636,6 +1662,7 @@ function destroyPlayerInstance() {
   volumeControlPlugin.value = null;
 
   resetFullscreenState();
+  void releaseBackgroundPlaybackLock();
 }
 
 function ensureDanmuOverlayHost(player: Player): HTMLElement | null {
@@ -1917,16 +1944,16 @@ async function mountXgPlayer(
       cors: true,
       autoCleanupSourceBuffer: true,
       enableWorker: true,
-      stashInitialSize: 128,
-      lazyLoad: true,
-      lazyLoadMaxDuration: 30,
-      deferLoadAfterSourceOpen: true,
+      stashInitialSize: 256,
+      lazyLoad: false,
+      disconnectTime: 0,
     };
   }
 
   const player = new Player(playerOptions);
 
   playerInstance.value = player;
+  await acquireBackgroundPlaybackLock();
   const storedPlayerVolume = loadStoredVolume();
   if (storedPlayerVolume !== null) {
     player.volume = storedPlayerVolume;
@@ -2714,6 +2741,7 @@ onUnmounted(async () => {
   }
 
   destroyPlayerInstance();
+  await releaseBackgroundPlaybackLock();
   danmakuMessages.value = []; 
 });
 

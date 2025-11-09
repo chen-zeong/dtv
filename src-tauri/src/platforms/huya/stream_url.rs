@@ -7,7 +7,7 @@ use md5::{Digest, Md5};
 use rand::Rng;
 use regex::Regex;
 use reqwest::header::{
-    HeaderMap, HeaderValue, ACCEPT, ACCEPT_LANGUAGE, COOKIE, ORIGIN, REFERER, USER_AGENT,
+    HeaderMap, HeaderName, HeaderValue, ACCEPT, ACCEPT_LANGUAGE, COOKIE, REFERER, USER_AGENT,
 };
 use serde::Serialize;
 use serde_json::Value;
@@ -192,9 +192,21 @@ async fn fetch_room_detail(
     );
     let mut headers = HeaderMap::new();
     headers.insert(ACCEPT, HeaderValue::from_static("*/*"));
-    headers.insert(ORIGIN, HeaderValue::from_static("https://www.huya.com"));
-    headers.insert(REFERER, HeaderValue::from_static("https://www.huya.com/"));
-    headers.insert(USER_AGENT, HeaderValue::from_static("Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36"));
+    headers.insert(
+        USER_AGENT,
+        HeaderValue::from_static("ios/7.830 (ios 17.0; ; iPhone 15 (A2846/A3089/A3090/A3092))"),
+    );
+    headers.insert(
+        REFERER,
+        HeaderValue::from_static(
+            "https://servicewechat.com/wx74767bf0b684f7d3/301/page-frame.html",
+        ),
+    );
+    headers.insert(ACCEPT_LANGUAGE, HeaderValue::from_static("zh-CN,zh;q=0.9"));
+    headers.insert(
+        HeaderName::from_static("xweb_xhr"),
+        HeaderValue::from_static("1"),
+    );
 
     let resp = client.get(&url).headers(headers).send().await?;
     let text = resp.text().await?;
@@ -427,6 +439,15 @@ fn prioritize_candidates(candidates: Vec<WebStreamCandidate>) -> Vec<WebStreamCa
     remaining
 }
 
+fn adjust_tx_flv_url(mut url: String, is_tx: bool) -> String {
+    if !is_tx {
+        return url;
+    }
+    url = url.replace("&ctype=tars_mp", "&ctype=huya_webh5");
+    url = url.replace("&fs=bhct", "&fs=bgct");
+    url
+}
+
 fn resolve_ratio(quality: Option<&str>) -> Option<i32> {
     if let Some(q) = quality {
         let trimmed = q.trim();
@@ -476,7 +497,10 @@ fn pick_stream_url(
     }
 }
 
-fn build_flv_tx_urls(candidate: Option<&WebStreamCandidate>) -> Vec<HuyaUnifiedStreamEntry> {
+fn build_flv_tx_urls(
+    candidate: Option<&WebStreamCandidate>,
+    is_tx: bool,
+) -> Vec<HuyaUnifiedStreamEntry> {
     let Some(base) = candidate else {
         return Vec::new();
     };
@@ -485,19 +509,19 @@ fn build_flv_tx_urls(candidate: Option<&WebStreamCandidate>) -> Vec<HuyaUnifiedS
     entries.push(HuyaUnifiedStreamEntry {
         quality: "原画".to_string(),
         bitRate: 0,
-        url: base.base_flv.clone(),
+        url: adjust_tx_flv_url(base.base_flv.clone(), is_tx),
     });
 
     if is_flv_url(&base.base_flv) {
         entries.push(HuyaUnifiedStreamEntry {
             quality: "高清".to_string(),
             bitRate: 4000,
-            url: format!("{}&ratio={}", base.base_flv, 4000),
+            url: adjust_tx_flv_url(format!("{}&ratio={}", base.base_flv, 4000), is_tx),
         });
         entries.push(HuyaUnifiedStreamEntry {
             quality: "标清".to_string(),
             bitRate: 2000,
-            url: format!("{}&ratio={}", base.base_flv, 2000),
+            url: adjust_tx_flv_url(format!("{}&ratio={}", base.base_flv, 2000), is_tx),
         });
     }
 
@@ -542,7 +566,12 @@ pub async fn get_huya_unified_cmd(
             });
         }
     };
-    let tx_entries = build_flv_tx_urls(web_stream.candidates.get(selected_index));
+    let selected_candidate = web_stream.candidates.get(selected_index);
+    let is_tx = selected_candidate
+        .map(|c| c.cdn.eq_ignore_ascii_case("tx"))
+        .unwrap_or(false);
+    let selected_url = adjust_tx_flv_url(selected_url, is_tx);
+    let tx_entries = build_flv_tx_urls(selected_candidate, is_tx);
     let is_live = detail.status || web_stream.is_live;
     println!(
         "[Huya] requested quality: {:?}, resolved ratio: {:?}, preferred line: {:?}, selected line: {:?}",

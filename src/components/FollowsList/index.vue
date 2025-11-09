@@ -191,7 +191,9 @@
   const overlayAlignTop = ref<number>(64)
   const overlayAlignLeft = ref<number>(240)
   
-  const followStore = useFollowStore();
+const followStore = useFollowStore();
+const toStreamerKey = (platform: Platform | string, id: string) =>
+  `${String(platform || '').toUpperCase()}:${id}`;
   
   // Updated DouyinRoomInfo to match the Rust struct DouyinFollowListRoomInfo
   // interface DouyinRoomInfo { // This will be the type for `data` from invoke
@@ -887,13 +889,43 @@
 
       const validUpdates = updates.filter((entry): entry is { originalKey: string; updated: FollowedStreamer } => !!entry && !!entry.updated && typeof entry.updated.id !== 'undefined');
       if (validUpdates.length > 0) {
-        // Preserve original user-defined order: map updates back onto the original list order (use platform:id to avoid collisions)
-        const toKey = (s: FollowedStreamer) => `${s.platform}:${s.id}`;
-        const updateMap = new Map<string, FollowedStreamer>(validUpdates.map(u => [u.originalKey, u.updated]));
-        const reorderedPreservingOrder = props.followedAnchors.map(orig => updateMap.get(toKey(orig)) ?? orig);
-        const hasChanged = JSON.stringify(reorderedPreservingOrder) !== JSON.stringify(props.followedAnchors);
-        if (hasChanged) {
-          emit('reorderList', reorderedPreservingOrder);
+        const updateMap = new Map<string, FollowedStreamer>(validUpdates.map(u => [toStreamerKey(u.updated.platform, u.updated.id), u.updated]));
+
+        const manualKeys = followStore.listOrder.length > 0
+          ? followStore.listOrder
+              .filter(item => item.type === 'streamer')
+              .map(item => toStreamerKey(item.data.platform, item.data.id))
+          : props.followedAnchors.map(s => toStreamerKey(s.platform, s.id));
+
+        const manualOrderedStreamers: FollowedStreamer[] = [];
+        const seenKeys = new Set<string>();
+
+        const pushFromKey = (key: string) => {
+          if (seenKeys.has(key)) return;
+          const updated = updateMap.get(key) 
+            ?? props.followedAnchors.find(anchor => toStreamerKey(anchor.platform, anchor.id) === key);
+          if (updated) {
+            manualOrderedStreamers.push(updated);
+            seenKeys.add(key);
+          }
+        };
+
+        manualKeys.forEach(pushFromKey);
+        props.followedAnchors.forEach(streamer => pushFromKey(toStreamerKey(streamer.platform, streamer.id)));
+
+        if (manualOrderedStreamers.length > 0) {
+          emit('reorderList', manualOrderedStreamers);
+          const folderItems = followStore.listOrder.filter(item => item.type === 'folder');
+          const liveStreamers = manualOrderedStreamers.filter(s => s.liveStatus === 'LIVE');
+          const notLiveStreamers = manualOrderedStreamers.filter(s => s.liveStatus !== 'LIVE');
+          const listAfterRefresh = [
+            ...folderItems,
+            ...liveStreamers.map(streamer => ({ type: 'streamer' as const, data: streamer })),
+            ...notLiveStreamers.map(streamer => ({ type: 'streamer' as const, data: streamer })),
+          ];
+          if (listAfterRefresh.length > 0) {
+            followStore.updateListOrder(listAfterRefresh);
+          }
         }
       }
     } finally {

@@ -6,8 +6,10 @@ use std::collections::HashMap;
 use std::env;
 use std::sync::{Arc, Mutex};
 use tokio::sync::oneshot;
+mod keep_awake;
 mod platforms;
 mod proxy;
+use keep_awake::KeepAwakeManager;
 use platforms::common::{DouyinDanmakuState, HuyaDanmakuState};
 use platforms::douyin::danmu::signature::generate_douyin_ms_token;
 use platforms::douyin::fetch_douyin_partition_rooms;
@@ -136,6 +138,18 @@ async fn stop_danmaku_listener(
     }
 }
 
+#[tauri::command]
+fn begin_background_playback(state: tauri::State<'_, KeepAwakeManager>) -> Result<(), String> {
+    state.begin();
+    Ok(())
+}
+
+#[tauri::command]
+fn end_background_playback(state: tauri::State<'_, KeepAwakeManager>) -> Result<(), String> {
+    state.end();
+    Ok(())
+}
+
 // search_anchor seems fine, assuming douyu::search_anchor is correct
 #[tauri::command]
 async fn search_anchor(keyword: String) -> Result<String, String> {
@@ -162,6 +176,7 @@ fn main() {
         .manage(platforms::common::BilibiliDanmakuState::default()) // Manage BilibiliDanmakuState
         .manage(StreamUrlStore::default())
         .manage(proxy::ProxyServerHandle::default())
+        .manage(KeepAwakeManager::default())
         .manage(platforms::bilibili::state::BilibiliState::default())
         .invoke_handler(tauri::generate_handler![
             get_stream_url_cmd,
@@ -178,6 +193,8 @@ fn main() {
             proxy::start_proxy,
             proxy::stop_proxy,
             proxy::start_static_proxy_server,
+            begin_background_playback,
+            end_background_playback,
             fetch_categories,
             fetch_live_list,
             fetch_live_list_for_cate3,
