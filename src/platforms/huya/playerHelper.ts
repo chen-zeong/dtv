@@ -6,8 +6,6 @@ import { v4 as uuidv4 } from 'uuid';
 
 export interface HuyaUnifiedEntry { quality: string; bitRate: number; url: string; }
 
-let huyaProxyActive = false;
-
 export async function getHuyaStreamConfig(
   roomId: string,
   quality: string = '原画',
@@ -18,11 +16,11 @@ export async function getHuyaStreamConfig(
     const result = await invoke<any>('get_huya_unified_cmd', { roomId: roomId, quality, line: line ?? null });
     console.log('[HuyaPlayerHelper] getHuyaStreamConfig got result:', result);
     
-    if (result && result.flv_tx_urls && Array.isArray(result.flv_tx_urls)) {  
+    if (result && result.flv_tx_urls && Array.isArray(result.flv_tx_urls)) {
       const streamUrl = pickHuyaUrlByQuality(result.flv_tx_urls, quality) || result.flv_tx_urls[0]?.url;
       if (streamUrl) {
-        const proxy = await startHuyaProxyFromUrl(streamUrl);
-        return proxy;
+        const sanitizedUrl = enforceHttps(streamUrl);
+        return { streamUrl: sanitizedUrl, streamType: inferStreamType(sanitizedUrl) };
       } else {
         // 无地址按未开播处理
         throw new Error('主播未开播或无法获取直播流');
@@ -39,35 +37,6 @@ export async function getHuyaStreamConfig(
       throw new Error(msg);
     }
     throw new Error('主播未开播或无法获取直播流');
-  }
-}
-
-export async function startHuyaProxyFromUrl(directFlvUrl: string): Promise<{ streamUrl: string, streamType: string | undefined }> {
-  try {
-    // 先将原始流地址写入到后端的 StreamUrlStore
-    await invoke('set_stream_url_cmd', { url: directFlvUrl });
-    // 再启动代理，返回带有 /live.flv 的本地地址
-    const localProxyUrl = await invoke<string>('start_proxy');
-    console.log('[HuyaPlayerHelper] Proxy started for Huya:', localProxyUrl, 'from', directFlvUrl);
-    huyaProxyActive = true;
-    return { streamUrl: localProxyUrl, streamType: 'flv' };
-  } catch (error) {
-    console.error('[HuyaPlayerHelper] Error starting Huya proxy:', error);
-    throw error;
-  }
-}
-
-export async function stopHuyaProxy(): Promise<void> {
-  if (!huyaProxyActive) {
-    return;
-  }
-  try {
-    await invoke('stop_proxy');
-    console.log('[HuyaPlayerHelper] Proxy stopped successfully');
-  } catch (error) {
-    console.error('[HuyaPlayerHelper] Error stopping proxy:', error);
-  } finally {
-    huyaProxyActive = false;
   }
 }
 
@@ -177,4 +146,23 @@ export async function stopHuyaDanmaku(currentUnlistenFn: (() => void) | null): P
 function pickHuyaUrlByQuality(entries: HuyaUnifiedEntry[], quality: string): string | undefined {
   const target = entries.find((e) => e.quality === quality);
   return target?.url;
+}
+
+function enforceHttps(url: string): string {
+  if (!url) return url;
+  if (url.startsWith('http://')) {
+    return url.replace('http://', 'https://');
+  }
+  return url;
+}
+
+function inferStreamType(url: string): string | undefined {
+  if (!url) return undefined;
+  if (url.includes('.flv')) {
+    return 'flv';
+  }
+  if (url.includes('.m3u8')) {
+    return 'hls';
+  }
+  return undefined;
 }

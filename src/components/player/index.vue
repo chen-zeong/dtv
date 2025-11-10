@@ -117,7 +117,7 @@ import type { DanmakuMessage, DanmuOverlayInstance } from './types';
 // Platform-specific player helpers
 import { getDouyuStreamConfig, startDouyuDanmakuListener, stopDouyuDanmaku, stopDouyuProxy } from '../../platforms/douyu/playerHelper';
 import { fetchAndPrepareDouyinStreamConfig, startDouyinDanmakuListener, stopDouyinDanmaku } from '../../platforms/douyin/playerHelper';
-import { getHuyaStreamConfig, startHuyaDanmakuListener, stopHuyaDanmaku, stopHuyaProxy } from '../../platforms/huya/playerHelper';
+import { getHuyaStreamConfig, startHuyaDanmakuListener, stopHuyaDanmaku } from '../../platforms/huya/playerHelper';
 import { getBilibiliStreamConfig, startBilibiliDanmakuListener, stopBilibiliDanmaku } from '../../platforms/bilibili/playerHelper';
 
 import StreamerInfo from '../StreamerInfo/index.vue';
@@ -2165,9 +2165,6 @@ async function initializePlayerAndStream(
     if (oldPlatformForCleanup === StreamingPlatform.DOUYU) {
       await stopDouyuProxy();
     }
-    if (oldPlatformForCleanup === StreamingPlatform.HUYA) {
-      await stopHuyaProxy();
-    }
   } else {
     await stopCurrentDanmakuListener();
   }
@@ -2633,7 +2630,7 @@ watch([() => props.roomId, () => props.platform, () => props.streamUrl, () => pr
       // Determine if re-initialization is needed
       const isInitialCall = oldRoomId === undefined && oldPlatform === undefined;
       const hasSwitchedStream = newRoomId !== oldRoomId || newPlatform !== oldPlatform;
-      // Douyin might also re-init if its specific stream URL prop changes (though less likely with current proxy setup)
+      // Douyin might also re-init if its specific stream URL prop changes (rare with the new direct stream setup)
       const douyinStreamUrlChanged = newPlatform === StreamingPlatform.DOUYIN && newStreamUrl !== _oldStreamUrl;
 
       const needsReInit = hasSwitchedStream || isInitialCall || douyinStreamUrlChanged;
@@ -2650,9 +2647,6 @@ watch([() => props.roomId, () => props.platform, () => props.streamUrl, () => pr
         await stopCurrentDanmakuListener(oldPlatform, oldRoomId);
         if (oldPlatform === StreamingPlatform.DOUYU) {
           await stopDouyuProxy();
-        }
-        if (oldPlatform === StreamingPlatform.HUYA) {
-          await stopHuyaProxy();
         }
       } else {
         await stopCurrentDanmakuListener();
@@ -2708,9 +2702,6 @@ onUnmounted(async () => {
 
   if (props.platform === StreamingPlatform.DOUYU) {
     await stopDouyuProxy();
-  }
-  if (props.platform === StreamingPlatform.HUYA) {
-    await stopHuyaProxy();
   }
 
   destroyPlayerInstance();

@@ -54,16 +54,19 @@ export async function fetchAndPrepareDouyinStreamConfig(roomId: string, quality:
     let streamType: string | undefined = undefined;
     let uiMessage: string | null = null; 
 
-    if (streamAvailable && result.stream_url) {
-      if (result.stream_url.startsWith('http://127.0.0.1') && result.stream_url.endsWith('/live.flv')) {
+    const rawStreamUrl = result.stream_url ?? null;
+    const sanitizedStreamUrl = streamAvailable && rawStreamUrl ? enforceHttps(rawStreamUrl) : null;
+
+    if (streamAvailable && rawStreamUrl) {
+      if (rawStreamUrl.startsWith('http://127.0.0.1') && rawStreamUrl.endsWith('/live.flv')) {
         streamType = 'flv';
-      } else if (result.stream_url.includes('pull-hls') || result.stream_url.endsWith('.m3u8')) {
-        console.warn(`[DouyinPlayerHelper] Received HLS-like stream URL (${result.stream_url}), but expected flv. Overriding to flv.`);
+      } else if (rawStreamUrl.includes('pull-hls') || rawStreamUrl.endsWith('.m3u8')) {
+        console.warn(`[DouyinPlayerHelper] Received HLS-like stream URL (${rawStreamUrl}), but expected flv. Overriding to flv.`);
         streamType = 'flv';
-      } else if (result.stream_url.includes('pull-flv') || result.stream_url.includes('.flv')) {
+      } else if (rawStreamUrl.includes('pull-flv') || rawStreamUrl.includes('.flv')) {
         streamType = 'flv';
       } else {
-        console.warn(`[DouyinPlayerHelper] Could not determine stream type for URL: ${result.stream_url}. Defaulting to flv.`);
+        console.warn(`[DouyinPlayerHelper] Could not determine stream type for URL: ${rawStreamUrl}. Defaulting to flv.`);
         streamType = 'flv';
       }
       // uiMessage remains null if stream is available and no prior error.
@@ -76,7 +79,7 @@ export async function fetchAndPrepareDouyinStreamConfig(roomId: string, quality:
     }
 
     return {
-      streamUrl: streamAvailable ? (result.stream_url !== undefined ? result.stream_url : null) : null,
+      streamUrl: sanitizedStreamUrl,
       streamType: streamType,
       title: result.title,
       anchorName: result.anchor_name,
@@ -177,4 +180,17 @@ export async function stopDouyinDanmaku(currentUnlistenFn: (() => void) | null):
   } catch (error) {
     console.error('[DouyinPlayerHelper] Error stopping Douyin danmaku listener:', error);
   }
+}
+
+function enforceHttps(url: string): string {
+  if (!url) {
+    return url;
+  }
+  if (url.startsWith('https://')) {
+    return url;
+  }
+  if (url.startsWith('http://')) {
+    return `https://${url.slice('http://'.length)}`;
+  }
+  return url;
 }

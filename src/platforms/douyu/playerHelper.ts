@@ -33,7 +33,7 @@ export async function getDouyuStreamConfig(
       });
       
       if (streamUrl) {
-        finalStreamUrl = streamUrl;
+        finalStreamUrl = enforceHttps(streamUrl);
         streamType = 'flv';
         break;
       } else {
@@ -162,4 +162,13 @@ export async function stopDouyuProxy(): Promise<void> {
     console.error('[DouyuPlayerHelper] Error stopping proxy server:', e);
     douyuProxyActive = false;
   }
+}
+
+function enforceHttps(url: string): string {
+  if (!url) return url;
+  if (url.startsWith('https://')) return url;
+  if (url.startsWith('http://')) {
+    return `https://${url.slice('http://'.length)}`;
+  }
+  return url;
 }

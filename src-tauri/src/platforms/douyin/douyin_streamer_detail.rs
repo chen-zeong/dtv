@@ -3,7 +3,7 @@ use crate::platforms::common::types::StreamVariant;
 use crate::platforms::common::GetStreamUrlPayload;
 use crate::platforms::common::LiveStreamInfo as CommonLiveStreamInfo;
 use crate::platforms::douyin::web_api::{choose_flv_stream, fetch_room_data, DouyinRoomData};
-use crate::proxy::{start_proxy, ProxyServerHandle};
+use crate::proxy::ProxyServerHandle;
 use crate::StreamUrlStore;
 use serde_json::Value;
 use tauri::{command, AppHandle, State};
@@ -30,9 +30,9 @@ pub async fn get_douyin_live_stream_url(
 
 #[command]
 pub async fn get_douyin_live_stream_url_with_quality(
-    app_handle: AppHandle,
-    stream_url_store: State<'_, StreamUrlStore>,
-    proxy_server_handle: State<'_, ProxyServerHandle>,
+    _app_handle: AppHandle,
+    _stream_url_store: State<'_, StreamUrlStore>,
+    _proxy_server_handle: State<'_, ProxyServerHandle>,
     payload: GetStreamUrlPayload,
     quality: String,
 ) -> Result<CommonLiveStreamInfo, String> {
@@ -105,48 +105,16 @@ pub async fn get_douyin_live_stream_url_with_quality(
         selected_key, real_url
     );
 
-    // Persist upstream URL so the proxy can serve it
-    {
-        let mut guard = stream_url_store.url.lock().unwrap();
-        *guard = real_url.clone();
-    }
-
-    let proxied_url = match start_proxy(app_handle, proxy_server_handle, stream_url_store).await {
-        Ok(proxy) => {
-            println!(
-                "[Douyin Stream Detail] Proxy started successfully for '{}': {}",
-                web_rid, proxy
-            );
-            proxy
-        }
-        Err(e) => {
-            eprintln!(
-                    "[Douyin Stream Detail] Failed to start proxy for '{}': {}. Returning upstream URL directly.",
-                    web_rid, e
-                );
-            return Ok(CommonLiveStreamInfo {
-                title,
-                anchor_name,
-                avatar,
-                stream_url: Some(real_url.clone()),
-                status: Some(status),
-                error_message: Some(format!("启动本地代理失败: {}", e)),
-                upstream_url: Some(real_url),
-                available_streams,
-                normalized_room_id: None,
-                web_rid: Some(web_rid),
-            });
-        }
-    };
+    let sanitized_url = enforce_https(&real_url);
 
     Ok(CommonLiveStreamInfo {
         title,
         anchor_name,
         avatar,
-        stream_url: Some(proxied_url.clone()),
+        stream_url: Some(sanitized_url.clone()),
         status: Some(status),
         error_message: None,
-        upstream_url: Some(real_url),
+        upstream_url: Some(sanitized_url),
         available_streams,
         normalized_room_id: None,
         web_rid: Some(web_rid),
@@ -196,6 +164,16 @@ pub(crate) fn extract_anchor_name(room: &Value) -> Option<String> {
                 .and_then(|v| v.as_str())
                 .map(|s| s.to_string())
         })
+}
+
+fn enforce_https(url: &str) -> String {
+    if url.starts_with("https://") {
+        url.to_string()
+    } else if url.starts_with("http://") {
+        format!("https://{}", &url["http://".len()..])
+    } else {
+        url.to_string()
+    }
 }
 
 pub(crate) fn extract_avatar(room: &Value) -> Option<String> {

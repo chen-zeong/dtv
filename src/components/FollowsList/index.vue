@@ -275,6 +275,84 @@
     }
   }
   const MIN_ANIMATION_DURATION = 1500;
+
+  type RefreshUpdateEntry = { originalKey: string; updated: FollowedStreamer };
+
+  const streamerKey = (platform: Platform | string, id: string) => `${String(platform).toUpperCase()}:${id}`;
+  const toStreamerKey = (streamer: Pick<FollowedStreamer, 'platform' | 'id'>) => streamerKey(streamer.platform, streamer.id);
+  const isLiveStreamer = (streamer?: FollowedStreamer | null) => {
+    if (!streamer) return false;
+    if (streamer.liveStatus && streamer.liveStatus !== 'UNKNOWN') {
+      return streamer.liveStatus === 'LIVE';
+    }
+    return !!streamer.isLive;
+  };
+
+  type FolderListItem = Extract<FollowListItem, { type: 'folder' }>;
+  type StreamerListItem = Extract<FollowListItem, { type: 'streamer' }>;
+
+  function buildPostRefreshOrdering(updateEntries: RefreshUpdateEntry[]): { nextListOrder: FollowListItem[]; streamerSequence: FollowedStreamer[] } | null {
+    const baseOrderSource: FollowListItem[] = followStore.listOrder.length
+      ? [...followStore.listOrder]
+      : [
+          ...followStore.folders.map(folder => ({ type: 'folder' as const, data: folder })),
+          ...props.followedAnchors.map(streamer => ({ type: 'streamer' as const, data: streamer })),
+        ];
+
+    if (!baseOrderSource.length && !followStore.folders.length) {
+      return props.followedAnchors.length ? {
+        nextListOrder: props.followedAnchors.map(streamer => ({ type: 'streamer' as const, data: streamer })),
+        streamerSequence: [...props.followedAnchors],
+      } : null;
+    }
+
+    const streamerDataMap = new Map<string, FollowedStreamer>();
+    props.followedAnchors.forEach(streamer => {
+      streamerDataMap.set(toStreamerKey(streamer), streamer);
+    });
+    updateEntries.forEach(entry => {
+      streamerDataMap.set(entry.originalKey, entry.updated);
+    });
+
+    const folderItems: FolderListItem[] = [];
+    const liveItems: StreamerListItem[] = [];
+    const offlineItems: StreamerListItem[] = [];
+    const seenFolderIds = new Set<string>();
+    const seenStreamerKeys = new Set<string>();
+
+    const pushFolder = (folderId: string) => {
+      if (seenFolderIds.has(folderId)) return;
+      const folder = followStore.folders.find(f => f.id === folderId);
+      if (!folder) return;
+      folderItems.push({ type: 'folder', data: folder });
+      seenFolderIds.add(folderId);
+    };
+
+    const pushStreamerByKey = (key: string) => {
+      if (seenStreamerKeys.has(key)) return;
+      const streamer = streamerDataMap.get(key);
+      if (!streamer) return;
+      const item: StreamerListItem = { type: 'streamer', data: streamer };
+      (isLiveStreamer(streamer) ? liveItems : offlineItems).push(item);
+      seenStreamerKeys.add(key);
+    };
+
+    baseOrderSource.forEach(item => {
+      if (item.type === 'folder') {
+        pushFolder(item.data.id);
+      } else {
+        pushStreamerByKey(toStreamerKey(item.data));
+      }
+    });
+
+    streamerDataMap.forEach((_streamer, key) => {
+      pushStreamerByKey(key);
+    });
+
+    const nextListOrder = [...folderItems, ...liveItems, ...offlineItems];
+    const streamerSequence: FollowedStreamer[] = [...liveItems, ...offlineItems].map(item => item.data);
+    return { nextListOrder, streamerSequence };
+  }
   
   const streamers = computed(() => props.followedAnchors);
   
@@ -885,15 +963,13 @@
         }
       }, FOLLOW_REFRESH_CONCURRENCY);
 
-      const validUpdates = updates.filter((entry): entry is { originalKey: string; updated: FollowedStreamer } => !!entry && !!entry.updated && typeof entry.updated.id !== 'undefined');
-      if (validUpdates.length > 0) {
-        // Preserve original user-defined order: map updates back onto the original list order (use platform:id to avoid collisions)
-        const toKey = (s: FollowedStreamer) => `${s.platform}:${s.id}`;
-        const updateMap = new Map<string, FollowedStreamer>(validUpdates.map(u => [u.originalKey, u.updated]));
-        const reorderedPreservingOrder = props.followedAnchors.map(orig => updateMap.get(toKey(orig)) ?? orig);
-        const hasChanged = JSON.stringify(reorderedPreservingOrder) !== JSON.stringify(props.followedAnchors);
+      const validUpdates = updates.filter((entry): entry is RefreshUpdateEntry => !!entry && !!entry.updated && typeof entry.updated.id !== 'undefined');
+      const orderingResult = buildPostRefreshOrdering(validUpdates) || null;
+      if (orderingResult) {
+        followStore.updateListOrder(orderingResult.nextListOrder);
+        const hasChanged = JSON.stringify(orderingResult.streamerSequence) !== JSON.stringify(props.followedAnchors);
         if (hasChanged) {
-          emit('reorderList', reorderedPreservingOrder);
+          emit('reorderList', orderingResult.streamerSequence);
         }
       }
     } finally {

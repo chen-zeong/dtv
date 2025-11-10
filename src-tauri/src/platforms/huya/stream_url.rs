@@ -12,6 +12,9 @@ use reqwest::header::{
 use serde::Serialize;
 use serde_json::Value;
 
+const IOS_MOBILE_UA: &str = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1";
+const DESKTOP_UA: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0";
+
 #[derive(Clone, Debug, Serialize)]
 #[allow(non_snake_case)]
 pub struct HuyaUnifiedStreamEntry {
@@ -60,6 +63,16 @@ fn url_decode(s: &str) -> String {
         .find(|(k, _)| k == "a")
         .map(|(_, v)| v.into_owned())
         .unwrap_or_else(|| s.to_string())
+}
+
+fn enforce_https(url: &str) -> String {
+    if url.starts_with("https://") {
+        url.to_string()
+    } else if url.starts_with("http://") {
+        format!("https://{}", &url["http://".len()..])
+    } else {
+        url.to_string()
+    }
 }
 
 fn generate_web_anti_code(stream_name: &str, anti_code: &str) -> Result<String, String> {
@@ -139,7 +152,7 @@ fn generate_web_anti_code(stream_name: &str, anti_code: &str) -> Result<String, 
 async fn check_live_status(
     client: &reqwest::Client,
     room_id: &str,
-) -> Result<bool, Box<dyn Error>> {
+) -> Result<bool, Box<dyn Error + Send + Sync>> {
     let url = format!("https://m.huya.com/{}", room_id);
     let mut headers = HeaderMap::new();
     headers.insert(USER_AGENT, HeaderValue::from_static("Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36"));
@@ -185,16 +198,16 @@ struct HuyaWebStreamData {
 async fn fetch_room_detail(
     client: &reqwest::Client,
     room_id: &str,
-) -> Result<RoomDetail, Box<dyn Error>> {
+) -> Result<RoomDetail, Box<dyn Error + Send + Sync>> {
     let url = format!(
         "https://mp.huya.com/cache.php?m=Live&do=profileRoom&roomid={}&showSecret=1",
         room_id
     );
     let mut headers = HeaderMap::new();
     headers.insert(ACCEPT, HeaderValue::from_static("*/*"));
-    headers.insert(ORIGIN, HeaderValue::from_static("https://www.huya.com"));
-    headers.insert(REFERER, HeaderValue::from_static("https://www.huya.com/"));
-    headers.insert(USER_AGENT, HeaderValue::from_static("Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36"));
+    headers.insert(ORIGIN, HeaderValue::from_static("https://m.huya.com"));
+    headers.insert(REFERER, HeaderValue::from_static("https://m.huya.com/"));
+    headers.insert(USER_AGENT, HeaderValue::from_static(IOS_MOBILE_UA));
 
     let resp = client.get(&url).headers(headers).send().await?;
     let text = resp.text().await?;
@@ -248,21 +261,53 @@ async fn fetch_room_detail(
 async fn fetch_web_stream_data(
     client: &reqwest::Client,
     room_id: &str,
-) -> Result<HuyaWebStreamData, Box<dyn Error>> {
+) -> Result<HuyaWebStreamData, Box<dyn Error + Send + Sync>> {
+    match fetch_web_stream_data_with_headers(client, room_id, true).await {
+        Ok(data) if !data.candidates.is_empty() => Ok(data),
+        Ok(_) => {
+            println!("[Huya] Mobile UA response contained no stream candidates, retrying with desktop headers.");
+            fetch_web_stream_data_with_headers(client, room_id, false).await
+        }
+        Err(err) => {
+            eprintln!(
+                "[Huya] Mobile UA request failed ({:?}), retrying with desktop headers.",
+                err
+            );
+            fetch_web_stream_data_with_headers(client, room_id, false).await
+        }
+    }
+}
+
+async fn fetch_web_stream_data_with_headers(
+    client: &reqwest::Client,
+    room_id: &str,
+    use_mobile_headers: bool,
+) -> Result<HuyaWebStreamData, Box<dyn Error + Send + Sync>> {
     let url = format!("https://www.huya.com/{}", room_id);
     let mut headers = HeaderMap::new();
-    headers.insert(
-        USER_AGENT,
-        HeaderValue::from_static(
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0",
-        ),
-    );
-    headers.insert(
-        ACCEPT,
-        HeaderValue::from_static(
-            "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-        ),
-    );
+    if use_mobile_headers {
+        headers.insert(USER_AGENT, HeaderValue::from_static(IOS_MOBILE_UA));
+        headers.insert(
+            ACCEPT,
+            HeaderValue::from_static("text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"),
+        );
+        headers.insert(
+            REFERER,
+            HeaderValue::from_static("https://m.huya.com/"),
+        );
+    } else {
+        headers.insert(USER_AGENT, HeaderValue::from_static(DESKTOP_UA));
+        headers.insert(
+            ACCEPT,
+            HeaderValue::from_static(
+                "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+            ),
+        );
+        headers.insert(
+            REFERER,
+            HeaderValue::from_static("https://www.huya.com/"),
+        );
+    }
     headers.insert(
         ACCEPT_LANGUAGE,
         HeaderValue::from_static("zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2"),
@@ -354,7 +399,10 @@ async fn fetch_web_stream_data(
             Err(err) => return Err(format!("failed to generate Huya anti code: {err}").into()),
         };
 
-        let base_flv = format!("{}/{}.{}?{}", flv_url, stream_name, flv_suffix, anti_params);
+        let base_flv = enforce_https(&format!(
+            "{}/{}.{}?{}",
+            flv_url, stream_name, flv_suffix, anti_params
+        ));
         candidates.push(WebStreamCandidate { base_flv, cdn });
     }
 
@@ -380,6 +428,16 @@ fn cdn_priority(cdn: &str) -> usize {
 
 fn is_flv_url(url: &str) -> bool {
     url.to_ascii_lowercase().contains(".flv")
+}
+
+fn adjust_tx_stream_url(url: &str, cdn: &str) -> String {
+    if cdn.eq_ignore_ascii_case("tx") {
+        let replaced_ctype = url.replace("&ctype=tars_mp", "&ctype=huya_webh5");
+        let replaced_fs = replaced_ctype.replace("&fs=bhct", "&fs=bgct");
+        enforce_https(&replaced_fs)
+    } else {
+        enforce_https(url)
+    }
 }
 
 fn normalize_huya_line(input: Option<&str>) -> Option<String> {
@@ -462,17 +520,15 @@ fn pick_stream_url(
 
     let candidate_index = preferred_index.unwrap_or(0);
     let candidate = candidates.get(candidate_index)?;
+    let adjusted_base = adjust_tx_stream_url(&candidate.base_flv, &candidate.cdn);
     if let Some(r) = ratio {
-        if is_flv_url(&candidate.base_flv) {
-            Some((
-                format!("{}&ratio={}", candidate.base_flv, r),
-                candidate_index,
-            ))
+        if is_flv_url(&adjusted_base) {
+            Some((format!("{}&ratio={}", adjusted_base, r), candidate_index))
         } else {
-            Some((candidate.base_flv.clone(), candidate_index))
+            Some((adjusted_base, candidate_index))
         }
     } else {
-        Some((candidate.base_flv.clone(), candidate_index))
+        Some((adjusted_base, candidate_index))
     }
 }
 
@@ -482,22 +538,23 @@ fn build_flv_tx_urls(candidate: Option<&WebStreamCandidate>) -> Vec<HuyaUnifiedS
     };
 
     let mut entries = Vec::new();
+    let adjusted_base = adjust_tx_stream_url(&base.base_flv, &base.cdn);
     entries.push(HuyaUnifiedStreamEntry {
         quality: "原画".to_string(),
         bitRate: 0,
-        url: base.base_flv.clone(),
+        url: adjusted_base.clone(),
     });
 
-    if is_flv_url(&base.base_flv) {
+    if is_flv_url(&adjusted_base) {
         entries.push(HuyaUnifiedStreamEntry {
             quality: "高清".to_string(),
             bitRate: 4000,
-            url: format!("{}&ratio={}", base.base_flv, 4000),
+            url: format!("{}&ratio={}", adjusted_base, 4000),
         });
         entries.push(HuyaUnifiedStreamEntry {
             quality: "标清".to_string(),
             bitRate: 2000,
-            url: format!("{}&ratio={}", base.base_flv, 2000),
+            url: format!("{}&ratio={}", adjusted_base, 2000),
         });
     }
 
