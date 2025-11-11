@@ -440,7 +440,7 @@ impl DouYu {
     }
 
     async fn check_room_status(&self) -> Result<bool, Box<dyn std::error::Error>> {
-        let room_api_url = format!("http://open.douyucdn.cn/api/RoomApi/room/{}", self.rid);
+        let room_api_url = format!("https://open.douyucdn.cn/api/RoomApi/room/{}", self.rid);
 
         let response = self.client
             .get(room_api_url)

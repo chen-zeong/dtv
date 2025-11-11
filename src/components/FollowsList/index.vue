@@ -288,6 +288,17 @@
     return !!streamer.isLive;
   };
 
+  const getStatusBucket = (streamer?: FollowedStreamer | null): 'LIVE' | 'LOOPING' | 'OFFLINE' => {
+    if (!streamer) return 'OFFLINE';
+    if (isLiveStreamer(streamer)) {
+      return 'LIVE';
+    }
+    if (streamer.liveStatus === 'REPLAY') {
+      return 'LOOPING';
+    }
+    return 'OFFLINE';
+  };
+
   type FolderListItem = Extract<FollowListItem, { type: 'folder' }>;
   type StreamerListItem = Extract<FollowListItem, { type: 'streamer' }>;
 
@@ -316,6 +327,7 @@
 
     const folderItems: FolderListItem[] = [];
     const liveItems: StreamerListItem[] = [];
+    const loopingItems: StreamerListItem[] = [];
     const offlineItems: StreamerListItem[] = [];
     const seenFolderIds = new Set<string>();
     const seenStreamerKeys = new Set<string>();
@@ -333,7 +345,14 @@
       const streamer = streamerDataMap.get(key);
       if (!streamer) return;
       const item: StreamerListItem = { type: 'streamer', data: streamer };
-      (isLiveStreamer(streamer) ? liveItems : offlineItems).push(item);
+      const bucket = getStatusBucket(streamer);
+      if (bucket === 'LIVE') {
+        liveItems.push(item);
+      } else if (bucket === 'LOOPING') {
+        loopingItems.push(item);
+      } else {
+        offlineItems.push(item);
+      }
       seenStreamerKeys.add(key);
     };
 
@@ -349,8 +368,8 @@
       pushStreamerByKey(key);
     });
 
-    const nextListOrder = [...folderItems, ...liveItems, ...offlineItems];
-    const streamerSequence: FollowedStreamer[] = [...liveItems, ...offlineItems].map(item => item.data);
+    const nextListOrder = [...folderItems, ...liveItems, ...loopingItems, ...offlineItems];
+    const streamerSequence: FollowedStreamer[] = [...liveItems, ...loopingItems, ...offlineItems].map(item => item.data);
     return { nextListOrder, streamerSequence };
   }
   

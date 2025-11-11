@@ -207,10 +207,20 @@ const sortedFollowedAnchors = computed(() => {
     baseOrder = [...props.followedAnchors];
   }
 
-  // Group by live first (based on liveStatus), then non-live, preserving relative order within each group
-  const live = baseOrder.filter(a => a.liveStatus === 'LIVE');
-  const notLive = baseOrder.filter(a => a.liveStatus !== 'LIVE');
-  return [...live, ...notLive];
+  // Group by live -> looping -> others while preserving relative order inside each bucket
+  const live: FollowedStreamer[] = [];
+  const looping: FollowedStreamer[] = [];
+  const rest: FollowedStreamer[] = [];
+  baseOrder.forEach(anchor => {
+    if (anchor.liveStatus === 'LIVE') {
+      live.push(anchor);
+    } else if (anchor.liveStatus === 'REPLAY') {
+      looping.push(anchor);
+    } else {
+      rest.push(anchor);
+    }
+  });
+  return [...live, ...looping, ...rest];
 });
 
 const handleSelectAnchor = (anchor: FollowedStreamer) => {
