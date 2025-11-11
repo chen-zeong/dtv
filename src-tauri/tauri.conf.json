@@ -23,7 +23,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self' http://* https://*; connect-src 'self' http://* https://* wss://*; media-src 'self' http://* https://* blob:; img-src 'self' data: http://* https://*; script-src 'self' 'unsafe-eval' blob: 'wasm-unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; worker-src blob:; child-src blob:; object-src blob:; base-uri 'self'; media-src-elem 'self' http://* https://* blob:"
+      "csp": "default-src 'self' tauri://localhost http://127.0.0.1:* http://localhost:* http://* https://* data: blob:; connect-src 'self' tauri://localhost ipc://localhost http://127.0.0.1:* http://localhost:* http://* https://* ws://127.0.0.1:* ws://localhost:* ws://* wss://*; media-src 'self' tauri://localhost http://127.0.0.1:* http://localhost:* http://* https://* data: blob:; media-src-elem 'self' tauri://localhost http://127.0.0.1:* http://localhost:* http://* https://* blob:; img-src 'self' tauri://localhost data: blob: http://127.0.0.1:* http://localhost:* http://* https://*; font-src 'self' data: https://*; script-src 'self' 'unsafe-eval' blob: 'wasm-unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; worker-src blob:; child-src blob:; object-src blob:; base-uri 'self'"
     }
   },
   "bundle": {
@@ -44,12 +44,12 @@
       "icons/icon.ico"
     ],
     "windows": {
-    "nsis": {
-      "languages": ["SimpChinese"]
-    },
-    "wix": {
-      "language": ["zh-CN"]
+      "nsis": {
+        "languages": ["SimpChinese"]
+      },
+      "wix": {
+        "language": ["zh-CN"]
+      }
     }
-  }
   }
 }
