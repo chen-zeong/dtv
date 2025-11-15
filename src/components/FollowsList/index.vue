@@ -280,6 +280,15 @@
 
   const streamerKey = (platform: Platform | string, id: string) => `${String(platform).toUpperCase()}:${id}`;
   const toStreamerKey = (streamer: Pick<FollowedStreamer, 'platform' | 'id'>) => streamerKey(streamer.platform, streamer.id);
+  const normalizeRawKey = (rawKey?: string | null) => {
+    if (!rawKey) return '';
+    const segments = String(rawKey).split(':');
+    if (segments.length < 2) return '';
+    const platformPart = segments.shift();
+    const idPart = segments.join(':');
+    if (!platformPart || !idPart) return '';
+    return streamerKey(platformPart, idPart);
+  };
   const isLiveStreamer = (streamer?: FollowedStreamer | null) => {
     if (!streamer) return false;
     if (streamer.liveStatus && streamer.liveStatus !== 'UNKNOWN') {
@@ -309,6 +318,15 @@
           ...followStore.folders.map(folder => ({ type: 'folder' as const, data: folder })),
           ...props.followedAnchors.map(streamer => ({ type: 'streamer' as const, data: streamer })),
         ];
+    const folderStreamerKeys = new Set<string>();
+    followStore.folders.forEach(folder => {
+      folder.streamerIds.forEach(id => {
+        const normalized = normalizeRawKey(id);
+        if (normalized) {
+          folderStreamerKeys.add(normalized);
+        }
+      });
+    });
 
     if (!baseOrderSource.length && !followStore.folders.length) {
       return props.followedAnchors.length ? {
@@ -322,7 +340,8 @@
       streamerDataMap.set(toStreamerKey(streamer), streamer);
     });
     updateEntries.forEach(entry => {
-      streamerDataMap.set(entry.originalKey, entry.updated);
+      const normalized = normalizeRawKey(entry.originalKey) || toStreamerKey(entry.updated);
+      streamerDataMap.set(normalized, entry.updated);
     });
 
     const folderItems: FolderListItem[] = [];
@@ -341,8 +360,9 @@
     };
 
     const pushStreamerByKey = (key: string) => {
-      if (seenStreamerKeys.has(key)) return;
-      const streamer = streamerDataMap.get(key);
+      const normalizedKey = normalizeRawKey(key) || key;
+      if (!normalizedKey || seenStreamerKeys.has(normalizedKey)) return;
+      const streamer = streamerDataMap.get(normalizedKey);
       if (!streamer) return;
       const item: StreamerListItem = { type: 'streamer', data: streamer };
       const bucket = getStatusBucket(streamer);
@@ -353,7 +373,7 @@
       } else {
         offlineItems.push(item);
       }
-      seenStreamerKeys.add(key);
+      seenStreamerKeys.add(normalizedKey);
     };
 
     baseOrderSource.forEach(item => {
@@ -368,7 +388,13 @@
       pushStreamerByKey(key);
     });
 
-    const nextListOrder = [...folderItems, ...liveItems, ...loopingItems, ...offlineItems];
+    const filterOutFoldered = (items: StreamerListItem[]) => items.filter(item => !folderStreamerKeys.has(toStreamerKey(item.data)));
+    const nextListOrder = [
+      ...folderItems,
+      ...filterOutFoldered(liveItems),
+      ...filterOutFoldered(loopingItems),
+      ...filterOutFoldered(offlineItems),
+    ];
     const streamerSequence: FollowedStreamer[] = [...liveItems, ...loopingItems, ...offlineItems].map(item => item.data);
     return { nextListOrder, streamerSequence };
   }

@@ -113,6 +113,22 @@ const emit = defineEmits<{
   (e: 'streamerDragStart', streamer: FollowedStreamer, event: MouseEvent): void;
 }>();
 
+const sortStreamersByStatus = (items: FollowedStreamer[]): FollowedStreamer[] => {
+  const live: FollowedStreamer[] = [];
+  const looping: FollowedStreamer[] = [];
+  const rest: FollowedStreamer[] = [];
+  items.forEach(streamer => {
+    if (streamer.liveStatus === 'LIVE' || (!streamer.liveStatus && streamer.isLive)) {
+      live.push(streamer);
+    } else if (streamer.liveStatus === 'REPLAY') {
+      looping.push(streamer);
+    } else {
+      rest.push(streamer);
+    }
+  });
+  return [...live, ...looping, ...rest];
+};
+
 const folderItems = computed(() => {
   const seen = new Set<string>();
   const result: FollowedStreamer[] = [];
@@ -127,7 +143,7 @@ const folderItems = computed(() => {
       result.push(found);
     }
   }
-  return result;
+  return sortStreamersByStatus(result);
 });
 
 const toggleExpand = () => {

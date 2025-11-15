@@ -137,16 +137,26 @@ type DanmuUserSettings = {
   duration: number;
   area: number;
   mode: 'scroll' | 'top' | 'bottom';
+  opacity: number;
 };
 
 const DANMU_PREFERENCES_STORAGE_KEY = 'dtv_danmu_preferences_v1';
 const DANMU_AREA_OPTIONS = [0.25, 0.5, 0.75] as const;
+const DANMU_OPACITY_MIN = 0.2;
+const DANMU_OPACITY_MAX = 1;
 const PLAYER_VOLUME_STORAGE_KEY = 'dtv_player_volume_v1';
 const DEFAULT_DANMU_FONT_FAMILY = '"HarmonyOS Sans Bold", "HarmonyOS Sans", "PingFang SC", "Helvetica Neue", Arial, sans-serif';
 const WINDOWS_DANMU_FONT_FAMILY = '"HarmonyOS Sans Regular", "HarmonyOS Sans", "Microsoft YaHei", "Segoe UI", sans-serif';
 
 const sanitizeDanmuArea = (value: number): number => {
   return DANMU_AREA_OPTIONS.reduce((prev, curr) => Math.abs(curr - value) < Math.abs(prev - value) ? curr : prev, DANMU_AREA_OPTIONS[0]);
+};
+
+const sanitizeDanmuOpacity = (value: number): number => {
+  if (!Number.isFinite(value)) {
+    return 1;
+  }
+  return Math.min(DANMU_OPACITY_MAX, Math.max(DANMU_OPACITY_MIN, value));
 };
 
 const loadStoredVolume = (): number | null => {
@@ -220,6 +230,7 @@ const loadDanmuPreferences = (): { enabled: boolean; settings: DanmuUserSettings
         duration: Number.isFinite(settings.duration) ? settings.duration : 10000,
         area: Number.isFinite(settings.area) ? sanitizeDanmuArea(settings.area) : 0.5,
         mode: settings.mode === 'top' || settings.mode === 'bottom' ? settings.mode : 'scroll',
+        opacity: Number.isFinite(settings.opacity) ? sanitizeDanmuOpacity(settings.opacity) : 1,
       },
     };
   } catch (error) {
@@ -323,6 +334,7 @@ class DanmuSettingsControl extends Plugin {
       duration: 10000,
       area: 0.5,
       mode: 'scroll',
+      opacity: 1,
     })) as () => DanmuUserSettings,
     onChange: (async (_partial: Partial<DanmuUserSettings>) => {}) as (partial: Partial<DanmuUserSettings>) => Promise<void> | void,
   };
@@ -341,12 +353,14 @@ class DanmuSettingsControl extends Plugin {
     duration: 10000,
     area: 0.5,
     mode: 'scroll',
+    opacity: 1,
   };
   private textColorInput: HTMLInputElement | null = null;
   private strokeColorInput: HTMLInputElement | null = null;
   private fontSizeSlider: HTMLInputElement | null = null;
   private durationSlider: HTMLInputElement | null = null;
   private areaSlider: HTMLInputElement | null = null;
+  private opacitySlider: HTMLInputElement | null = null;
 
   override afterCreate() {
     if (this.config.disable) {
@@ -356,6 +370,7 @@ class DanmuSettingsControl extends Plugin {
       ? this.config.getSettings()
       : this.currentSettings;
     this.currentSettings.area = sanitizeDanmuArea(this.currentSettings.area);
+    this.currentSettings.opacity = sanitizeDanmuOpacity(this.currentSettings.opacity);
     if (typeof this.currentSettings.strokeColor !== 'string') {
       this.currentSettings.strokeColor = '#444444';
     }
@@ -429,6 +444,7 @@ class DanmuSettingsControl extends Plugin {
     this.fontSizeSlider = null;
     this.durationSlider = null;
     this.areaSlider = null;
+    this.opacitySlider = null;
   }
 
   override render() {
@@ -466,6 +482,10 @@ class DanmuSettingsControl extends Plugin {
             <label>显示区域 <span class="settings-value area-value">${this.formatAreaLabel(this.currentSettings.area)}</span></label>
             <input class="danmu-setting-area-range" type="range" min="0.25" max="0.75" step="0.25" value="${this.currentSettings.area}">
           </div>
+          <div class="settings-row">
+            <label>透明度 <span class="settings-value opacity-value">${this.formatOpacityLabel(this.currentSettings.opacity)}</span></label>
+            <input class="danmu-setting-opacity-range" type="range" min="${DANMU_OPACITY_MIN}" max="${DANMU_OPACITY_MAX}" step="0.05" value="${this.currentSettings.opacity}">
+          </div>
         </div>
       </div>
     `;
@@ -486,6 +506,7 @@ class DanmuSettingsControl extends Plugin {
     this.fontSizeSlider = this.panel.querySelector<HTMLInputElement>('.danmu-setting-font-range');
     this.durationSlider = this.panel.querySelector<HTMLInputElement>('.danmu-setting-duration-range');
     this.areaSlider = this.panel.querySelector<HTMLInputElement>('.danmu-setting-area-range');
+    this.opacitySlider = this.panel.querySelector<HTMLInputElement>('.danmu-setting-opacity-range');
 
     this.textColorInput?.addEventListener('input', (event) => {
       const value = (event.target as HTMLInputElement).value;
@@ -549,6 +570,14 @@ class DanmuSettingsControl extends Plugin {
       },
       '.area-value',
       (value) => this.formatAreaLabel(value),
+    );
+
+    handleRange(
+      this.opacitySlider,
+      'opacity',
+      (value) => sanitizeDanmuOpacity(Number(value)),
+      '.opacity-value',
+      (value) => this.formatOpacityLabel(value),
     );
   }
 
@@ -636,6 +665,15 @@ class DanmuSettingsControl extends Plugin {
       }
       this.updateSliderVisual(this.areaSlider);
     }
+    if (this.opacitySlider) {
+      const opacityValue = sanitizeDanmuOpacity(this.currentSettings.opacity);
+      this.opacitySlider.value = String(opacityValue);
+      const opacityLabel = this.panel.querySelector<HTMLSpanElement>('.opacity-value');
+      if (opacityLabel) {
+        opacityLabel.textContent = this.formatOpacityLabel(opacityValue);
+      }
+      this.updateSliderVisual(this.opacitySlider);
+    }
   }
 
   private formatDurationLabel(value: number): string {
@@ -666,6 +704,11 @@ class DanmuSettingsControl extends Plugin {
     return '上 3/4';
   }
 
+  private formatOpacityLabel(value: number): string {
+    const normalized = sanitizeDanmuOpacity(value);
+    return `${Math.round(normalized * 100)}%`;
+  }
+
   private emitChange(partial: Partial<DanmuUserSettings>) {
     const callback = this.config.onChange;
     if (typeof callback === 'function') {
@@ -677,6 +720,9 @@ class DanmuSettingsControl extends Plugin {
     const normalized: Partial<DanmuUserSettings> = { ...settings };
     if (typeof normalized.area === 'number') {
       normalized.area = sanitizeDanmuArea(normalized.area);
+    }
+    if (typeof normalized.opacity === 'number') {
+      normalized.opacity = sanitizeDanmuOpacity(normalized.opacity);
     }
     if (typeof normalized.strokeColor !== 'undefined' && typeof normalized.strokeColor !== 'string') {
       delete (normalized as any).strokeColor;
@@ -1459,6 +1505,7 @@ const danmuSettings = reactive<DanmuUserSettings>({
   duration: 10000,
   area: 0.5,
   mode: 'scroll',
+  opacity: 1,
 });
 
 const storedDanmuPreferences = loadDanmuPreferences();
@@ -1674,6 +1721,7 @@ function createDanmuOverlay(player: Player | null) {
 
   overlayHost.innerHTML = '';
   overlayHost.style.setProperty('--danmu-stroke-color', danmuSettings.strokeColor);
+  overlayHost.style.setProperty('--danmu-opacity', String(isDanmuEnabled.value ? sanitizeDanmuOpacity(danmuSettings.opacity) : 0));
 
   try {
     const overlay = new DanmuJs({
@@ -1704,6 +1752,7 @@ function applyDanmuOverlayPreferences(overlay: DanmuOverlayInstance | null) {
   if (!overlay) {
     return;
   }
+  const host = playerInstance.value?.root?.querySelector('.player-danmu-overlay') as HTMLElement | null;
   const fontSizeValue = parseInt(danmuSettings.fontSize, 10);
   if (!Number.isNaN(fontSizeValue)) {
     try {
@@ -1726,12 +1775,14 @@ function applyDanmuOverlayPreferences(overlay: DanmuOverlayInstance | null) {
     // Non-critical for players that do not support bulk duration updates
   }
   try {
-    overlay.setOpacity?.(isDanmuEnabled.value ? 1 : 0);
+    const normalizedOpacity = sanitizeDanmuOpacity(danmuSettings.opacity);
+    const nextOpacity = isDanmuEnabled.value ? normalizedOpacity : 0;
+    overlay.setOpacity?.(nextOpacity);
+    host?.style.setProperty('--danmu-opacity', String(nextOpacity));
   } catch (error) {
     // Non-critical
   }
   try {
-    const host = playerInstance.value?.root?.querySelector('.player-danmu-overlay') as HTMLElement | null;
     host?.style.setProperty('--danmu-stroke-color', danmuSettings.strokeColor);
   } catch (error) {
     console.warn('[Player] Failed to apply danmu stroke color:', error);
@@ -1742,17 +1793,20 @@ function syncDanmuEnabledState(overlay: DanmuOverlayInstance | null) {
   if (!overlay) {
     return;
   }
+  const normalizedOpacity = sanitizeDanmuOpacity(danmuSettings.opacity);
+  const targetOpacity = isDanmuEnabled.value ? normalizedOpacity : 0;
   try {
     if (isDanmuEnabled.value) {
       overlay.play?.();
-      overlay.setOpacity?.(1);
       overlay.show?.('scroll');
       overlay.show?.('top');
       overlay.show?.('bottom');
     } else {
       overlay.pause?.();
-      overlay.setOpacity?.(0);
     }
+    overlay.setOpacity?.(targetOpacity);
+    const host = playerInstance.value?.root?.querySelector('.player-danmu-overlay') as HTMLElement | null;
+    host?.style.setProperty('--danmu-opacity', String(targetOpacity));
   } catch (error) {
     console.warn('[Player] Failed updating danmu enabled state:', error);
   }
@@ -1967,6 +2021,7 @@ async function mountXgPlayer(
       duration: danmuSettings.duration,
       area: danmuSettings.area,
       mode: danmuSettings.mode,
+      opacity: danmuSettings.opacity,
     }),
     onChange: (partial: Partial<DanmuUserSettings>) => {
       if (partial.color) {
@@ -1986,6 +2041,9 @@ async function mountXgPlayer(
       }
       if (partial.mode) {
         danmuSettings.mode = partial.mode;
+      }
+      if (typeof partial.opacity === 'number') {
+        danmuSettings.opacity = sanitizeDanmuOpacity(partial.opacity);
       }
     },
   }) as DanmuSettingsControl;
@@ -2480,6 +2538,7 @@ const getDanmuSettingsSnapshot = (): DanmuUserSettings => ({
   duration: danmuSettings.duration,
   area: sanitizeDanmuArea(danmuSettings.area),
   mode: danmuSettings.mode,
+  opacity: sanitizeDanmuOpacity(danmuSettings.opacity),
 });
 
 const persistCurrentDanmuPreferences = () => {
@@ -2562,6 +2621,7 @@ watch(danmuSettingsPlugin, (plugin) => {
     duration: danmuSettings.duration,
     area: sanitizeDanmuArea(danmuSettings.area),
     mode: danmuSettings.mode,
+    opacity: sanitizeDanmuOpacity(danmuSettings.opacity),
   });
 });
 
@@ -2595,6 +2655,17 @@ watch(() => danmuSettings.area, (area) => {
     return;
   }
   danmuSettingsPlugin.value?.setSettings({ area: normalizedArea });
+  applyDanmuOverlayPreferences(danmuInstance.value);
+  persistCurrentDanmuPreferences();
+});
+
+watch(() => danmuSettings.opacity, (opacity) => {
+  const normalizedOpacity = sanitizeDanmuOpacity(opacity);
+  if (normalizedOpacity !== opacity) {
+    danmuSettings.opacity = normalizedOpacity;
+    return;
+  }
+  danmuSettingsPlugin.value?.setSettings({ opacity: normalizedOpacity });
   applyDanmuOverlayPreferences(danmuInstance.value);
   persistCurrentDanmuPreferences();
 });
