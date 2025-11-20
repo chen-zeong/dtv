@@ -1,7 +1,10 @@
 use crate::platforms::common::http_client::HttpClient;
-use reqwest::header::{HeaderMap, HeaderValue, COOKIE};
+use crate::platforms::douyin::a_bogus::generate_a_bogus;
+use crate::platforms::douyin::web_api::DEFAULT_USER_AGENT;
+use reqwest::header::{HeaderMap, HeaderValue, COOKIE, USER_AGENT};
 use serde::{Deserialize, Serialize};
 use tauri::State; // Removed SET_COOKIE
+use urlencoding::encode;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct DouyinRoomCover {
@@ -100,10 +103,40 @@ pub async fn fetch_douyin_partition_rooms(
         HeaderValue::from_str(&cookie_string)
             .map_err(|e| format!("Failed to create cookie header value: {}", e))?,
     );
+    headers.insert(
+        USER_AGENT,
+        HeaderValue::from_static(DEFAULT_USER_AGENT),
+    );
 
+    let params: Vec<(String, String)> = vec![
+        ("aid".to_string(), "6383".to_string()),
+        ("app_name".to_string(), "douyin_web".to_string()),
+        ("live_id".to_string(), "1".to_string()),
+        ("device_platform".to_string(), "web".to_string()),
+        ("language".to_string(), "zh-CN".to_string()),
+        ("enter_from".to_string(), "web_homepage_hot".to_string()),
+        ("cookie_enabled".to_string(), "true".to_string()),
+        ("screen_width".to_string(), "1920".to_string()),
+        ("screen_height".to_string(), "1080".to_string()),
+        ("browser_language".to_string(), "zh-CN".to_string()),
+        ("browser_platform".to_string(), "MacIntel".to_string()),
+        ("browser_name".to_string(), "Chrome".to_string()),
+        ("browser_version".to_string(), "120.0.0.0".to_string()),
+        ("count".to_string(), count.to_string()),
+        ("offset".to_string(), offset.to_string()),
+        ("partition".to_string(), partition.clone()),
+        ("partition_type".to_string(), partition_type.clone()),
+        ("req_from".to_string(), "2".to_string()),
+        ("msToken".to_string(), ms_token.clone()),
+    ];
+
+    let query = serde_urlencoded::to_string(&params)
+        .map_err(|e| format!("Failed to encode Douyin partition params: {}", e))?;
+    let sign = generate_a_bogus(&query, DEFAULT_USER_AGENT);
     let url = format!(
-        "https://live.douyin.com/webcast/web/partition/detail/room/v2/?aid=6383&app_name=douyin_web&live_id=1&device_platform=web&language=zh-CN&enter_from=web_homepage_hot&cookie_enabled=true&screen_width=1920&screen_height=1080&browser_language=zh-CN&browser_platform=MacIntel&browser_name=Chrome&browser_version=120.0.0.0&count={}&offset={}&partition={}&partition_type={}&req_from=2&msToken={}&a_bogus=D7sfgF7iON8bKd%2FGmOiievelRgdlNs8yQrTxbS%2FKSNzrcw0Y%2FSNHicSsjxzJ32CZGuphkCI7iEslbjdcsIXz11npomkDuziW-zAnn0sLMqqsT0JQEHREShzzuwsnUb4q-%2Fc5Elk51sBe2DQW9rAdlpMGH5TaQmRDWHFWdM0cc9WYfSyPm3aROZEAPfqumb243D%3D%3D",
-        count, offset, partition, partition_type, ms_token
+        "https://live.douyin.com/webcast/web/partition/detail/room/v2/?{}&a_bogus={}",
+        query,
+        encode(&sign)
     );
 
     match local_client
