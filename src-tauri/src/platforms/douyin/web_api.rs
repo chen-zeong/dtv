@@ -107,7 +107,7 @@ fn merge_origin_stream(room: &mut Value) {
 }
 
 async fn fetch_room_from_api(
-    _http_client: &HttpClient,
+    http_client: &HttpClient,
     web_id: &str,
     cookies: Option<&str>,
 ) -> Result<DouyinRoomData, String> {
@@ -138,8 +138,8 @@ async fn fetch_room_from_api(
         query,
         sign
     );
-    let client = reqwest::Client::new();
-    let json: Value = client
+    let json: Value = http_client
+        .inner
         .get(&api)
         .headers(headers)
         .send()

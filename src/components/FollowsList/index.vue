@@ -242,7 +242,7 @@
   const draggedStreamerKey = ref<string | null>(null); // 正在拖拽的主播键值
 
   // 并发与延迟设置：降低启动时对后端的压力，优先让分类/主播列表完成首屏加载
-  const FOLLOW_REFRESH_CONCURRENCY = 4; // 可根据机器性能与后端并发能力调整
+  const FOLLOW_REFRESH_CONCURRENCY = 2; // 关注刷新单独小池，避免争抢首屏资源
   const REFRESH_INITIAL_DELAY_MS = 1500; // 首次进入页面延迟触发关注列表刷新
   function requestIdle(fn: () => void, timeout = REFRESH_INITIAL_DELAY_MS) {
     // 在浏览器空闲或设定超时后再触发，避免与首页的分类/主播列表争抢网络与后端资源

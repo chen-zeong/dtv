@@ -4,6 +4,9 @@
 use reqwest::header::{HeaderMap, HeaderValue};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use tauri::State;
+
+use crate::platforms::common::FollowHttpClient;
 
 // Define the structure to be returned to TypeScript
 #[derive(Serialize, Deserialize, Debug, Default)]
@@ -17,12 +20,10 @@ pub struct DouyuFollowInfo {
 }
 
 #[tauri::command]
-pub async fn fetch_douyu_room_info(room_id: String) -> Result<DouyuFollowInfo, String> {
-    let client = reqwest::Client::builder()
-        .no_proxy()
-        .build()
-        .map_err(|e| e.to_string())?;
-
+pub async fn fetch_douyu_room_info(
+    room_id: String,
+    follow_http: State<'_, FollowHttpClient>,
+) -> Result<DouyuFollowInfo, String> {
     let mut headers = HeaderMap::new();
     headers.insert(
         "Accept",
@@ -40,7 +41,9 @@ pub async fn fetch_douyu_room_info(room_id: String) -> Result<DouyuFollowInfo, S
     );
     headers.insert("User-Agent", HeaderValue::from_static("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"));
 
-    let response_result = client
+    let response_result = follow_http
+        .0
+        .inner
         .get(format!("https://www.douyu.com/betard/{}", room_id))
         .headers(headers)
         .send()

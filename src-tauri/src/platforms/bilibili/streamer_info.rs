@@ -1,3 +1,4 @@
+use crate::platforms::common::FollowHttpClient;
 use md5;
 use md5::{Digest, Md5};
 use reqwest::header::{HeaderMap, HeaderValue, COOKIE, REFERER, USER_AGENT};
@@ -5,6 +6,7 @@ use serde_json::Value;
 use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::command;
+use tauri::State;
 
 // WBI mixin key mapping table (same as Python implementation)
 const MIXIN_KEY_ENC_TAB: [usize; 64] = [
@@ -23,10 +25,14 @@ fn get_mixin_key(origin: &str) -> String {
     out.chars().take(32).collect()
 }
 
-async fn get_wbi_keys(client: &reqwest::Client) -> Result<(String, String), String> {
+async fn get_wbi_keys(
+    client: &reqwest::Client,
+    headers: &HeaderMap,
+) -> Result<(String, String), String> {
     let url = "https://api.bilibili.com/x/web-interface/nav";
     let resp = client
         .get(url)
+        .headers(headers.clone())
         .send()
         .await
         .map_err(|e| format!("Failed to get WBI keys: {}", e))?;
@@ -97,6 +103,7 @@ fn build_wbi_sign(room_id: &str, img_key: &str, sub_key: &str) -> (String, Strin
 pub async fn fetch_bilibili_streamer_info(
     payload: crate::platforms::common::GetStreamUrlPayload,
     cookie: Option<String>,
+    follow_http: State<'_, FollowHttpClient>,
 ) -> Result<crate::platforms::common::LiveStreamInfo, String> {
     let room_id = payload.args.room_id_str.clone();
     if room_id.trim().is_empty() {
@@ -132,14 +139,10 @@ pub async fn fetch_bilibili_streamer_info(
         }
     }
 
-    let client = reqwest::Client::builder()
-        .default_headers(headers)
-        .no_proxy()
-        .build()
-        .map_err(|e| format!("Failed to build client: {}", e))?;
+    let client = &follow_http.0.inner;
 
     // Get WBI keys and build sign
-    let (img_key, sub_key) = get_wbi_keys(&client).await?;
+    let (img_key, sub_key) = get_wbi_keys(client, &headers).await?;
     let (wts, w_rid) = build_wbi_sign(&room_id, &img_key, &sub_key);
 
     // Call getInfoByRoom API with signed params
@@ -148,6 +151,7 @@ pub async fn fetch_bilibili_streamer_info(
 
     let resp = client
         .get(base)
+        .headers(headers.clone())
         .query(&params)
         .send()
         .await

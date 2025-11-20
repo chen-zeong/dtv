@@ -5,6 +5,8 @@ use std::time::Duration;
 
 pub const DEFAULT_USER_AGENT: &str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36";
 const DEFAULT_TIMEOUT_SECONDS: u64 = 20;
+const FOLLOW_POOL_MAX_IDLE_PER_HOST: usize = 2;
+const FOLLOW_POOL_IDLE_TIMEOUT_SECONDS: u64 = 15;
 
 #[derive(Debug, Clone)]
 pub struct HttpClient {
@@ -54,6 +56,34 @@ impl HttpClient {
             .timeout(Duration::from_secs(DEFAULT_TIMEOUT_SECONDS))
             .cookie_provider(cookie_jar)
             .no_proxy(); // 关键：禁用所有代理设置
+
+        let inner_client = client_builder
+            .build()
+            .map_err(|e| format!("Failed to build direct connection reqwest client: {}", e))?;
+
+        Ok(HttpClient {
+            inner: inner_client,
+            headers: default_headers,
+        })
+    }
+
+    /// 直连 + 限制连接池规模，用于关注刷新等低并发任务
+    pub fn new_direct_limited(max_idle_per_host: usize) -> Result<Self, String> {
+        let mut default_headers = ReqwestHeaderMap::new();
+        default_headers.insert(
+            USER_AGENT,
+            HeaderValue::from_str(DEFAULT_USER_AGENT)
+                .map_err(|e| format!("Invalid default user agent: {}", e))?,
+        );
+
+        let cookie_jar = Arc::new(Jar::default());
+
+        let client_builder = Client::builder()
+            .timeout(Duration::from_secs(DEFAULT_TIMEOUT_SECONDS))
+            .cookie_provider(cookie_jar)
+            .no_proxy()
+            .pool_max_idle_per_host(max_idle_per_host)
+            .pool_idle_timeout(Duration::from_secs(FOLLOW_POOL_IDLE_TIMEOUT_SECONDS));
 
         let inner_client = client_builder
             .build()
@@ -244,5 +274,17 @@ impl HttpClient {
         // 由于reqwest::Client的cookie_store方法在当前版本中不可用
         // 我们返回一个提示信息，表明cookies是通过headers设置的
         "Cookies are set via headers (check Headers section above for Cookie header)".to_string()
+    }
+}
+
+/// 专用于关注刷新等低并发任务的 HTTP 客户端包装
+#[derive(Debug, Clone)]
+pub struct FollowHttpClient(pub HttpClient);
+
+impl FollowHttpClient {
+    pub fn new() -> Result<Self, String> {
+        Ok(Self(HttpClient::new_direct_limited(
+            FOLLOW_POOL_MAX_IDLE_PER_HOST,
+        )?))
     }
 }

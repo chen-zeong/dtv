@@ -8,7 +8,7 @@ use std::sync::{Arc, Mutex};
 use tokio::sync::oneshot;
 mod platforms;
 mod proxy;
-use platforms::common::{DouyinDanmakuState, HuyaDanmakuState};
+use platforms::common::{DouyinDanmakuState, FollowHttpClient, HuyaDanmakuState};
 use platforms::douyin::danmu::signature::generate_douyin_ms_token;
 use platforms::douyin::fetch_douyin_partition_rooms;
 use platforms::douyin::fetch_douyin_room_info;
@@ -152,10 +152,12 @@ fn main() {
         .no_proxy()
         .build()
         .expect("Failed to create reqwest client");
+    let follow_http_client = FollowHttpClient::new().expect("Failed to create follow http client");
 
     tauri::Builder::default()
         .plugin(tauri_plugin_os::init())
         .manage(client) // Manage the reqwest client
+        .manage(follow_http_client) // 专用关注刷新客户端，避免占用默认连接池
         .manage(DouyuDanmakuHandles::default()) // Manage new DouyuDanmakuHandles
         .manage(DouyinDanmakuState::default()) // Manage DouyinDanmakuState
         .manage(HuyaDanmakuState::default()) // Manage HuyaDanmakuState

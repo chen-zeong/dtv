@@ -1,12 +1,13 @@
 use crate::platforms::common::http_client::HttpClient;
-use crate::platforms::common::GetStreamUrlPayload;
-use crate::platforms::common::LiveStreamInfo;
+use crate::platforms::common::{FollowHttpClient, GetStreamUrlPayload, LiveStreamInfo};
 use crate::platforms::douyin::web_api::{fetch_room_data, normalize_douyin_live_id, DouyinRoomData};
 use tauri::command;
+use tauri::State;
 
 #[command]
 pub async fn fetch_douyin_streamer_info(
     payload: GetStreamUrlPayload,
+    follow_http: State<'_, FollowHttpClient>,
 ) -> Result<LiveStreamInfo, String> {
     let requested_id = payload.args.room_id_str.trim().to_string();
     if requested_id.is_empty() {
@@ -24,12 +25,11 @@ pub async fn fetch_douyin_streamer_info(
         });
     }
 
-    let http_client = HttpClient::new_direct_connection()
-        .map_err(|e| format!("Failed to create direct connection HttpClient: {}", e))?;
+    let http_client: &HttpClient = &follow_http.0;
 
     let normalized_id = normalize_douyin_live_id(&requested_id);
 
-    match fetch_room_data(&http_client, &normalized_id, None).await {
+    match fetch_room_data(http_client, &normalized_id, None).await {
         Ok(DouyinRoomData { room }) => {
             let web_rid = super::douyin_streamer_detail::extract_web_rid(&room)
                 .unwrap_or_else(|| normalized_id.clone());

@@ -11,6 +11,9 @@ use reqwest::header::{
 };
 use serde::Serialize;
 use serde_json::Value;
+use tauri::State;
+
+use crate::platforms::common::FollowHttpClient;
 
 const IOS_MOBILE_UA: &str = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1";
 const DESKTOP_UA: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0";
@@ -566,18 +569,15 @@ pub async fn get_huya_unified_cmd(
     room_id: String,
     quality: Option<String>,
     line: Option<String>,
+    follow_http: State<'_, FollowHttpClient>,
 ) -> Result<HuyaUnifiedResponse, String> {
-    let client = reqwest::Client::builder()
-        .timeout(Duration::from_secs(10))
-        .no_proxy()
-        .build()
-        .map_err(|e| e.to_string())?;
+    let client = &follow_http.0.inner;
 
-    let detail = fetch_room_detail(&client, &room_id)
+    let detail = fetch_room_detail(client, &room_id)
         .await
         .map_err(|e| e.to_string())?;
 
-    let web_stream = fetch_web_stream_data(&client, &room_id)
+    let web_stream = fetch_web_stream_data(client, &room_id)
         .await
         .map_err(|e| e.to_string())?;
 
