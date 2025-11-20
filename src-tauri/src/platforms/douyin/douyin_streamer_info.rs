@@ -1,7 +1,7 @@
 use crate::platforms::common::http_client::HttpClient;
 use crate::platforms::common::GetStreamUrlPayload;
 use crate::platforms::common::LiveStreamInfo;
-use crate::platforms::douyin::web_api::{fetch_room_data, DouyinRoomData};
+use crate::platforms::douyin::web_api::{fetch_room_data, normalize_douyin_live_id, DouyinRoomData};
 use tauri::command;
 
 #[command]
@@ -27,10 +27,12 @@ pub async fn fetch_douyin_streamer_info(
     let http_client = HttpClient::new_direct_connection()
         .map_err(|e| format!("Failed to create direct connection HttpClient: {}", e))?;
 
-    match fetch_room_data(&http_client, &requested_id, None).await {
+    let normalized_id = normalize_douyin_live_id(&requested_id);
+
+    match fetch_room_data(&http_client, &normalized_id, None).await {
         Ok(DouyinRoomData { room }) => {
             let web_rid = super::douyin_streamer_detail::extract_web_rid(&room)
-                .unwrap_or_else(|| requested_id.clone());
+                .unwrap_or_else(|| normalized_id.clone());
             let status = room
                 .get("status")
                 .and_then(|v| v.as_i64())
@@ -62,11 +64,11 @@ pub async fn fetch_douyin_streamer_info(
             avatar: None,
             stream_url: None,
             status: None,
-            error_message: Some(format!("获取抖音房间信息失败: {}", e)),
-            upstream_url: None,
-            available_streams: None,
-            normalized_room_id: None,
-            web_rid: Some(requested_id),
+                error_message: Some(format!("获取抖音房间信息失败: {}", e)),
+                upstream_url: None,
+                available_streams: None,
+                normalized_room_id: None,
+                web_rid: Some(normalized_id),
         }),
     }
 }

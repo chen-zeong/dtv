@@ -173,17 +173,58 @@ async fn fetch_room_from_api(
     Ok(DouyinRoomData { room: room_mut })
 }
 
-fn extract_web_id(id_or_url: &str) -> &str {
-    if let Some(pos) = id_or_url.find("live.douyin.com/") {
-        let start = pos + "live.douyin.com/".len();
-        let remainder = &id_or_url[start..];
-        remainder
-            .split(['?', '&', '/'])
-            .find(|segment| !segment.is_empty())
-            .unwrap_or(id_or_url)
-    } else {
-        id_or_url
+/// Normalize user input into a Douyin web_id. Supports raw IDs and full URLs such as
+/// `https://live.douyin.com/123456` or `https://www.douyin.com/follow/live/123456`.
+pub fn normalize_douyin_live_id(id_or_url: &str) -> String {
+    let trimmed = id_or_url.trim();
+    if trimmed.is_empty() {
+        return String::new();
     }
+
+    // Prefer explicit room/query parameters if present.
+    if let Some(qpos) = trimmed.find('?') {
+        let query = &trimmed[qpos + 1..];
+        for kv in query.split('&') {
+            if let Some(val) = kv
+                .strip_prefix("room_id=")
+                .or_else(|| kv.strip_prefix("roomId="))
+                .or_else(|| kv.strip_prefix("web_rid="))
+                .or_else(|| kv.strip_prefix("webId="))
+            {
+                let cleaned = val
+                    .split(['&', '#'])
+                    .find(|s| !s.is_empty())
+                    .unwrap_or(val);
+                if !cleaned.is_empty() {
+                    return cleaned.to_string();
+                }
+            }
+        }
+    }
+
+    // Handle any douyin.com URL (live.douyin.com, www.douyin.com/follow/live/xxx, etc.).
+    if let Some(pos) = trimmed.find("douyin.com/") {
+        let start = pos + "douyin.com/".len();
+        let remainder = &trimmed[start..];
+        let path_only = remainder.split(['?', '#']).next().unwrap_or(remainder);
+        if let Some(segment) = path_only
+            .rsplit('/')
+            .find(|segment| !segment.is_empty())
+        {
+            return segment
+                .split(['?', '&', '#'])
+                .find(|s| !s.is_empty())
+                .unwrap_or(segment)
+                .to_string();
+        }
+    }
+
+    // Fallback: strip trailing query/hash from raw input.
+    trimmed
+        .split(['?', '&', '#'])
+        .find(|s| !s.is_empty())
+        .unwrap_or(trimmed)
+        .to_string()
 }
 
 pub async fn fetch_room_data(
@@ -191,9 +232,9 @@ pub async fn fetch_room_data(
     raw_id: &str,
     cookies: Option<&str>,
 ) -> Result<DouyinRoomData, String> {
-    let web_id = extract_web_id(raw_id);
+    let web_id = normalize_douyin_live_id(raw_id);
     // 简化逻辑：直接走网页版接口 + a_bogus，避免 HTML 解析失败。
-    fetch_room_from_api(http_client, web_id, cookies).await
+    fetch_room_from_api(http_client, &web_id, cookies).await
 }
 
 pub fn choose_flv_stream(room: &Value, desired_quality: &str) -> Option<(String, String)> {

@@ -1,5 +1,7 @@
 use crate::platforms::common::http_client::HttpClient;
-use crate::platforms::douyin::web_api::{fetch_room_data, DouyinRoomData, DEFAULT_USER_AGENT};
+use crate::platforms::douyin::web_api::{
+    fetch_room_data, normalize_douyin_live_id, DouyinRoomData, DEFAULT_USER_AGENT,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::{self, Value};
 use std::sync::Arc;
@@ -47,9 +49,10 @@ impl DouyinLiveWebFetcher {
         // 使用直连HTTP客户端，绕过所有代理设置
         let http_client = HttpClient::new_direct_connection()
             .map_err(|e| format!("Failed to create direct connection HttpClient: {}", e))?;
+        let normalized_live_id = normalize_douyin_live_id(live_id);
 
         Ok(DouyinLiveWebFetcher {
-            live_id: live_id.to_string(),
+            live_id: normalized_live_id,
             room_id: None,
             resolved_info: None,
             user_agent: DEFAULT_USER_AGENT.to_string(),
@@ -394,16 +397,17 @@ pub async fn fetch_douyin_room_info(live_id: String) -> Result<DouyinFollowListR
         "[fetch_douyin_room_info] Fetching details for web_id: {}",
         live_id
     );
+    let normalized_id = normalize_douyin_live_id(&live_id);
 
     let http_client = HttpClient::new_direct_connection()
         .map_err(|e| format!("Failed to create direct connection HttpClient: {}", e))?;
 
-    let DouyinRoomData { room } = fetch_room_data(&http_client, &live_id, None)
+    let DouyinRoomData { room } = fetch_room_data(&http_client, &normalized_id, None)
         .await
         .map_err(|e| format!("Failed to fetch Douyin room data: {}", e))?;
 
     let web_rid = crate::platforms::douyin::douyin_streamer_detail::extract_web_rid(&room)
-        .unwrap_or_else(|| live_id.clone());
+        .unwrap_or_else(|| normalized_id.clone());
     let nickname = crate::platforms::douyin::douyin_streamer_detail::extract_anchor_name(&room)
         .unwrap_or_else(|| format!("主播{}", web_rid));
     let room_name = room

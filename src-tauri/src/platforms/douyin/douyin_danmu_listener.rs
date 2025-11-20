@@ -1,3 +1,4 @@
+use crate::platforms::douyin::web_api::normalize_douyin_live_id;
 use tauri::Emitter;
 use tokio::sync::mpsc as tokio_mpsc;
 
@@ -32,6 +33,8 @@ pub async fn start_douyin_danmu_listener(
         return Ok(());
     }
 
+    let normalized_room_id = normalize_douyin_live_id(&room_id_or_url);
+
     let (tx_shutdown, mut rx_shutdown) = tokio_mpsc::channel::<()>(1);
     {
         let mut lock = state.inner().0.lock().unwrap();
@@ -39,7 +42,7 @@ pub async fn start_douyin_danmu_listener(
     }
 
     let app_handle_clone = app_handle.clone();
-    let room_id_str_clone = room_id_or_url.clone();
+    let room_id_str_clone = normalized_room_id.clone();
 
     tokio::spawn(async move {
         println!(

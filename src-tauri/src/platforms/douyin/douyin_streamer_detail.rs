@@ -2,7 +2,9 @@ use crate::platforms::common::http_client::HttpClient;
 use crate::platforms::common::types::StreamVariant;
 use crate::platforms::common::GetStreamUrlPayload;
 use crate::platforms::common::LiveStreamInfo as CommonLiveStreamInfo;
-use crate::platforms::douyin::web_api::{choose_flv_stream, fetch_room_data, DouyinRoomData};
+use crate::platforms::douyin::web_api::{
+    choose_flv_stream, fetch_room_data, normalize_douyin_live_id, DouyinRoomData,
+};
 use crate::proxy::ProxyServerHandle;
 use crate::StreamUrlStore;
 use serde_json::Value;
@@ -60,8 +62,9 @@ pub async fn get_douyin_live_stream_url_with_quality(
     let http_client = HttpClient::new_direct_connection()
         .map_err(|e| format!("Failed to create direct connection HttpClient: {}", e))?;
 
-    let DouyinRoomData { room } = fetch_room_data(&http_client, &requested_id, None).await?;
-    let web_rid = extract_web_rid(&room).unwrap_or_else(|| requested_id.clone());
+    let normalized_id = normalize_douyin_live_id(&requested_id);
+    let DouyinRoomData { room } = fetch_room_data(&http_client, &normalized_id, None).await?;
+    let web_rid = extract_web_rid(&room).unwrap_or_else(|| normalized_id.clone());
     let status = room
         .get("status")
         .and_then(|v| v.as_i64())
