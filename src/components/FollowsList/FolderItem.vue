@@ -381,11 +381,6 @@ const handleFolderAfterLeave = (el: Element) => {
   background: rgba(52, 53, 60, 0.9);
 }
 
-.folder-streamer-item.status-live {
-  border-color: rgba(16, 185, 129, 0.4);
-  background: rgba(16, 185, 129, 0.12);
-}
-
 :root[data-theme="light"] .folder-item {
   background: #f4f7fd;
   border-color: rgba(209, 217, 234, 0.7);
@@ -419,11 +414,6 @@ const handleFolderAfterLeave = (el: Element) => {
 :root[data-theme="light"] .folder-streamer-item:hover {
   background: rgba(114, 147, 255, 0.15);
   border-color: rgba(114, 147, 255, 0.35);
-}
-
-:root[data-theme="light"] .folder-streamer-item.status-live {
-  background: rgba(34, 197, 94, 0.18);
-  border-color: rgba(34, 197, 94, 0.4);
 }
 
 :root[data-theme="light"] .folder-item.is-drag-over {
